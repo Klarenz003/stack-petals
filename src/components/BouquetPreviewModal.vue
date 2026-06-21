@@ -17,15 +17,20 @@ function addAndClose(event: MouseEvent) {
 </script>
 
 <template>
-  <div class="preview-overlay" @click="emit('close')">
-    <button class="preview-close" @click.stop="emit('close')">✕</button>
-    <div class="preview-content" @click.stop>
-      <img :src="bouquet.image" :alt="bouquet.name" />
-      <h2>{{ bouquet.name }}</h2>
-      <p>{{ bouquet.price }}</p>
-      <button class="co-btn-primary" style="margin-top:16px" @click="addAndClose">
-        Add to Cart
-      </button>
+  <Transition name="preview" appear>
+    <div class="preview-overlay" @click="emit('close')">
+      <button class="preview-close" @click.stop="emit('close')">✕</button>
+
+      <Transition name="preview-card" appear>
+        <div class="preview-content" @click.stop>
+          <img :src="bouquet.image" :alt="bouquet.name" />
+          <h2>{{ bouquet.name }}</h2>
+          <p>{{ bouquet.price }}</p>
+          <button class="co-btn-primary" style="margin-top:16px" @click="addAndClose">
+            Add to Cart
+          </button>
+        </div>
+      </Transition>
     </div>
-  </div>
+  </Transition>
 </template>

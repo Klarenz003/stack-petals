@@ -52,11 +52,13 @@ watch(
     </Transition>
   </RouterView>
 
+  <Transition name="preview">
   <BouquetPreviewModal
     v-if="preview.selectedBouquet"
     :bouquet="preview.selectedBouquet"
     @close="preview.close()"
-  />
+    />
+    </Transition>
 
   <TheFooter />
 </template>

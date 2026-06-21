@@ -41,8 +41,17 @@ const filteredProducts = computed(() => {
       </button>
     </div>
 
-    <div class="grid wide-grid">
-      <ProductCard v-for="product in filteredProducts" :key="product.name" :product="product" />
-    </div>
+    <!-- TransitionGroup animates cards in/out when filter changes -->
+    <TransitionGroup
+      name="cards"
+      tag="div"
+      class="grid wide-grid"
+    >
+      <ProductCard
+        v-for="product in filteredProducts"
+        :key="product.name"
+        :product="product"
+      />
+    </TransitionGroup>
   </div>
 </template>
