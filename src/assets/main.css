@@ -910,6 +910,56 @@ footer {
   z-index: 1;
 }
 
+/* ── Field Validation ───────────────────────────────────────── */
+.field-error {
+  color: #e74c3c;
+  font-size: 11px;
+  margin-top: -8px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+input[type="date"] {
+  position: relative;
+}
+
+.co-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}
+
+/* ── Scrollbar — blends into the modal ── */
+.checkout-modal {
+  scrollbar-width: thin;                          /* Firefox */
+  scrollbar-color: rgba(216, 165, 167, 0.5) transparent;
+}
+
+/* Chrome / Edge / Safari */
+.checkout-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.checkout-modal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 16px 0;                                 /* keeps it off the top/bottom edges */
+  border-radius: 99px;
+}
+
+.checkout-modal::-webkit-scrollbar-thumb {
+  background: rgba(216, 165, 167, 0.45);
+  border-radius: 99px;
+  transition: background 0.2s ease;
+}
+
+.checkout-modal::-webkit-scrollbar-thumb:hover {
+  background: rgba(216, 165, 167, 0.8);
+}
+
 
 /* ── Responsive ─────────────────────────────────────────────── */
 
@@ -952,25 +1002,17 @@ footer {
   #circuit-canvas, #petal-canvas { display: none; }
 }
 
-/* ── Field Validation ───────────────────────────────────────── */
-.field-error {
-  color: #e74c3c;
-  font-size: 11px;
-  margin-top: -8px;
+@keyframes shake {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-8px) rotate(-0.5deg); }
+  30%  { transform: translateX(8px)  rotate(0.5deg); }
+  45%  { transform: translateX(-6px) rotate(-0.3deg); }
+  60%  { transform: translateX(6px)  rotate(0.3deg); }
+  75%  { transform: translateX(-3px); }
+  90%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-}
-input[type="date"] {
-  position: relative;
-}
-
-.co-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #555;
+.checkout-modal.shake {
+  animation: shake 0.5s ease;
 }

@@ -32,15 +32,23 @@ const minDate = computed(() => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   return tomorrow.toISOString().split('T')[0]
 })
+
+const isShaking = ref(false)
+
+function shakeModal() {
+  if (isShaking.value) return
+  isShaking.value = true
+  setTimeout(() => { isShaking.value = false }, 500)
+}
 </script>
 
 <template>
   <div
-    v-if="cart.checkoutStep > 0"
-    class="checkout-overlay"
-    @click.self="cart.closeCheckout()"
-  >
-    <div class="checkout-modal">
+  v-if="cart.checkoutStep > 0"
+  class="checkout-overlay"
+  @click.self="shakeModal"
+>
+  <div class="checkout-modal" :class="{ shake: isShaking }">
 
       <!-- Step indicator -->
       <div class="checkout-steps">
