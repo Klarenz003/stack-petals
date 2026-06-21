@@ -109,6 +109,7 @@ export const useCartStore = defineStore('cart', () => {
 
     if (error) throw error
 
+     // 3. Send email notifications
     await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
   method: 'POST',
   headers: {
