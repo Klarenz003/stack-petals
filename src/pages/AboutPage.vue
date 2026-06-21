@@ -11,7 +11,7 @@ const values = [
 const team: TeamMember[] = [
   { name: 'Klarenz E.', role: 'Owner',                    initials: 'KE' },
   { name: 'Klarenz E.', role: 'Web Developer / Designer', initials: 'KE' },
-  { name: 'Klarenz E.', role: 'Florist',                  initials: 'KE' },
+  { name: 'Gerlie E.', role: 'Florist',                  initials: 'GE' },
   { name: 'Klarenz E.', role: 'Software Engineer',        initials: 'KE' },
 ]
 </script>
