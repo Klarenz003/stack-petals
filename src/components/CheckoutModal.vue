@@ -17,6 +17,21 @@ function handleDrop(e: DragEvent) {
   const file = e.dataTransfer?.files[0]
   if (file && file.type.startsWith('image/')) cart.handleProofUpload(file)
 }
+
+import { ref, computed } from 'vue'
+
+const emailError = ref('')
+
+function validateEmail() {
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  emailError.value = pattern.test(cart.customer.email) ? '' : 'Please enter a valid email address'
+}
+
+const minDate = computed(() => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toISOString().split('T')[0]
+})
 </script>
 
 <template>
@@ -71,13 +86,16 @@ function handleDrop(e: DragEvent) {
             <input v-model="cart.customer.name" type="text" placeholder="Juan dela Cruz" />
           </label>
           <label>Email Address
-            <input v-model="cart.customer.email" type="email" placeholder="juan@email.com" />
+            <input v-model="cart.customer.email" type="email" placeholder="juan@email.com" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}" @input="validateEmail"/>
+            <small class="field-error" v-if="emailError">{{ emailError }}</small>
           </label>
           <label>Phone Number
-            <input v-model="cart.customer.phone" type="tel" placeholder="+63 9XX XXX XXXX" />
+            <input v-model="cart.customer.phone" type="tel" placeholder="09XX XXX XXXX" maxlength="11"@input="cart.customer.phone = cart.customer.phone.replace(/\D/g, '')"/>
+            <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11"> Phone number must be 11 digits</small>
           </label>
           <label>Delivery Address
             <textarea v-model="cart.customer.address" placeholder="House no., Street, Barangay, City" rows="3"></textarea>
+            <input v-model="cart.customer.date" type="date" :min="minDate"/>
           </label>
           <label>Delivery Date
             <input v-model="cart.customer.date" type="date" />
