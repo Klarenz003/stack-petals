@@ -951,3 +951,26 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   #circuit-canvas, #petal-canvas { display: none; }
 }
+
+/* ── Field Validation ───────────────────────────────────────── */
+.field-error {
+  color: #e74c3c;
+  font-size: 11px;
+  margin-top: -8px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+}
+input[type="date"] {
+  position: relative;
+}
+
+.co-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+}

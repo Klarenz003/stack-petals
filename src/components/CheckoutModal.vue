@@ -95,10 +95,9 @@ const minDate = computed(() => {
           </label>
           <label>Delivery Address
             <textarea v-model="cart.customer.address" placeholder="House no., Street, Barangay, City" rows="3"></textarea>
-            <input v-model="cart.customer.date" type="date" :min="minDate"/>
           </label>
           <label>Delivery Date
-            <input v-model="cart.customer.date" type="date" />
+            <input v-model="cart.customer.date" type="date" :min="minDate" @keydown.prevent/>
           </label>
           <label>Note (optional)
             <textarea v-model="cart.customer.note" placeholder="Any special requests?" rows="2"></textarea>
@@ -129,34 +128,23 @@ const minDate = computed(() => {
         </div>
 
         <div class="qr-container">
-          <div v-if="cart.paymentMethod === 'gcash'" class="qr-box">
-            <img
-              src="/images/gcash-qr.jpg"
-              alt="GCash QR"
-              @error="($event.target as HTMLImageElement).style.display = 'none'"
-            />
-            <div class="qr-placeholder">
+          <div class="qr-box" v-if="cart.paymentMethod === 'gcash'">
+            <img src="/images/gcash-qr.jpg" alt="GCash QR" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="qr-placeholder" style="display:none">
               <span>💙</span>
               <p>GCash QR Code</p>
-              <small>Replace with your actual GCash QR<br />(public/images/gcash-qr.jpg)</small>
+              <small>Replace with your actual GCash QR<br>(./images/gcash-qr.png)</small>
             </div>
           </div>
-          <div v-if="cart.paymentMethod === 'maya'" class="qr-box">
-            <img
-              src="/images/maya-qr.jpg"
-              alt="Maya QR"
-              @error="($event.target as HTMLImageElement).style.display = 'none'"
-            />
-            <div class="qr-placeholder">
+          <div class="qr-box" v-if="cart.paymentMethod === 'maya'">
+            <img src="/images/maya-qr.jpg" alt="Maya QR" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <div class="qr-placeholder" style="display:none">
               <span>💚</span>
               <p>Maya QR Code</p>
-              <small>Replace with your actual Maya QR<br />(public/images/maya-qr.jpg)</small>
+              <small>Replace with your actual Maya QR<br>(./images/maya-qr.png)</small>
             </div>
           </div>
-          <p class="qr-hint">
-            Scan the QR code using your {{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }} app,
-            then upload your screenshot below.
-          </p>
+          <p class="qr-hint">Scan the QR code using your {{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }} app, then upload your screenshot below.</p>
         </div>
 
         <!-- Upload proof -->

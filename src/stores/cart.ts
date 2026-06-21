@@ -1,7 +1,8 @@
 // src/stores/cart.ts
-import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep } from '@/types'
+
 
 export const useCartStore = defineStore('cart', () => {
   // ── State ──────────────────────────────────────────────────────
@@ -33,9 +34,15 @@ export const useCartStore = defineStore('cart', () => {
   })
 
   const customerValid = computed(() => {
-    const c = customer.value
-    return !!(c.name && c.email && c.phone && c.address && c.date)
-  })
+  const c = customer.value
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)
+  const phoneOk = c.phone.length === 11
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const minDate = tomorrow.toISOString().split('T')[0]
+  const dateOk = !!c.date && c.date >= minDate
+  return !!(c.name && emailOk && phoneOk && c.address && dateOk)
+})
 
   // ── Actions ────────────────────────────────────────────────────
   function addToCart(item: CartItem) {
