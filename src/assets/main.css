@@ -865,20 +865,31 @@ nav a.router-link-active::after {
 
 /* ── Gallery page ───────────────────────────────────────────── */
 
+.gallery-grid {
+  padding: 0 5%;
+  columns: 4;
+  column-gap: 16px;
+}
+
 .gallery-item {
   break-inside: avoid;
   margin-bottom: 16px;
   border-radius: 16px;
   overflow: hidden;
-
-  /* Safari fix — keeps border-radius composited during GPU transitions */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
   -webkit-mask-image: -webkit-radial-gradient(white, black);
-  will-change: transform;
 }
-.gallery-item img { width: 100%; display: block; transition: transform 0.3s ease; }
-.gallery-item:hover img { transform: scale(1.03); }
+
+.gallery-item img {
+  width: 100%;
+  display: block;
+  transition: transform 0.3s ease;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.03);
+}
 
 
 /* ── Reviews page ───────────────────────────────────────────── */
