@@ -13,7 +13,7 @@ const info: ContactInfo[] = [
 ]
 
 const formValid = computed(() =>
-  !!(form.value.name && form.value.email && form.value.message)
+  !!(form.value.name && form.value.email && form.value.message && !emailError.value)
 )
 
 /**
@@ -38,6 +38,20 @@ function sendMessage() {
 
   submitted.value = true
   form.value = { name: '', email: '', subject: '', message: '' }
+}
+
+
+const emailError = ref('')
+
+function validateEmail() {
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!form.value.email) {
+    emailError.value = ''
+    return
+  }
+  emailError.value = pattern.test(form.value.email)
+    ? ''
+    : 'Please enter a valid email address'
 }
 </script>
 
@@ -77,7 +91,8 @@ function sendMessage() {
               <input v-model="form.name" type="text" placeholder="Your name" />
             </label>
             <label>Email
-              <input v-model="form.email" type="email" placeholder="your@email.com" />
+              <input v-model="form.email" type="email" placeholder="your@email.com" @input="validateEmail" @blur="validateEmail"/>
+              <small class="field-error" v-if="emailError">{{ emailError }}</small>
             </label>
             <label>Subject
               <input v-model="form.subject" type="text" placeholder="What's this about?" />
