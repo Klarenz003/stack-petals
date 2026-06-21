@@ -8,7 +8,7 @@ const form = ref({ name: '', email: '', subject: '', message: '' })
 
 const info: ContactInfo[] = [
   { icon: '📍', label: 'Address',       value: 'Taytay, Rizal, Philippines' },
-  { icon: '📧', label: 'Email',          value: 'hello@stackpetals.com'                 },
+  { icon: '📧', label: 'Email',          value: 'stack.petals@gmail.com'                 },
   { icon: '📱', label: 'Phone / Viber',  value: '+63 962 270 3704'                      },
   { icon: '🕐', label: 'Business Hours', value: 'Mon–Sat, 8:00 AM – 7:00 PM'            },
 ]

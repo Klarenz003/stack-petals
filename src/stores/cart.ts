@@ -108,6 +108,27 @@ export const useCartStore = defineStore('cart', () => {
     })
 
     if (error) throw error
+
+    await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+  },
+  body: JSON.stringify({
+    order: {
+      customer_name:  customer.value.name,
+      email:          customer.value.email,
+      phone:          customer.value.phone,
+      address:        customer.value.address,
+      delivery_date:  customer.value.date,
+      note:           customer.value.note,
+      items:          cartItems.value,
+      total:          cartTotal.value,
+      payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
+    },
+  }),
+})
   }
 
   function finishCheckout() {
