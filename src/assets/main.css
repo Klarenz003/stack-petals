@@ -876,6 +876,7 @@ nav a.router-link-active::after {
   margin-bottom: 16px;
   border-radius: 16px;
   overflow: hidden;
+  mask-image: radial-gradient(white, black);
   -webkit-mask-image: -webkit-radial-gradient(white, black);
 }
 
