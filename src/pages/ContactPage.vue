@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { ContactInfo } from '@/types'
+import { supabase } from '@/supabaseClient'
 
 const submitted = ref(false)
 const form = ref({ name: '', email: '', subject: '', message: '' })
@@ -16,30 +17,24 @@ const formValid = computed(() =>
   !!(form.value.name && form.value.email && form.value.message && !emailError.value)
 )
 
-/**
- * sendMessage: currently persists to localStorage.
- * TODO: Replace with an API call to your Node.js/Express backend, e.g.:
- *   await api.post('/messages', form.value)
- */
-function sendMessage() {
+async function sendMessage() {
   if (!formValid.value) return
 
-  const msgs = JSON.parse(localStorage.getItem('sp_messages') || '[]')
-  msgs.unshift({
-    id:        `MSG-${Date.now()}`,
-    createdAt: new Date().toISOString(),
-    name:      form.value.name,
-    email:     form.value.email,
-    subject:   form.value.subject,
-    message:   form.value.message,
-    read:      false,
+  const { error } = await supabase.from('messages').insert({
+    name:    form.value.name,
+    email:   form.value.email,
+    subject: form.value.subject,
+    message: form.value.message,
   })
-  localStorage.setItem('sp_messages', JSON.stringify(msgs))
+
+  if (error) {
+    console.error('Failed to send message:', error.message)
+    return
+  }
 
   submitted.value = true
   form.value = { name: '', email: '', subject: '', message: '' }
 }
-
 
 const emailError = ref('')
 

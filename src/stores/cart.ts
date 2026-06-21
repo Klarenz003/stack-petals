@@ -1,4 +1,5 @@
 // src/stores/cart.ts
+import { supabase } from '@/supabaseClient'
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep } from '@/types'
@@ -77,41 +78,36 @@ export const useCartStore = defineStore('cart', () => {
     paymentProofPreview.value = null
   }
 
-  /**
-   * submitOrder: currently persists to localStorage.
-   * TODO: Replace localStorage.setItem calls with Supabase inserts once
-   * the Node.js/Express API is ready, e.g.:
-   *   await api.post('/orders', payload)
-   */
-  function submitOrder(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!paymentProof.value) { reject(new Error('No proof')); return }
 
-      confirmedTotal.value = cartTotal.value
+  async function submitOrder(): Promise<void> {
+    if (!paymentProof.value) throw new Error('No proof')
 
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const orders = JSON.parse(localStorage.getItem('sp_orders') || '[]')
-          orders.unshift({
-            id:            `ORD-${Date.now()}`,
-            createdAt:     new Date().toISOString(),
-            customer:      { ...customer.value },
-            items:         cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image })),
-            total:         cartTotal.value,
-            paymentMethod: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
-            proofImage:    (e.target as FileReader).result,
-            paymentStatus: 'Pending',
-            deliveryStatus:'Processing',
-          })
-          localStorage.setItem('sp_orders', JSON.stringify(orders))
-          resolve()
-        } catch (err) {
-          reject(err)
-        }
-      }
-      reader.readAsDataURL(paymentProof.value)
+    confirmedTotal.value = cartTotal.value
+
+    // 1. Upload payment proof to Supabase Storage
+    const fileName = `proof-${Date.now()}.jpg`
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('proofs')
+      .upload(fileName, paymentProof.value)
+
+    if (uploadError) throw uploadError
+
+    // 2. Insert order into Supabase
+    const { error } = await supabase.from('orders').insert({
+      customer_name:  customer.value.name,
+      email:          customer.value.email,
+      phone:          customer.value.phone,
+      address:        customer.value.address,
+      delivery_date:  customer.value.date,
+      note:           customer.value.note,
+      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image })),
+      total:          cartTotal.value,
+      payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
+      proof_url:      uploadData.path,
+      status:         'pending',
     })
+
+    if (error) throw error
   }
 
   function finishCheckout() {
