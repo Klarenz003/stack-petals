@@ -6,9 +6,9 @@ const submitted = ref(false)
 const form = ref({ name: '', email: '', subject: '', message: '' })
 
 const info: ContactInfo[] = [
-  { icon: '📍', label: 'Address',       value: 'Quezon City, Metro Manila, Philippines' },
+  { icon: '📍', label: 'Address',       value: 'Taytay, Rizal, Philippines' },
   { icon: '📧', label: 'Email',          value: 'hello@stackpetals.com'                 },
-  { icon: '📱', label: 'Phone / Viber',  value: '+63 9XX XXX XXXX'                      },
+  { icon: '📱', label: 'Phone / Viber',  value: '+63 962 270 3704'                      },
   { icon: '🕐', label: 'Business Hours', value: 'Mon–Sat, 8:00 AM – 7:00 PM'            },
 ]
 
@@ -62,9 +62,9 @@ function sendMessage() {
 
         <h2 style="margin-top:40px">Follow Us</h2>
         <div class="social-links">
-          <a href="#" class="social-btn">Facebook</a>
-          <a href="#" class="social-btn">Instagram</a>
-          <a href="#" class="social-btn">TikTok</a>
+          <a href="https://www.facebook.com/StackOverPetals" class="social-btn">Facebook</a>
+          <!-- <a href="#" class="social-btn">Instagram</a> -->
+          <!-- <a href="#" class="social-btn">TikTok</a> -->
         </div>
       </div>
 
