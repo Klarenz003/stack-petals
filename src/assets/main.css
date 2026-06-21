@@ -1022,6 +1022,27 @@ input[type="date"] {
   background: rgba(216, 165, 167, 0.8);
 }
 
+/* Code & Petals — custom cursor
+   Stack Petals website
+   Place SVG files in /public/cursors/ */
+
+:root {
+  --cursor-default: url('/cursors/cp-default.svg') 4 2, auto;
+  --cursor-pointer: url('/cursors/cp-pointer.svg') 4 2, pointer;
+  --cursor-loading: url('/cursors/cp-loading.svg') 16 16, wait;
+}
+
+* { cursor: var(--cursor-default); }
+
+a, button, [role="button"],
+label[for], select, summary {
+  cursor: var(--cursor-pointer);
+}
+
+.loading, [aria-busy="true"] {
+  cursor: var(--cursor-loading);
+}
+
 /* ── Responsive ─────────────────────────────────────────────── */
 
 @media (max-width: 992px) {
