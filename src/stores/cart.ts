@@ -47,6 +47,10 @@ export const useCartStore = defineStore('cart', () => {
 
   // ── Actions ────────────────────────────────────────────────────
   function addToCart(item: CartItem) {
+    if (!item.stock || item.stock === 0) {
+      alert('This item is out of stock')
+      return
+    }
     cartItems.value.push({ ...item })
   }
 
