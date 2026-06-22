@@ -5,6 +5,7 @@ import { ref, computed } from 'vue'
 const cart = useCartStore()
 const isShaking = ref(false)
 const emailError = ref('')
+const showPreview = ref(false)
 
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
@@ -153,49 +154,68 @@ function handleMemoryDrop(e: DragEvent) {
       <!-- STEP 3 — Love Letter -->
       <div v-if="cart.checkoutStep === 3" class="checkout-body">
         <h2>Add a Love Letter 💌</h2>
-        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Optional: Include a personalized love letter with your bouquet</p>
         
-        <div class="co-form">
-          <label>
-            <input v-model="cart.letterData.include" type="checkbox" />
-            Include a love letter with this bouquet
-          </label>
-        </div>
+        <label class="letter-checkbox">
+          <input v-model="cart.letterData.include" type="checkbox" />
+          <span>Include a personalized love letter</span>
+        </label>
 
         <div v-if="cart.letterData.include" class="letter-form">
-          <label>For (Recipient Name)
+          <label>For (Recipient)
             <input v-model="cart.letterData.recipientName" type="text" placeholder="Maria, Mom, My Love..." />
           </label>
 
-          <label>Main Message
-            <textarea v-model="cart.letterData.mainMessage" placeholder="Write your heartfelt message..." rows="4"></textarea>
+          <label>Your Message
+            <textarea v-model="cart.letterData.mainMessage" placeholder="Write something special..." rows="5"></textarea>
           </label>
 
-          <label>6 Petal Messages (short, one per petal)</label>
-          <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-input">
-            <input v-model="cart.letterData.petalMessages[i]" :placeholder="`Petal ${i + 1}...`" />
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <label style="margin: 0;">6 Petal Messages</label>
+            <button class="preview-btn" @click="showPreview = true">👁️ Preview Flower</button>
+          </div>
+          
+          <div style="display: grid; gap: 8px;">
+            <div v-for="(_, i) in cart.letterData.petalMessages" :key="i">
+              <input v-model="cart.letterData.petalMessages[i]" :placeholder="`Petal ${i + 1}...`" />
+            </div>
           </div>
 
-          <label style="margin-top: 20px;">Memories (Optional - upload up to 3 photos)</label>
-          <div class="upload-area" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
-            <input
-              ref="memoryInput"
-              type="file"
-              accept="image/*"
-              multiple
-              style="display:none"
-              @change="handleMemoryUpload"
-            />
-            <div v-if="cart.letterData.memories.length === 0" class="upload-placeholder">
-              <span>📸</span>
-              <p>Click or drag photos here (max 3)</p>
-            </div>
-            <div v-else class="memory-grid">
-              <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-preview">
-                <img :src="mem" :alt="`Memory ${idx + 1}`" />
-                <button class="remove-memory" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+          <label style="margin-top: 20px;">Memories (up to 3 photos)
+            <div class="upload-area" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
+              <input ref="memoryInput" type="file" accept="image/*" multiple style="display:none" @change="handleMemoryUpload" />
+              <div v-if="cart.letterData.memories.length === 0" class="upload-placeholder">
+                <span>📸</span>
+                <p>Click or drag photos</p>
+              </div>
+              <div v-else class="memory-grid">
+                <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-preview">
+                  <img :src="mem" :alt="`Memory ${idx + 1}`" />
+                  <button class="remove-memory" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+                </div>
               </div>
             </div>
+          </label>
+        </div>
+
+        <!-- Preview Modal -->
+        <div v-if="showPreview" class="preview-modal-overlay" @click="showPreview = false">
+          <div class="preview-modal" @click.stop>
+            <button class="preview-close" @click="showPreview = false">✕</button>
+            <h3>Preview Your Flower 🌸</h3>
+            
+            <div class="flower-preview">
+              <div class="petal petal-1">{{ cart.letterData.petalMessages[0] }}</div>
+              <div class="petal petal-2">{{ cart.letterData.petalMessages[1] }}</div>
+              <div class="petal petal-3">{{ cart.letterData.petalMessages[2] }}</div>
+              <div class="petal petal-4">{{ cart.letterData.petalMessages[3] }}</div>
+              <div class="petal petal-5">{{ cart.letterData.petalMessages[4] }}</div>
+              <div class="petal petal-6">{{ cart.letterData.petalMessages[5] }}</div>
+              <div class="center">💕</div>
+            </div>
+
+            <p style="text-align: center; margin-top: 20px; color: #666; font-size: 13px;">
+              Tap each petal in the letter to read the full message
+            </p>
           </div>
         </div>
 
@@ -204,6 +224,7 @@ function handleMemoryDrop(e: DragEvent) {
           <button class="co-btn-primary" @click="cart.checkoutStep = 4">Continue →</button>
         </div>
       </div>
+
 
       <!-- STEP 4 — Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
