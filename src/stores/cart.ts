@@ -31,6 +31,7 @@ export const useCartStore = defineStore('cart', () => {
     recipientName: '',
     mainMessage: '',
     petalMessages: ['', '', '', '', '', ''],
+    memories: [] as string[],
   })
 
   // ── Computed ───────────────────────────────────────────────────
@@ -153,12 +154,12 @@ export const useCartStore = defineStore('cart', () => {
     paymentProofPreview.value = null
     customer.value = { name: '', email: '', phone: '', address: '', date: '', note: '' }
 
-  // ── Love Letter ────────────────────────────────────────────────────────
     letterData.value = {
       include: false,
       recipientName: '',
       mainMessage: '',
       petalMessages: ['', '', '', '', '', ''],
+      memories: [],
     }
   }
 

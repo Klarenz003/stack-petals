@@ -39,6 +39,34 @@ const minDate = computed(() => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   return tomorrow.toISOString().split('T')[0]
 })
+
+function handleMemoryUpload(e: Event) {
+  const files = (e.target as HTMLInputElement).files
+  if (files) {
+    for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        cart.letterData.memories.push(event.target?.result as string)
+      }
+      reader.readAsDataURL(files[i])
+    }
+  }
+}
+
+function handleMemoryDrop(e: DragEvent) {
+  const files = e.dataTransfer?.files
+  if (files) {
+    for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
+      if (files[i].type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          cart.letterData.memories.push(event.target?.result as string)
+        }
+        reader.readAsDataURL(files[i])
+      }
+    }
+  }
+}
 </script>
 
 <template>
@@ -146,6 +174,28 @@ const minDate = computed(() => {
           <label>6 Petal Messages (short, one per petal)</label>
           <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-input">
             <input v-model="cart.letterData.petalMessages[i]" :placeholder="`Petal ${i + 1}...`" />
+          </div>
+
+          <label style="margin-top: 20px;">Memories (Optional - upload up to 3 photos)</label>
+          <div class="upload-area" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
+            <input
+              ref="memoryInput"
+              type="file"
+              accept="image/*"
+              multiple
+              style="display:none"
+              @change="handleMemoryUpload"
+            />
+            <div v-if="cart.letterData.memories.length === 0" class="upload-placeholder">
+              <span>📸</span>
+              <p>Click or drag photos here (max 3)</p>
+            </div>
+            <div v-else class="memory-grid">
+              <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-preview">
+                <img :src="mem" :alt="`Memory ${idx + 1}`" />
+                <button class="remove-memory" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+              </div>
+            </div>
           </div>
         </div>
 
