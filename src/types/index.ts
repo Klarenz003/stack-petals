@@ -75,4 +75,4 @@ export interface ContactInfo {
 }
 
 export type PaymentMethod = 'gcash' | 'maya'
-export type CheckoutStep = 0 | 1 | 2 | 3 | 4
+export type CheckoutStep = 0 | 1 | 2 | 3 | 4 | 5

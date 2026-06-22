@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
+import { ref, computed } from 'vue'
 
 const cart = useCartStore()
+const isShaking = ref(false)
+const emailError = ref('')
 
+// ── Functions ──────────────────────────────────────
 async function submitOrder() {
   await cart.submitOrder()
-  cart.checkoutStep = 4
+  cart.checkoutStep = 5
 }
 
 function handleProofUpload(e: Event) {
@@ -18,37 +22,32 @@ function handleDrop(e: DragEvent) {
   if (file && file.type.startsWith('image/')) cart.handleProofUpload(file)
 }
 
-import { ref, computed } from 'vue'
-
-const emailError = ref('')
-
 function validateEmail() {
   const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   emailError.value = pattern.test(cart.customer.email) ? '' : 'Please enter a valid email address'
 }
-
-const minDate = computed(() => {
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  return tomorrow.toISOString().split('T')[0]
-})
-
-const isShaking = ref(false)
 
 function shakeModal() {
   if (isShaking.value) return
   isShaking.value = true
   setTimeout(() => { isShaking.value = false }, 500)
 }
+
+// ── Computed ───────────────────────────────────────
+const minDate = computed(() => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toISOString().split('T')[0]
+})
 </script>
 
 <template>
   <div
-  v-if="cart.checkoutStep > 0"
-  class="checkout-overlay"
-  @click.self="shakeModal"
->
-  <div class="checkout-modal" :class="{ shake: isShaking }">
+    v-if="cart.checkoutStep > 0"
+    class="checkout-overlay"
+    @click.self="shakeModal"
+  >
+    <div class="checkout-modal" :class="{ shake: isShaking }">
 
       <!-- Step indicator -->
       <div class="checkout-steps">
@@ -61,10 +60,14 @@ function shakeModal() {
         </div>
         <div class="step-line" :class="{ done: cart.checkoutStep > 2 }"></div>
         <div class="step" :class="{ active: cart.checkoutStep >= 3, done: cart.checkoutStep > 3 }">
-          <span>3</span><small>Payment</small>
+          <span>3</span><small>Letter</small>
         </div>
         <div class="step-line" :class="{ done: cart.checkoutStep > 3 }"></div>
-        <div class="step" :class="{ active: cart.checkoutStep >= 4 }">
+        <div class="step" :class="{ active: cart.checkoutStep >= 4, done: cart.checkoutStep > 4 }">
+          <span>4</span><small>Payment</small>
+        </div>
+        <div class="step-line" :class="{ done: cart.checkoutStep > 4 }"></div>
+        <div class="step" :class="{ active: cart.checkoutStep >= 5 }">
           <span>✓</span><small>Done</small>
         </div>
       </div>
@@ -94,12 +97,12 @@ function shakeModal() {
             <input v-model="cart.customer.name" type="text" placeholder="Juan dela Cruz" />
           </label>
           <label>Email Address
-            <input v-model="cart.customer.email" type="email" placeholder="juan@email.com" pattern="[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}" @input="validateEmail"/>
+            <input v-model="cart.customer.email" type="email" placeholder="juan@email.com" @input="validateEmail"/>
             <small class="field-error" v-if="emailError">{{ emailError }}</small>
           </label>
           <label>Phone Number
-            <input v-model="cart.customer.phone" type="tel" placeholder="09XX XXX XXXX" maxlength="11"@input="cart.customer.phone = cart.customer.phone.replace(/\D/g, '')"/>
-            <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11"> Phone number must be 11 digits</small>
+            <input v-model="cart.customer.phone" type="tel" placeholder="09XX XXX XXXX" maxlength="11" @input="cart.customer.phone = cart.customer.phone.replace(/\D/g, '')"/>
+            <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11">Phone number must be 11 digits</small>
           </label>
           <label>Delivery Address
             <textarea v-model="cart.customer.address" placeholder="House no., Street, Barangay, City" rows="3"></textarea>
@@ -113,14 +116,47 @@ function shakeModal() {
         </div>
         <div class="co-actions">
           <button class="co-btn-outline" @click="cart.checkoutStep = 1">← Back</button>
-          <button class="co-btn-primary" @click="cart.goToPayment()" :disabled="!cart.customerValid">
+          <button class="co-btn-primary" @click="cart.checkoutStep = 3" :disabled="!cart.customerValid">
             Continue →
           </button>
         </div>
       </div>
 
-      <!-- STEP 3 — Payment -->
+      <!-- STEP 3 — Love Letter -->
       <div v-if="cart.checkoutStep === 3" class="checkout-body">
+        <h2>Add a Love Letter 💌</h2>
+        <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Optional: Include a personalized love letter with your bouquet</p>
+        
+        <div class="co-form">
+          <label>
+            <input v-model="cart.letterData.include" type="checkbox" />
+            Include a love letter with this bouquet
+          </label>
+        </div>
+
+        <div v-if="cart.letterData.include" class="letter-form">
+          <label>For (Recipient Name)
+            <input v-model="cart.letterData.recipientName" type="text" placeholder="Maria, Mom, My Love..." />
+          </label>
+
+          <label>Main Message
+            <textarea v-model="cart.letterData.mainMessage" placeholder="Write your heartfelt message..." rows="4"></textarea>
+          </label>
+
+          <label>6 Petal Messages (short, one per petal)</label>
+          <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-input">
+            <input v-model="cart.letterData.petalMessages[i]" :placeholder="`Petal ${i + 1}...`" />
+          </div>
+        </div>
+
+        <div class="co-actions">
+          <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
+          <button class="co-btn-primary" @click="cart.checkoutStep = 4">Continue →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4 — Payment -->
+      <div v-if="cart.checkoutStep === 4" class="checkout-body">
         <h2>Payment</h2>
         <p class="co-subtitle">Total to pay: <strong>{{ cart.cartTotal }}</strong></p>
 
@@ -180,15 +216,15 @@ function shakeModal() {
         </div>
 
         <div class="co-actions">
-          <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
+          <button class="co-btn-outline" @click="cart.checkoutStep = 3">← Back</button>
           <button class="co-btn-primary" @click="submitOrder" :disabled="!cart.paymentProof">
             Submit Order →
           </button>
         </div>
       </div>
 
-      <!-- STEP 4 — Confirmation -->
-      <div v-if="cart.checkoutStep === 4" class="checkout-body confirmation">
+      <!-- STEP 5 — Confirmation -->
+      <div v-if="cart.checkoutStep === 5" class="checkout-body confirmation">
         <div class="confirm-icon">🌸</div>
         <h2>Order Received!</h2>
         <p>Thank you, <strong>{{ cart.customer.name }}</strong>! Your order has been submitted successfully.</p>
@@ -204,7 +240,7 @@ function shakeModal() {
       </div>
 
       <!-- Close button (not shown on confirmation) -->
-      <button v-if="cart.checkoutStep < 4" class="checkout-close" @click="cart.closeCheckout()">✕</button>
+      <button v-if="cart.checkoutStep < 5" class="checkout-close" @click="cart.closeCheckout()">✕</button>
     </div>
   </div>
 </template>

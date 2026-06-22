@@ -1048,6 +1048,25 @@ label[for], select, summary {
 .loading, [aria-busy="true"] {
   cursor: var(--cursor-loading);
 }
+/* ── Letter Form ────────────────────────────────────────────── */
+.letter-form {
+  background: #faf8f7;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.petal-input {
+  margin-bottom: 12px;
+}
+
+.petal-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
 
 /* ── Responsive ─────────────────────────────────────────────── */
 

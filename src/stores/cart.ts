@@ -25,6 +25,14 @@ export const useCartStore = defineStore('cart', () => {
     note: '',
   })
 
+  // ── Love Letter ────────────────────────────────────────────────────────
+  const letterData = ref({
+    include: false,
+    recipientName: '',
+    mainMessage: '',
+    petalMessages: ['', '', '', '', '', ''],
+  })
+
   // ── Computed ───────────────────────────────────────────────────
   const cartTotal = computed(() => {
     const sum = cartItems.value.reduce((acc, item) => {
@@ -69,7 +77,7 @@ export const useCartStore = defineStore('cart', () => {
 
   function goToPayment() {
     if (!customerValid.value) return
-    checkoutStep.value = 3
+    checkoutStep.value = letterData.value.include ? 3 : 4
   }
 
   function handleProofUpload(file: File) {
@@ -144,12 +152,22 @@ export const useCartStore = defineStore('cart', () => {
     paymentProof.value = null
     paymentProofPreview.value = null
     customer.value = { name: '', email: '', phone: '', address: '', date: '', note: '' }
+
+  // ── Love Letter ────────────────────────────────────────────────────────
+    letterData.value = {
+      include: false,
+      recipientName: '',
+      mainMessage: '',
+      petalMessages: ['', '', '', '', '', ''],
+    }
   }
+
+
 
   return {
     // state
     cartItems, cartOpen, checkoutStep, confirmedTotal,
-    paymentMethod, paymentProof, paymentProofPreview, customer,
+    paymentMethod, paymentProof, paymentProofPreview, customer, letterData,
     // computed
     cartTotal, customerValid,
     // actions
