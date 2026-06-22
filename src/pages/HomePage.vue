@@ -1,21 +1,21 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
-import type { Product, Feature } from '@/types'
+import type { Feature } from '@/types'
 
 const router = useRouter()
+const products = useProductsStore()
+
+onMounted(() => {
+  products.fetchProducts()
+})
 
 const features: Feature[] = [
   { label: 'Engineered', sub: 'with Precision', icon: '/images/engineered-icon.png' },
   { label: 'Crafted',    sub: 'with Love',      icon: '/images/crafted-icon.png'    },
   { label: 'Delivered',  sub: 'with Care',      icon: '/images/delivered-icon.png'  },
-]
-
-const products: Product[] = [
-  { name: 'Blush Symphony', price: '₱5,000.00', image: '/images/b1.png' },
-  { name: 'Code & Petals',  price: '₱5,699.00', image: '/images/b2.png' },
-  { name: 'Pink Algorithm', price: '₱4,500.00', image: '/images/b3.png' },
-  { name: 'Lavender Logic', price: '₱5,399.00', image: '/images/b4.png' },
 ]
 </script>
 
@@ -48,7 +48,7 @@ const products: Product[] = [
     <section class="products" id="products">
       <h2>Featured Bouquets</h2>
       <div class="grid">
-        <ProductCard v-for="product in products" :key="product.name" :product="product" />
+        <ProductCard v-for="product in products.featuredProducts" :key="product.name" :product="product" />
       </div>
     </section>
   </div>

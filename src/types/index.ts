@@ -1,11 +1,14 @@
 // src/types/index.ts
 
 export interface Product {
+  id?: string
   name: string
   price: string
   image: string
   category?: string
   badge?: string | null
+  stock?: number
+  featured?: boolean
 }
 
 export interface CartItem extends Product {
