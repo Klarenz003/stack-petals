@@ -38,7 +38,7 @@ export const useCartStore = defineStore('cart', () => {
   const cartTotal = computed(() => {
     const sum = cartItems.value.reduce((acc, item) => {
       const numeric = parseFloat(item.price.replace(/[₱,]/g, ''))
-      return acc + (isNaN(numeric) ? 0 : numeric)
+      return acc + (isNaN(numeric) ? 0 : numeric) * item.quantity
     }, 0)
     return `₱${sum.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   })
@@ -55,13 +55,37 @@ export const useCartStore = defineStore('cart', () => {
 })
 
   // ── Actions ────────────────────────────────────────────────────
-  function addToCart(item: CartItem) {
-    if (!item.stock || item.stock === 0) {
-      alert('This item is out of stock')
+function addToCart(item: CartItem) {
+  if (!item.stock || item.stock === 0) {
+    alert('This item is out of stock')
+    return
+  }
+
+  const existing = cartItems.value.find(i => i.id === item.id)
+  if (existing) {
+    if (existing.quantity >= (item.stock ?? 0)) {
+      alert(`Only ${item.stock} available in stock`)
       return
     }
-    cartItems.value.push({ ...item })
+    existing.quantity++
+  } else {
+    cartItems.value.push({ ...item, quantity: 1 })
   }
+}
+
+function updateQuantity(index: number, delta: number) {
+  const item = cartItems.value[index]
+  const newQty = item.quantity + delta
+  if (newQty < 1) {
+    cartItems.value.splice(index, 1)
+    return
+  }
+  if (newQty > (item.stock ?? 0)) {
+    alert(`Only ${item.stock} available in stock`)
+    return
+  }
+  item.quantity = newQty
+}
 
   function removeFromCart(index: number) {
     cartItems.value.splice(index, 1)
@@ -93,15 +117,16 @@ export const useCartStore = defineStore('cart', () => {
 
 
   async function submitOrder(): Promise<void> {
-    if (!paymentProof.value) throw new Error('No proof')
+  if (!paymentProof.value) throw new Error('No proof')
 
     confirmedTotal.value = cartTotal.value
 
     // 1. Upload payment proof to Supabase Storage
     const fileName = `proof-${Date.now()}.jpg`
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('proofs')
-      .upload(fileName, paymentProof.value)
+    .from('proofs')
+    .upload(fileName, paymentProof.value)
+    if (uploadError) throw uploadError
 
     if (uploadError) throw uploadError
 
@@ -113,17 +138,32 @@ export const useCartStore = defineStore('cart', () => {
       address:        customer.value.address,
       delivery_date:  customer.value.date,
       note:           customer.value.note,
-      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image })),
+      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image, quantity: i.quantity })),
       total:          cartTotal.value,
       payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
       proof_url:      uploadData.path,
       status:         'pending',
     })
-
     if (error) throw error
 
-    // 3. Send email notifications
-    console.log('Calling edge function...')
+    // 3. Decrease stock for each item
+    for (const item of cartItems.value) {
+      if (!item.id) continue
+      const { data: product } = await supabase
+        .from('products')
+        .select('stock')
+        .eq('id', item.id)
+        .single()
+
+      if (product) {
+        await supabase
+          .from('products')
+          .update({ stock: Math.max(0, product.stock - item.quantity) })
+          .eq('id', item.id)
+      }
+    }
+
+    // 4. Send email notifications
     const emailRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
       method: 'POST',
       headers: {
@@ -166,15 +206,17 @@ export const useCartStore = defineStore('cart', () => {
 
 
   return {
-    // state
-    cartItems, cartOpen, checkoutStep, confirmedTotal,
-    paymentMethod, paymentProof, paymentProofPreview, customer, letterData,
-    // computed
-    cartTotal, customerValid,
-    // actions
-    addToCart, removeFromCart,
-    openCheckout, closeCheckout, goToPayment,
-    handleProofUpload, clearProof,
-    submitOrder, finishCheckout,
-  }
-})
+      // ── State ──────────────────────────────────────────────────────
+      cartItems, cartOpen, checkoutStep, confirmedTotal,
+      paymentMethod, paymentProof, paymentProofPreview, customer, letterData,
+
+      // ── Computed ───────────────────────────────────────────────────
+      cartTotal, customerValid,
+
+      // ── Actions ────────────────────────────────────────────────────
+      addToCart, removeFromCart, updateQuantity,
+      openCheckout, closeCheckout, goToPayment,
+      handleProofUpload, clearProof,
+      submitOrder, finishCheckout,
+    }
+  })

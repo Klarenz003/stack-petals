@@ -76,3 +76,14 @@ export interface ContactInfo {
 
 export type PaymentMethod = 'gcash' | 'maya'
 export type CheckoutStep = 0 | 1 | 2 | 3 | 4 | 5
+export interface CartItem {
+  id?: string
+  name: string
+  price: string
+  image: string
+  category?: string
+  badge?: string | null
+  stock?: number
+  featured?: boolean
+  quantity: number
+}
