@@ -14,8 +14,8 @@ const cart = useCartStore()
   <div v-for="(item, index) in cart.cartItems" :key="item.name" class="cart-item">
     <img :src="item.image" :alt="item.name" />
     <div class="cart-item-info">
-      <span class="cart-item-name">{{ item.name }}</span>
-      <span class="cart-item-price">{{ item.price }}</span>
+      <div class="cart-item-name">{{ item.name }}</div>
+      <div class="cart-item-price">{{ item.price }}</div>
       <div class="qty-controls">
         <button @click="cart.updateQuantity(index, -1)">−</button>
         <span>{{ item.quantity }}</span>

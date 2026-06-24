@@ -55,37 +55,47 @@ export const useCartStore = defineStore('cart', () => {
 })
 
   // ── Actions ────────────────────────────────────────────────────
-function addToCart(item: CartItem) {
-  if (!item.stock || item.stock === 0) {
-    alert('This item is out of stock')
-    return
+  const notification = ref<string | null>(null)
+  let notificationTimer: ReturnType<typeof setTimeout> | null = null
+
+  function showNotification(message: string) {
+    notification.value = message
+    if (notificationTimer) clearTimeout(notificationTimer)
+    notificationTimer = setTimeout(() => {
+      notification.value = null
+    }, 2500)
   }
 
-  const existing = cartItems.value.find(i => i.id === item.id)
-  if (existing) {
-    if (existing.quantity >= (item.stock ?? 0)) {
-      alert(`Only ${item.stock} available in stock`)
+  function addToCart(item: CartItem) {
+    if (!item.stock || item.stock === 0) {
+      showNotification('This item is out of stock')
       return
     }
-    existing.quantity++
-  } else {
-    cartItems.value.push({ ...item, quantity: 1 })
+    const existing = cartItems.value.find(i => i.id === item.id)
+    if (existing) {
+      if (existing.quantity >= (item.stock ?? 0)) {
+        showNotification(`Only ${item.stock} available in stock`)
+        return
+      }
+      existing.quantity++
+    } else {
+      cartItems.value.push({ ...item, quantity: 1 })
+    }
   }
-}
 
-function updateQuantity(index: number, delta: number) {
-  const item = cartItems.value[index]
-  const newQty = item.quantity + delta
-  if (newQty < 1) {
-    cartItems.value.splice(index, 1)
-    return
+  function updateQuantity(index: number, delta: number) {
+    const item = cartItems.value[index]
+    const newQty = item.quantity + delta
+    if (newQty < 1) {
+      cartItems.value.splice(index, 1)
+      return
+    }
+    if (newQty > (item.stock ?? 0)) {
+      showNotification(`Only ${item.stock} available in stock`)
+      return
+    }
+    item.quantity = newQty
   }
-  if (newQty > (item.stock ?? 0)) {
-    alert(`Only ${item.stock} available in stock`)
-    return
-  }
-  item.quantity = newQty
-}
 
   function removeFromCart(index: number) {
     cartItems.value.splice(index, 1)
@@ -217,6 +227,6 @@ function updateQuantity(index: number, delta: number) {
       addToCart, removeFromCart, updateQuantity,
       openCheckout, closeCheckout, goToPayment,
       handleProofUpload, clearProof,
-      submitOrder, finishCheckout,
+      submitOrder, finishCheckout, notification
     }
   })

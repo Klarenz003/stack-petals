@@ -10,6 +10,7 @@ import TheFooter from '@/components/TheFooter.vue'
 import CartSidebar from '@/components/CartSidebar.vue'
 import CheckoutModal from '@/components/CheckoutModal.vue'
 import BouquetPreviewModal from '@/components/BouquetPreviewModal.vue'
+import CartNotification from '@/components/CartNotification.vue'
 
 useCanvas()
 
@@ -43,6 +44,7 @@ watch(
 
   <CartSidebar />
   <CheckoutModal />
+  <CartNotification />
   <TheHeader />
 
   <!-- Page slide transition -->
