@@ -159,18 +159,11 @@ export const useCartStore = defineStore('cart', () => {
     // 3. Decrease stock for each item
     for (const item of cartItems.value) {
       if (!item.id) continue
-      const { data: product } = await supabase
-        .from('products')
-        .select('stock')
-        .eq('id', item.id)
-        .single()
-
-      if (product) {
-        await supabase
-          .from('products')
-          .update({ stock: Math.max(0, product.stock - item.quantity) })
-          .eq('id', item.id)
-      }
+      const { error: stockError } = await supabase.rpc('decrement_stock', {
+        p_id: item.id,
+        p_qty: item.quantity,
+      })
+      if (stockError) console.error('Stock update failed for', item.id, stockError)
     }
 
     // 4. Send email notifications

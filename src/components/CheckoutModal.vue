@@ -34,6 +34,11 @@ function shakeModal() {
   setTimeout(() => { isShaking.value = false }, 500)
 }
 
+function handleDone() {
+  cart.finishCheckout()
+  window.location.reload()
+}
+
 // ── Computed ───────────────────────────────────────
 const minDate = computed(() => {
   const tomorrow = new Date()
@@ -357,7 +362,7 @@ function handleMemoryDrop(e: DragEvent) {
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>
         </div>
         <p class="confirm-note">We'll review your payment and confirm your order within 24 hours. 🌷</p>
-        <button class="co-btn-primary" @click="cart.finishCheckout()">Done</button>
+        <button class="co-btn-primary" @click="handleDone">Done</button>
       </div>
 
       <!-- Close button (not shown on confirmation) -->
