@@ -50,7 +50,7 @@ const team: TeamMember[] = [
         </p>
         <p>
           It really strikes a great balance between your engineering background and the magical 
-          user experience of the QR code. Let me know if you need any tweaks to the wording before you publish it!
+          user experience of the QR code.
         </p>
       </div>
     </div>
