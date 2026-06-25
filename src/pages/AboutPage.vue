@@ -4,7 +4,6 @@ import type { TeamMember } from '@/types'
 const values = [
   { icon: '🌸', title: 'Precision',      desc: 'Every stem placed with purpose, like a function with a clear return value.' },
   { icon: '✨', title: 'Lasting Beauty', desc: 'Handcrafted bouquets designed to stay beautiful for years, not days.'        },
-  { icon: '📦', title: 'Reliability',    desc: 'On-time delivery, every time. No bugs, no delays.'                           },
   { icon: '💛', title: 'Heart',          desc: 'Each bouquet carries the warmth of genuine human craftsmanship.'             },
 ]
 
@@ -20,7 +19,7 @@ const team: TeamMember[] = [
   <div class="page-section">
     <div class="page-hero">
       <h1>About <span>Stack Petals</span></h1>
-      <p>Where engineering meets artistry — and every petal tells a story.</p>
+      <p>Where engineering meets artistry. Every petal tells a story.</p>
     </div>
 
     <div class="about-grid">
@@ -30,18 +29,28 @@ const team: TeamMember[] = [
       <div class="about-text">
         <h2>Our Story</h2>
         <p>
-          Stack Petals was born at the intersection of two passions — software engineering and
-          the art of floral design. Founded in 2024, we believe that the same precision and care
-          that goes into building beautiful software can be applied to crafting breathtaking bouquets.
+          In May 2026, computer engineer Klarenz Evasco set out to build 
+          something that combined his love for programming with his passion 
+          for hands-on crafting. Guided by a strong vision for success and a 
+          prayer to build a meaningful future, he designed and coded Stack Petals 
+          from the ground up to redefine how we express affection.
         </p>
         <p>
-          Every arrangement we create is like a piece of code: thoughtfully structured, elegantly
-          composed, and built to last — or in this case, to bloom.
+          Our products are entirely unique because they aren't just about the flowers. 
+          Each handcrafted arrangement acts as a gateway to a digital experience. 
+          Embedded with a custom QR code, our bouquets allow recipients to scan and 
+          instantly unlock a heartfelt virtual message alongside an interactive 360-degree 
+          view of their bouquet. Every piece is thoughtfully structured, elegantly composed, 
+          and engineered to connect people in a modern world.
         </p>
         <h2 style="margin-top:32px">Our Mission</h2>
         <p>
-          To deliver premium, handcrafted bouquets that combine technical precision with heartfelt
-          creativity — making every occasion unforgettable.
+          To revolutionize traditional gifting by embedding interactive technology into 
+          artisan floral design, creating seamless, memorable, and high-tech expressions of love.
+        </p>
+        <p>
+          It really strikes a great balance between your engineering background and the magical 
+          user experience of the QR code. Let me know if you need any tweaks to the wording before you publish it!
         </p>
       </div>
     </div>
