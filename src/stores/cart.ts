@@ -127,17 +127,15 @@ export const useCartStore = defineStore('cart', () => {
 
 
   async function submitOrder(): Promise<void> {
-  if (!paymentProof.value) throw new Error('No proof')
+    if (!paymentProof.value) throw new Error('No proof')
 
     confirmedTotal.value = cartTotal.value
 
     // 1. Upload payment proof to Supabase Storage
     const fileName = `proof-${Date.now()}.jpg`
     const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('proofs')
-    .upload(fileName, paymentProof.value)
-    if (uploadError) throw uploadError
-
+      .from('proofs')
+      .upload(fileName, paymentProof.value)
     if (uploadError) throw uploadError
 
     // 2. Insert order into Supabase
@@ -166,7 +164,35 @@ export const useCartStore = defineStore('cart', () => {
       if (stockError) console.error('Stock update failed for', item.id, stockError)
     }
 
-    // 4. Send email notifications
+    // 4. Save letter draft if included
+    if (letterData.value.include) {
+      // Get the order we just created
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('email', customer.value.email)
+          .eq('proof_url', uploadData.path)
+          .single()
+
+        console.log('Order data:', orderData)
+
+        if (orderData) {
+          const { error: letterError } = await supabase.from('letters').insert({
+            order_id:       orderData.id,
+            recipient:      letterData.value.recipientName,
+            sender:         customer.value.name,
+            message:        letterData.value.mainMessage,
+            petal_messages: letterData.value.petalMessages,
+            memories:       letterData.value.memories,
+            angle_photos:   [],
+            published:      false,
+            template:       'love',
+          })
+          console.log('Letter error:', letterError)
+        }
+      }
+
+    // 5. Send email notifications
     const emailRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
       method: 'POST',
       headers: {
