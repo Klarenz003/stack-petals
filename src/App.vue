@@ -35,9 +35,6 @@ watch(
   <canvas id="circuit-canvas"></canvas>
   <canvas id="petal-canvas"></canvas>
 
-  <NavBar v-if="!$route.meta.hideNav" />
-  <RouterView />
-
   <button class="cart-btn" @click="cart.cartOpen = true" title="View Cart">
     <img src="/images/cart-icon.png" alt="Cart" width="28" height="28" />
     <span v-if="cart.cartItems.length > 0" class="cart-count">
@@ -48,7 +45,7 @@ watch(
   <CartSidebar />
   <CheckoutModal />
   <CartNotification />
-  <TheHeader />
+  <TheHeader v-if="!$route.meta.hideNav" />
 
   <!-- Page slide transition -->
   <RouterView v-slot="{ Component }">
