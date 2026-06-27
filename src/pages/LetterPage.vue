@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -29,6 +29,7 @@ const currentAngle = ref(0)
 const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
+const show360 = ref(false)
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -388,34 +389,23 @@ onUnmounted(() => {
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <h2 class="letter-title">Your bouquet<br><em>in 360°</em></h2>
-          <p class="letter-sub" style="margin-bottom: 20px;">Drag left or right to rotate</p>
+          <h2 class="letter-title">Your bouquet<br><em>up close</em></h2>
+          <div class="letter-divider"><span></span>✦<span></span></div>
 
-            <div
-              v-if="letter.angle_photos && letter.angle_photos.length > 0"
-              class="viewer-360"
-              @mousedown.stop="on360Start"
-              @mousemove.stop="on360Move"
-              @mouseup.stop="on360End"
-              @mouseleave="on360End"
-              @touchstart.stop="on360Start"
-              @touchmove.stop="on360Move"
-              @touchend.stop="on360End"
-            >
+          <div v-if="letter.angle_photos && letter.angle_photos.length > 0" class="bouquet-preview">
             <img
-              :src="letter.angle_photos[currentAngle]"
-              :alt="`Angle ${currentAngle + 1}`"
-              class="angle-photo"
-              draggable="false"
+              :src="letter.angle_photos[0]"
+              alt="Your bouquet"
+              class="bouquet-main-photo"
             />
-            <div class="viewer-hint">
-              <span>←</span> drag to rotate <span>→</span>
-            </div>
+            <button class="btn-360" @click="show360 = true">
+              ✦ View in 360°
+            </button>
           </div>
 
           <div v-else class="no-photos">
             <p>🌸</p>
-            <p class="letter-sub">360° view coming soon</p>
+            <p class="letter-sub">Photos coming soon</p>
           </div>
 
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -424,6 +414,39 @@ onUnmounted(() => {
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
         </div>
       </div>
+
+      <!-- ── 360° Full Screen Viewer ────────────────────────────────────── -->
+      <Teleport to="body">
+        <div v-if="show360" class="viewer-fullscreen">
+          <button class="viewer-close" @click="show360 = false">✕</button>
+
+          <div class="viewer-header">
+            <p class="viewer-hint">← drag to rotate →</p>
+          </div>
+
+          <div
+            class="viewer-360-full"
+            @mousedown.stop="on360Start"
+            @mousemove.stop="on360Move"
+            @mouseup.stop="on360End"
+            @mouseleave="on360End"
+            @touchstart.stop.prevent="on360Start"
+            @touchmove.stop.prevent="on360Move"
+            @touchend.stop="on360End"
+          >
+            <img
+              :src="letter!.angle_photos[currentAngle]"
+              :alt="`Angle ${currentAngle + 1}`"
+              class="angle-photo-full"
+              draggable="false"
+            />
+          </div>
+
+          <div class="viewer-footer">
+            <p class="viewer-frame">{{ currentAngle + 1 }} / {{ letter!.angle_photos.length }}</p>
+          </div>
+        </div>
+      </Teleport>
 
       <!-- ── SCREEN 7 — Final Quote ─────────────────────────────── -->
       <div
@@ -979,5 +1002,130 @@ onUnmounted(() => {
   pointer-events: none;
   border-radius: 16px;
   transition: opacity 0.05s ease; /* ultra fast = smooth feel */
+}
+
+/* ── Bouquet Preview ──────────────────────────────────────────────── */
+.bouquet-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 300px;
+}
+
+.bouquet-main-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.btn-360 {
+  margin-top: 16px;
+  padding: 12px 32px;
+  background: white;
+  color: #D4687A;
+  border: 1.5px solid #E8B4C0;
+  border-radius: 28px;
+  font-family: 'Lora', serif;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.btn-360:hover {
+  background: #FFF0F3;
+  border-color: #D4687A;
+}
+
+/* ── 360° Full Screen Viewer ──────────────────────────────────────── */
+.viewer-fullscreen {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+}
+
+.viewer-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid #E8B4C0;
+  color: #D4687A;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  box-shadow: 0 2px 12px rgba(212, 104, 122, 0.15);
+  transition: all 0.2s;
+}
+
+.viewer-close:hover {
+  background: #FFF0F3;
+  transform: scale(1.05);
+}
+
+.viewer-header {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.viewer-hint {
+  font-family: 'Lora', serif;
+  font-size: 13px;
+  color: #B08090;
+  font-style: italic;
+  margin: 0;
+}
+
+.viewer-360-full {
+  width: 90vw;
+  max-width: 500px;
+  aspect-ratio: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewer-360-full:active {
+  cursor: grabbing;
+}
+
+.angle-photo-full {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viewer-footer {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.viewer-frame {
+  font-family: 'Lora', serif;
+  font-size: 12px;
+  color: #B08090;
+  font-style: italic;
+  margin: 0;
+  letter-spacing: 1px;
 }
 </style>
