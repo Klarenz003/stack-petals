@@ -57,13 +57,15 @@ watch(
         @close="preview.close()"
       />
     </Transition>
+  </template>
 
-  <!-- Page slide transition -->
+  <!-- Always rendered -->
   <RouterView v-slot="{ Component }">
     <Transition :name="transitionName" mode="out-in">
       <component :is="Component" :key="route.name" />
     </Transition>
   </RouterView>
-  <TheFooter />
-  </template>
+
+  <!-- Footer only on non-letter pages -->
+  <TheFooter v-if="!isLetterPage" />
 </template>
