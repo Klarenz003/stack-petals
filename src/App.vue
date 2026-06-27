@@ -58,13 +58,12 @@ watch(
       />
     </Transition>
 
-    <TheFooter />
-  </template>
-
   <!-- Page slide transition -->
   <RouterView v-slot="{ Component }">
     <Transition :name="transitionName" mode="out-in">
       <component :is="Component" :key="route.name" />
     </Transition>
   </RouterView>
+  <TheFooter />
+  </template>
 </template>
