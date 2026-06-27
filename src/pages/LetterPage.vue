@@ -27,7 +27,6 @@ const notFound = ref(false)
 const currentScreen = ref(0)
 const revealedPetals = ref<boolean[]>([false, false, false, false, false, false])
 const currentMemory = ref(0)
-const currentAngle = ref(0)
 const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
@@ -195,7 +194,6 @@ function applyVideoMomentum() {
   }
 
 // ── Lifecycle ──────────────────────────────────────────────────────
-// ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => loadLetter())
 
 watch(() => letter.value?.angle_video, (video) => {
@@ -205,7 +203,6 @@ watch(() => letter.value?.angle_video, (video) => {
 
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
-  if (animationFrame) cancelAnimationFrame(animationFrame)
 })
 </script>
 
