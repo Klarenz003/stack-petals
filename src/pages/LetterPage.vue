@@ -149,7 +149,7 @@ function on360Move(e: MouseEvent | TouchEvent) {
   lastX = x
 
   const video = videoRef.value
-  const scrubAmount = (diff / window.innerWidth) * video.duration * 2
+  const scrubAmount = (diff / window.innerWidth) * video.duration * 3 // ← increase multiplier
   video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
 }
 
@@ -203,6 +203,15 @@ watch(() => letter.value?.angle_video, (video) => {
 
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
+})
+
+watch(() => currentScreen.value, (screen) => {
+  if (screen === 5 && videoRef.value) {
+    videoRef.value.load()
+    videoRef.value.play().then(() => {
+      videoRef.value?.pause()
+    })
+  }
 })
 </script>
 
