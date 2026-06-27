@@ -140,19 +140,6 @@ function on360Start(e: MouseEvent | TouchEvent) {
   if (videoRef.value) videoRef.value.pause()
 }
 
-function on360Move(e: MouseEvent | TouchEvent) {
-  if (!isDragging360 || !videoRef.value || !videoReady.value) return
-  e.stopPropagation()
-  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
-  const diff = lastX - x
-  velocity = diff
-  lastX = x
-
-  const video = videoRef.value
-  const scrubAmount = (diff / window.innerWidth) * video.duration * 3 // ← increase multiplier
-  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
-}
-
 function on360End() {
   isDragging360 = false
   // Momentum
@@ -169,6 +156,31 @@ function applyVideoMomentum() {
   video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
   velocity *= 0.85
   requestAnimationFrame(applyVideoMomentum)
+}
+
+// Canvas-based scrubbing = much smoother on desktop
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+const videoEl = ref<HTMLVideoElement | null>(null)
+
+function drawFrame() {
+  const canvas = canvasRef.value
+  const video = videoEl.value
+  if (!canvas || !video) return
+  const ctx = canvas.getContext('2d')
+  ctx?.drawImage(video, 0, 0, canvas.width, canvas.height)
+}
+
+function on360Move(e: MouseEvent | TouchEvent) {
+  if (!isDragging360 || !videoEl.value || !videoReady.value) return
+  e.stopPropagation()
+  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
+  const diff = lastX - x
+  velocity = diff
+  lastX = x
+
+  const video = videoEl.value
+  const scrubAmount = (diff / window.innerWidth) * video.duration * 3
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
 }
 
 // ── Background ─────────────────────────────────────────────────────
@@ -475,14 +487,23 @@ watch(() => currentScreen.value, (screen) => {
             @touchmove.stop.prevent="on360Move"
             @touchend.stop="on360End"
           >
+            <!-- Hidden video for scrubbing -->
             <video
-              ref="videoRef"
+              ref="videoEl"
               :src="letter!.angle_video"
-              class="angle-video-full"
+              class="hidden-video"
               preload="auto"
               muted
               playsinline
               @loadedmetadata="videoReady = true"
+              @seeked="drawFrame"
+            />
+            <!-- Canvas displays the frames -->
+            <canvas
+              ref="canvasRef"
+              class="angle-canvas"
+              width="800"
+              height="800"
             />
           </div>
         </div>
@@ -1181,6 +1202,17 @@ watch(() => currentScreen.value, (screen) => {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
+  mix-blend-mode: multiply;
+}
+
+.hidden-video {
+  display: none;
+}
+
+.angle-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   mix-blend-mode: multiply;
 }
 
