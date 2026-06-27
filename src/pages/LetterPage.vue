@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
+
 
 // ── Types ──────────────────────────────────────────────────────────
 interface Letter {
@@ -124,57 +125,103 @@ function startMemoryTimer() {
   }, 3000)
 }
 
-// ── 360° Drag ─────────────────────────────────────────────────────
-let angleStartX = 0
+// ── 360° Drag (smooth with momentum) ──────────────────────────────
 let isDragging360 = false
+let lastX = 0
+let velocity = 0
+let animationFrame: number | null = null
+let accumulatedDelta = 0
+const SENSITIVITY = 0.3 // lower = slower, higher = faster
 
 function on360Start(e: MouseEvent | TouchEvent) {
   isDragging360 = true
-  angleStartX = 'touches' in e ? e.touches[0].clientX : e.clientX
+  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
+  lastX = x
+  velocity = 0
+  accumulatedDelta = 0
+  if (animationFrame) {
+    cancelAnimationFrame(animationFrame)
+    animationFrame = null
+  }
 }
 
 function on360Move(e: MouseEvent | TouchEvent) {
   if (!isDragging360 || !letter.value) return
-  e.stopPropagation() // ← prevents triggering page swipe
+  e.stopPropagation()
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX
-  const diff = angleStartX - x
-  if (Math.abs(diff) > 5) { // ← lower threshold = faster response
-    const total = letter.value.angle_photos.length
-    if (diff > 0) {
-      currentAngle.value = (currentAngle.value + 1) % total
-    } else {
-      currentAngle.value = (currentAngle.value - 1 + total) % total
-    }
-    angleStartX = x // ← reset each step for continuous smooth drag
+  const diff = lastX - x
+  velocity = diff
+  accumulatedDelta += diff * SENSITIVITY
+  lastX = x
+
+  const total = letter.value.angle_photos.length
+  const steps = Math.round(accumulatedDelta)
+  if (Math.abs(steps) >= 1) {
+    currentAngle.value = ((currentAngle.value + steps) % total + total) % total
+    accumulatedDelta -= steps
   }
 }
 
 function on360End() {
   isDragging360 = false
+  // Momentum after release
+  applyMomentum()
+}
+
+function applyMomentum() {
+  if (!letter.value) return
+  if (Math.abs(velocity) < 0.5) {
+    velocity = 0
+    return
+  }
+  const total = letter.value.angle_photos.length
+  accumulatedDelta += velocity * SENSITIVITY
+  const steps = Math.round(accumulatedDelta)
+  if (Math.abs(steps) >= 1) {
+    currentAngle.value = ((currentAngle.value + steps) % total + total) % total
+    accumulatedDelta -= steps
+  }
+  velocity *= 0.85 // friction — higher = slides longer
+  animationFrame = requestAnimationFrame(applyMomentum)
 }
 
 // ── Background ─────────────────────────────────────────────────────
-function screenBg(screenKey: string): string {
-  const custom = letter.value?.backgrounds?.[screenKey]
-  if (custom) return `url(${custom})`
-  const gradients: Record<string, string> = {
-    screen1: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-    screen2: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-    screen3: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-    screen4: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-    screen5: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-    screen6: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-    screen7: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-    screen8: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-    screen9: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+  function screenBg(screenKey: string): string {
+    const custom = letter.value?.backgrounds?.[screenKey]
+    const gradients: Record<string, string> = {
+      screen1: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+      screen2: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
+      screen3: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+      screen4: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
+      screen5: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+      screen6: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
+      screen7: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+      screen8: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
+      screen9: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
+    }
+    const gradient = gradients[screenKey] || gradients.screen1
+    if (custom) {
+      // Layer: gradient on top (semi-transparent) + custom image below
+      return `${gradient}, url(${custom})`
+    }
+    return gradient
   }
-  return gradients[screenKey] || gradients.screen1
-}
 
 // ── Lifecycle ──────────────────────────────────────────────────────
+// ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => loadLetter())
+
+watch(() => letter.value?.angle_photos, (photos) => {
+  if (!photos || photos.length === 0) return
+  photos.forEach(src => {
+    const img = new Image()
+    img.src = src
+  })
+}, { immediate: true })
+
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
+  if (animationFrame) cancelAnimationFrame(animationFrame)
 })
 </script>
 
@@ -545,11 +592,19 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-size: cover;
-  background-position: center;
+  background-size: cover, cover;
+  background-position: center, center;
+  background-blend-mode: multiply;
   position: relative;
   overflow-y: auto;
   padding: 60px 0 80px;
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: overlay;
+}
+
+.letter-screen:has(.bouquet-preview) {
+  overflow: hidden;
 }
 
 /* ── Content ──────────────────────────────────────────────────────── */
@@ -991,6 +1046,8 @@ onUnmounted(() => {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
+  will-change: contents;
+  image-rendering: auto;
 }
 
 .viewer-footer {
