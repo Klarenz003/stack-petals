@@ -187,27 +187,25 @@ function applyMomentum() {
 
 // ── Background ─────────────────────────────────────────────────────
   function screenBg(screenKey: string): string {
-    const custom = letter.value?.backgrounds?.[screenKey]
-    const gradients: Record<string, string> = {
-      screen1: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-      screen2: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-      screen3: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-      screen4: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-      screen5: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-      screen6: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-      screen7: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-      screen8: 'linear-gradient(160deg, #FFF5F7 0%, #FFEDF2 100%)',
-      screen9: 'linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%)',
-    }
-    const gradient = gradients[screenKey] || gradients.screen1
-    if (custom) {
-      // Layer: gradient on top (semi-transparent) + custom image below
-      return `${gradient}, url(${custom})`
-    }
-    return gradient
+  const custom = letter.value?.backgrounds?.[screenKey]
+  const gradients: Record<string, string> = {
+    screen1: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
+    screen2: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
+    screen3: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
+    screen4: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
+    screen5: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
+    screen6: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
+    screen7: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
+    screen8: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
+    screen9: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
   }
+  const gradient = gradients[screenKey] || gradients.screen1
+  if (custom) {
+    return `linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(${custom})`
+  }
+  return gradient
+}
 
-// ── Lifecycle ──────────────────────────────────────────────────────
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => loadLetter())
 
