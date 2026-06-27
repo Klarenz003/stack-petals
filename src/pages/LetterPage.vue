@@ -66,21 +66,35 @@ function goToScreen(n: number) {
   currentScreen.value = n
 }
 
-// ── Touch / Swipe ──────────────────────────────────────────────────
+// ── Touch / Swipe (page navigation) ───────────────────────────────
+let swipeStartX = 0
+let swipeStartY = 0
+let isSwiping = false
+
 function onTouchStart(e: TouchEvent) {
-  dragStartX.value = e.touches[0].clientX
+  // Don't start page swipe if touching the 360 viewer
+  const target = e.target as HTMLElement
+  if (target.closest('.viewer-360')) return
+  swipeStartX = e.touches[0].clientX
+  swipeStartY = e.touches[0].clientY
+  isSwiping = true
 }
 
 function onTouchEnd(e: TouchEvent) {
-  const diff = dragStartX.value - e.changedTouches[0].clientX
-  if (Math.abs(diff) > 50) {
-    if (diff > 0) nextScreen()
+  if (!isSwiping) return
+  isSwiping = false
+  const diffX = swipeStartX - e.changedTouches[0].clientX
+  const diffY = Math.abs(swipeStartY - e.changedTouches[0].clientY)
+  // Only swipe page if horizontal movement is dominant and large enough
+  if (Math.abs(diffX) > 80 && Math.abs(diffX) > diffY * 2) {
+    if (diffX > 0) nextScreen()
     else prevScreen()
   }
 }
 
-// ── Mouse drag (desktop) ───────────────────────────────────────────
 function onMouseDown(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.closest('.viewer-360')) return
   isDragging.value = true
   dragStartX.value = e.clientX
 }
@@ -89,7 +103,7 @@ function onMouseUp(e: MouseEvent) {
   if (!isDragging.value) return
   isDragging.value = false
   const diff = dragStartX.value - e.clientX
-  if (Math.abs(diff) > 50) {
+  if (Math.abs(diff) > 80) {
     if (diff > 0) nextScreen()
     else prevScreen()
   }
@@ -120,16 +134,17 @@ function on360Start(e: MouseEvent | TouchEvent) {
 
 function on360Move(e: MouseEvent | TouchEvent) {
   if (!isDragging360 || !letter.value) return
+  e.stopPropagation() // ← prevents triggering page swipe
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX
   const diff = angleStartX - x
-  if (Math.abs(diff) > 15) {
+  if (Math.abs(diff) > 5) { // ← lower threshold = faster response
     const total = letter.value.angle_photos.length
     if (diff > 0) {
       currentAngle.value = (currentAngle.value + 1) % total
     } else {
       currentAngle.value = (currentAngle.value - 1 + total) % total
     }
-    angleStartX = x
+    angleStartX = x // ← reset each step for continuous smooth drag
   }
 }
 
@@ -376,17 +391,17 @@ onUnmounted(() => {
           <h2 class="letter-title">Your bouquet<br><em>in 360°</em></h2>
           <p class="letter-sub" style="margin-bottom: 20px;">Drag left or right to rotate</p>
 
-          <div
-            v-if="letter.angle_photos && letter.angle_photos.length > 0"
-            class="viewer-360"
-            @mousedown="on360Start"
-            @mousemove="on360Move"
-            @mouseup="on360End"
-            @mouseleave="on360End"
-            @touchstart="on360Start"
-            @touchmove="on360Move"
-            @touchend="on360End"
-          >
+            <div
+              v-if="letter.angle_photos && letter.angle_photos.length > 0"
+              class="viewer-360"
+              @mousedown.stop="on360Start"
+              @mousemove.stop="on360Move"
+              @mouseup.stop="on360End"
+              @mouseleave="on360End"
+              @touchstart.stop="on360Start"
+              @touchmove.stop="on360Move"
+              @touchend.stop="on360End"
+            >
             <img
               :src="letter.angle_photos[currentAngle]"
               :alt="`Angle ${currentAngle + 1}`"
@@ -955,5 +970,14 @@ onUnmounted(() => {
 .letter-not-found p {
   font-style: italic;
   color: #B08090;
+}
+
+.angle-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+  border-radius: 16px;
+  transition: opacity 0.05s ease; /* ultra fast = smooth feel */
 }
 </style>
