@@ -30,7 +30,6 @@ const router = createRouter({
     { path: '/gallery',  name: 'gallery',   component: GalleryPage  },
     { path: '/reviews',  name: 'reviews',   component: ReviewsPage  },
     { path: '/contact',  name: 'contact',   component: ContactPage  },
-    { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue') },
     { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

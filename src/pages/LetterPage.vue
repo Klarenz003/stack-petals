@@ -13,6 +13,7 @@ interface Letter {
   petal_messages: string[]
   memories: string[]
   angle_photos: string[]
+  angle_video: string
   backgrounds: Record<string, string | null>
   published: boolean
   template: string
@@ -54,6 +55,13 @@ async function loadLetter() {
   loading.value = false
   startMemoryTimer()
 }
+
+// ── Video 360° ─────────────────────────────────────────────────────
+const videoRef = ref<HTMLVideoElement | null>(null)
+const videoReady = ref(false)
+let lastX = 0
+let isDragging360 = false
+let velocity = 0
 
 // ── Navigation ─────────────────────────────────────────────────────
 function nextScreen() {
@@ -125,64 +133,43 @@ function startMemoryTimer() {
   }, 3000)
 }
 
-// ── 360° Drag (smooth with momentum) ──────────────────────────────
-let isDragging360 = false
-let lastX = 0
-let velocity = 0
-let animationFrame: number | null = null
-let accumulatedDelta = 0
-const SENSITIVITY = 0.3 // lower = slower, higher = faster
-
+// ── 360° Video Scrub ───────────────────────────────────────────────
 function on360Start(e: MouseEvent | TouchEvent) {
   isDragging360 = true
-  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
-  lastX = x
+  lastX = 'touches' in e ? e.touches[0].clientX : e.clientX
   velocity = 0
-  accumulatedDelta = 0
-  if (animationFrame) {
-    cancelAnimationFrame(animationFrame)
-    animationFrame = null
-  }
+  if (videoRef.value) videoRef.value.pause()
 }
 
 function on360Move(e: MouseEvent | TouchEvent) {
-  if (!isDragging360 || !letter.value) return
+  if (!isDragging360 || !videoRef.value || !videoReady.value) return
   e.stopPropagation()
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX
   const diff = lastX - x
   velocity = diff
-  accumulatedDelta += diff * SENSITIVITY
   lastX = x
 
-  const total = letter.value.angle_photos.length
-  const steps = Math.round(accumulatedDelta)
-  if (Math.abs(steps) >= 1) {
-    currentAngle.value = ((currentAngle.value + steps) % total + total) % total
-    accumulatedDelta -= steps
-  }
+  const video = videoRef.value
+  const scrubAmount = (diff / window.innerWidth) * video.duration * 2
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
 }
 
 function on360End() {
   isDragging360 = false
-  // Momentum after release
-  applyMomentum()
+  // Momentum
+  applyVideoMomentum()
 }
 
-function applyMomentum() {
-  if (!letter.value) return
-  if (Math.abs(velocity) < 0.5) {
+function applyVideoMomentum() {
+  if (!videoRef.value || Math.abs(velocity) < 0.3) {
     velocity = 0
     return
   }
-  const total = letter.value.angle_photos.length
-  accumulatedDelta += velocity * SENSITIVITY
-  const steps = Math.round(accumulatedDelta)
-  if (Math.abs(steps) >= 1) {
-    currentAngle.value = ((currentAngle.value + steps) % total + total) % total
-    accumulatedDelta -= steps
-  }
-  velocity *= 0.85 // friction — higher = slides longer
-  animationFrame = requestAnimationFrame(applyMomentum)
+  const video = videoRef.value
+  const scrubAmount = (velocity / window.innerWidth) * video.duration * 2
+  video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + scrubAmount))
+  velocity *= 0.85
+  requestAnimationFrame(applyVideoMomentum)
 }
 
 // ── Background ─────────────────────────────────────────────────────
@@ -211,12 +198,9 @@ function applyMomentum() {
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => loadLetter())
 
-watch(() => letter.value?.angle_photos, (photos) => {
-  if (!photos || photos.length === 0) return
-  photos.forEach(src => {
-    const img = new Image()
-    img.src = src
-  })
+watch(() => letter.value?.angle_video, (video) => {
+  if (!video || !videoRef.value) return
+  videoRef.value.load()
 }, { immediate: true })
 
 onUnmounted(() => {
@@ -428,7 +412,7 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ── SCREEN 6 — 360° View ───────────────────────────────── -->
+      <!-- ── SCREEN 6 — Bouquet View ────────────────────────────────────── -->
       <div
         v-if="currentScreen === 5"
         class="letter-screen"
@@ -439,11 +423,15 @@ onUnmounted(() => {
           <h2 class="letter-title">Your bouquet<br><em>up close</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
-          <div v-if="letter.angle_photos && letter.angle_photos.length > 0" class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
-            <img
-              :src="letter.angle_photos[0]"
-              alt="Your bouquet"
-              class="bouquet-main-photo"
+          <div v-if="letter.angle_video" class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
+            <video
+              ref="videoRef"
+              :src="letter.angle_video"
+              class="bouquet-main-video"
+              preload="auto"
+              muted
+              playsinline
+              @loadedmetadata="videoReady = true"
             />
             <button class="btn-360" @click.stop="show360 = true">
               ✦ View in 360°
@@ -452,7 +440,7 @@ onUnmounted(() => {
 
           <div v-else class="no-photos">
             <p>🌸</p>
-            <p class="letter-sub">Photos coming soon</p>
+            <p class="letter-sub">360° view coming soon</p>
           </div>
 
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -481,15 +469,15 @@ onUnmounted(() => {
             @touchmove.stop.prevent="on360Move"
             @touchend.stop="on360End"
           >
-            <img
-              :src="letter!.angle_photos[currentAngle]"
-              :alt="`Angle ${currentAngle + 1}`"
-              class="angle-photo-full"
-              draggable="false"
+            <video
+              ref="videoRef"
+              :src="letter!.angle_video"
+              class="angle-video-full"
+              preload="auto"
+              muted
+              playsinline
+              @loadedmetadata="videoReady = true"
             />
-          </div>
-
-          <div class="viewer-footer">
           </div>
         </div>
       </Teleport>
@@ -1048,6 +1036,7 @@ onUnmounted(() => {
   user-select: none;
   will-change: contents;
   image-rendering: auto;
+  mix-blend-mode: multiply;
 }
 
 .viewer-footer {
@@ -1160,12 +1149,33 @@ onUnmounted(() => {
   pointer-events: none;
   border-radius: 16px;
   transition: opacity 0.05s ease;
+  mix-blend-mode: multiply; /* ← add this */
 }
 
 .no-photos,
 .no-memories {
   text-align: center;
   color: #B08090;
+}
+
+.bouquet-main-video {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 32px;
+  pointer-events: none;
+  box-shadow: 0 8px 32px rgba(212, 104, 122, 0.15),
+              0 2px 8px rgba(212, 104, 122, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.angle-video-full {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  mix-blend-mode: multiply;
 }
 
 /* ── Desktop ────────────────────────────────────────────────────── */
