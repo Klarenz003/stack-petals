@@ -946,24 +946,14 @@ onUnmounted(() => {
   align-items: center;
   width: 100%;
   max-width: 360px;
-  overflow: hidden;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 40px;
-  border: 1px solid rgba(232, 180, 192, 0.3);
-  backdrop-filter: blur(8px);
 }
 
 .bouquet-main-photo {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
-  border-radius: 32px;
+  border-radius: 20px;
   pointer-events: none;
-  box-shadow: 0 8px 32px rgba(212, 104, 122, 0.15),
-              0 2px 8px rgba(212, 104, 122, 0.08);
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(4px);
 }
 
 .btn-360 {
