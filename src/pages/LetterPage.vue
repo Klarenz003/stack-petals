@@ -392,13 +392,13 @@ onUnmounted(() => {
           <h2 class="letter-title">Your bouquet<br><em>up close</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
-          <div v-if="letter.angle_photos && letter.angle_photos.length > 0" class="bouquet-preview">
+          <div v-if="letter.angle_photos && letter.angle_photos.length > 0" class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
             <img
               :src="letter.angle_photos[0]"
               alt="Your bouquet"
               class="bouquet-main-photo"
             />
-            <button class="btn-360" @click="show360 = true">
+            <button class="btn-360" @click.stop="show360 = true">
               ✦ View in 360°
             </button>
           </div>
@@ -443,7 +443,6 @@ onUnmounted(() => {
           </div>
 
           <div class="viewer-footer">
-            <p class="viewer-frame">{{ currentAngle + 1 }} / {{ letter!.angle_photos.length }}</p>
           </div>
         </div>
       </Teleport>
@@ -526,11 +525,17 @@ onUnmounted(() => {
   overflow: hidden;
   position: relative;
   user-select: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #FFF0F3;
 }
 
 .letter-screens {
   width: 100%;
   height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
 .letter-screen {
@@ -544,14 +549,14 @@ onUnmounted(() => {
   background-position: center;
   position: relative;
   overflow-y: auto;
-  padding: 40px 0 60px;
+  padding: 60px 0 80px;
 }
 
 /* ── Content ──────────────────────────────────────────────────────── */
 .screen-content {
   width: 100%;
-  max-width: 420px;
-  padding: 0 28px;
+  max-width: 480px;
+  padding: 0 40px;
 }
 
 .screen-content.center {
@@ -564,21 +569,21 @@ onUnmounted(() => {
 /* ── Typography ───────────────────────────────────────────────────── */
 .letter-logo {
   font-family: 'Lora', serif;
-  font-size: 11px;
+  font-size: 13px;
   color: #C48090;
   letter-spacing: 3px;
   text-transform: uppercase;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .letter-headline {
   font-family: 'Lora', serif;
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 400;
   color: #7A3A4A;
   text-align: center;
   line-height: 1.3;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
 .letter-headline em {
@@ -588,11 +593,11 @@ onUnmounted(() => {
 
 .letter-title {
   font-family: 'Lora', serif;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 400;
   color: #7A3A4A;
   line-height: 1.4;
-  margin: 0 0 8px;
+  margin: 0 0 12px;
 }
 
 .letter-title em {
@@ -602,7 +607,7 @@ onUnmounted(() => {
 
 .letter-sub {
   font-family: 'Lora', serif;
-  font-size: 13px;
+  font-size: 15px;
   color: #B08090;
   font-style: italic;
   line-height: 1.7;
@@ -611,7 +616,7 @@ onUnmounted(() => {
 
 .letter-dear {
   font-family: 'Lora', serif;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 400;
   color: #7A3A4A;
   margin: 0 0 8px;
@@ -624,15 +629,15 @@ onUnmounted(() => {
 
 .letter-from {
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: 16px;
   color: #C48090;
   letter-spacing: 1px;
   margin: 0;
 }
 
 .letter-heart {
-  font-size: 32px;
-  margin-bottom: 16px;
+  font-size: 40px;
+  margin-bottom: 20px;
 }
 
 /* ── Divider ──────────────────────────────────────────────────────── */
@@ -658,11 +663,11 @@ onUnmounted(() => {
   color: white;
   border: none;
   border-radius: 28px;
-  padding: 12px 32px;
+  padding: 14px 40px;
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
-  margin-top: 24px;
+  margin-top: 28px;
   letter-spacing: 0.5px;
   transition: all 0.2s;
 }
@@ -677,9 +682,9 @@ onUnmounted(() => {
   color: #D4687A;
   border: 1px solid #E8B4C0;
   border-radius: 28px;
-  padding: 10px 28px;
+  padding: 12px 32px;
   font-family: 'Lora', serif;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
   letter-spacing: 0.5px;
   transition: all 0.2s;
@@ -717,8 +722,8 @@ onUnmounted(() => {
 
 /* ── Flower ───────────────────────────────────────────────────────── */
 .blooming-flower {
-  font-size: 72px;
-  margin-bottom: 24px;
+  font-size: 96px;
+  margin-bottom: 28px;
   animation: bloom 2s ease-in-out infinite alternate;
 }
 
@@ -752,8 +757,8 @@ onUnmounted(() => {
 /* ── Petals ───────────────────────────────────────────────────────── */
 .petals-flower {
   position: relative;
-  width: 280px;
-  height: 280px;
+  width: 320px;
+  height: 320px;
   margin: 0 auto;
 }
 
@@ -814,15 +819,15 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.65);
   border: 1px solid #F0C4CF;
   border-radius: 16px;
-  padding: 20px;
+  padding: 24px;
   width: 100%;
 }
 
 .letter-message-text {
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: 15px;
   color: #7A4A54;
-  line-height: 1.9;
+  line-height: 2;
   font-style: italic;
   text-align: center;
   margin: 0;
@@ -831,7 +836,7 @@ onUnmounted(() => {
 /* ── Memories ─────────────────────────────────────────────────────── */
 .memory-slideshow {
   width: 100%;
-  max-width: 300px;
+  max-width: 360px;
 }
 
 .memory-frame {
@@ -879,138 +884,13 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-/* ── 360° Viewer ──────────────────────────────────────────────────── */
-.viewer-360 {
-  width: 100%;
-  max-width: 300px;
-  position: relative;
-  cursor: grab;
-}
-
-.viewer-360:active {
-  cursor: grabbing;
-}
-
-.angle-photo {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  pointer-events: none;
-  border-radius: 16px;
-}
-
-.viewer-hint {
-  text-align: center;
-  font-family: 'Lora', serif;
-  font-size: 12px;
-  color: #B08090;
-  font-style: italic;
-  margin-top: 8px;
-}
-
-/* ── Quote ────────────────────────────────────────────────────────── */
-.quote-flower {
-  font-size: 56px;
-  margin-bottom: 16px;
-}
-
-.letter-quote {
-  font-family: 'Lora', serif;
-  font-size: 18px;
-  color: #7A3A4A;
-  font-style: italic;
-  line-height: 1.7;
-  text-align: center;
-  margin: 0;
-  padding: 0 12px;
-}
-
-/* ── Sender ───────────────────────────────────────────────────────── */
-.sender-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #F4C0CE, #D4687A);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Lora', serif;
-  font-size: 28px;
-  color: white;
-  font-weight: 600;
-}
-
-/* ── End Screen ───────────────────────────────────────────────────── */
-.end-flowers {
-  font-size: 40px;
-  margin-bottom: 20px;
-  letter-spacing: 4px;
-}
-
-.end-brand {
-  margin-top: 28px;
-  text-align: center;
-}
-
-.end-brand p {
-  font-family: 'Lora', serif;
-  font-size: 11px;
-  color: #C48090;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin: 0 0 4px;
-}
-
-.end-brand strong {
-  font-family: 'Lora', serif;
-  font-size: 18px;
-  color: #7A3A4A;
-  font-weight: 600;
-}
-
-/* ── Loading / Not Found ──────────────────────────────────────────── */
-.letter-loading,
-.letter-not-found {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%);
-  font-family: 'Lora', serif;
-  color: #7A3A4A;
-  text-align: center;
-  padding: 40px;
-}
-
-.loading-flower {
-  font-size: 56px;
-  margin-bottom: 20px;
-  animation: bloom 2s ease-in-out infinite alternate;
-}
-
-.letter-loading p,
-.letter-not-found p {
-  font-style: italic;
-  color: #B08090;
-}
-
-.angle-photo {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  pointer-events: none;
-  border-radius: 16px;
-  transition: opacity 0.05s ease; /* ultra fast = smooth feel */
-}
-
 /* ── Bouquet Preview ──────────────────────────────────────────────── */
 .bouquet-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 300px;
+  max-width: 360px;
 }
 
 .bouquet-main-photo {
@@ -1095,7 +975,7 @@ onUnmounted(() => {
 
 .viewer-360-full {
   width: 90vw;
-  max-width: 500px;
+  max-width: 600px;
   aspect-ratio: 1;
   cursor: grab;
   touch-action: none;
@@ -1127,5 +1007,133 @@ onUnmounted(() => {
   font-style: italic;
   margin: 0;
   letter-spacing: 1px;
+}
+
+/* ── Quote ────────────────────────────────────────────────────────── */
+.quote-flower {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.letter-quote {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  color: #7A3A4A;
+  font-style: italic;
+  line-height: 1.8;
+  text-align: center;
+  margin: 0;
+  padding: 0 12px;
+}
+
+/* ── Sender ───────────────────────────────────────────────────────── */
+.sender-circle {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F4C0CE, #D4687A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Lora', serif;
+  font-size: 36px;
+  color: white;
+  font-weight: 600;
+}
+
+/* ── End Screen ───────────────────────────────────────────────────── */
+.end-flowers {
+  font-size: 48px;
+  margin-bottom: 24px;
+  letter-spacing: 4px;
+}
+
+.end-brand {
+  margin-top: 28px;
+  text-align: center;
+}
+
+.end-brand p {
+  font-family: 'Lora', serif;
+  font-size: 11px;
+  color: #C48090;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.end-brand strong {
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  color: #7A3A4A;
+  font-weight: 600;
+}
+
+/* ── Loading / Not Found ──────────────────────────────────────────── */
+.letter-loading,
+.letter-not-found {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%);
+  font-family: 'Lora', serif;
+  color: #7A3A4A;
+  text-align: center;
+  padding: 40px;
+}
+
+.loading-flower {
+  font-size: 72px;
+  margin-bottom: 24px;
+  animation: bloom 2s ease-in-out infinite alternate;
+}
+
+.letter-loading p,
+.letter-not-found p {
+  font-style: italic;
+  color: #B08090;
+}
+
+.angle-photo {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  pointer-events: none;
+  border-radius: 16px;
+  transition: opacity 0.05s ease;
+}
+
+.no-photos,
+.no-memories {
+  text-align: center;
+  color: #B08090;
+}
+
+/* ── Desktop ────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .letter-screens {
+    max-width: 600px;
+    box-shadow: 0 20px 60px rgba(212, 104, 122, 0.15);
+    border-radius: 24px;
+    overflow: hidden;
+    height: 90vh;
+    margin: auto;
+  }
+
+  .letter-screen {
+    height: 90vh;
+    border-radius: 24px;
+  }
+
+  .letter-headline { font-size: 48px; }
+  .letter-title    { font-size: 32px; }
+  .letter-sub      { font-size: 16px; }
+  .letter-quote    { font-size: 22px; }
+  .petals-flower   { width: 380px; height: 380px; }
+  .memory-slideshow { max-width: 420px; }
+  .bouquet-preview  { max-width: 420px; }
+  .viewer-360-full  { max-width: 700px; }
 }
 </style>

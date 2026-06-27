@@ -1613,6 +1613,27 @@ label[for], select, summary {
   color: #d64545;
 }
 
+/* ── Page slide transitions ── */
+.slide-left-enter-active,
+.slide-left-leave-active,
+.slide-right-enter-active,
+.slide-right-leave-active {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity   0.35s ease;
+}
+
+/* Going forward (Home → Bouquets → About …) */
+.slide-left-enter-from  { transform: translateX(48px);  opacity: 0; }
+.slide-left-enter-to    { transform: translateX(0);      opacity: 1; }
+.slide-left-leave-from  { transform: translateX(0);      opacity: 1; }
+.slide-left-leave-to    { transform: translateX(-48px);  opacity: 0; }
+
+/* Going backward (Contact → Reviews → Gallery …) */
+.slide-right-enter-from { transform: translateX(-48px); opacity: 0; }
+.slide-right-enter-to   { transform: translateX(0);     opacity: 1; }
+.slide-right-leave-from { transform: translateX(0);     opacity: 1; }
+.slide-right-leave-to   { transform: translateX(48px);  opacity: 0; }
+
 /* ── Responsive ─────────────────────────────────────────────── */
 
 @media (max-width: 992px) {
