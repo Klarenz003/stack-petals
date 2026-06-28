@@ -189,21 +189,21 @@ function applyMomentum() {
   function screenBg(screenKey: string): string {
   const custom = letter.value?.backgrounds?.[screenKey]
   const gradients: Record<string, string> = {
-    screen1: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
-    screen2: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
-    screen3: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
-    screen4: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
-    screen5: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
-    screen6: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
-    screen7: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
-    screen8: 'linear-gradient(160deg, rgba(255,245,247,0.55) 0%, rgba(255,237,242,0.55) 100%), url(/images/background.png)',
-    screen9: 'linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(/images/background.png)',
+    screen1: 'rgba(255,240,243,0.3)',
+    screen2: 'rgba(255,245,247,0.3)',
+    screen3: 'rgba(255,240,243,0.3)',
+    screen4: 'rgba(255,245,247,0.3)',
+    screen5: 'rgba(255,240,243,0.3)',
+    screen6: 'rgba(255,245,247,0.3)',
+    screen7: 'rgba(255,240,243,0.3)',
+    screen8: 'rgba(255,245,247,0.3)',
+    screen9: 'rgba(255,240,243,0.3)',
   }
-  const gradient = gradients[screenKey] || gradients.screen1
+  const overlay = gradients[screenKey] || gradients.screen1
   if (custom) {
-    return `linear-gradient(160deg, rgba(255,240,243,0.55) 0%, rgba(255,228,236,0.55) 100%), url(${custom})`
+    return custom
   }
-  return gradient
+  return overlay
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────
@@ -252,7 +252,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 0"
         class="letter-screen"
-        :style="{ background: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -271,7 +271,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 1"
         class="letter-screen"
-        :style="{ background: screenBg('screen2') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -293,7 +293,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 2"
         class="letter-screen"
-        :style="{ background: screenBg('screen3') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content">
           <div class="letter-logo">Stack Petals</div>
@@ -363,7 +363,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 3"
         class="letter-screen"
-        :style="{ background: screenBg('screen4') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content">
           <div class="letter-logo">Stack Petals</div>
@@ -386,7 +386,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 4"
         class="letter-screen"
-        :style="{ background: screenBg('screen5') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -430,7 +430,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 5"
         class="letter-screen"
-        :style="{ background: screenBg('screen6') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -496,7 +496,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 6"
         class="letter-screen"
-        :style="{ background: screenBg('screen7') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -517,7 +517,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 7"
         class="letter-screen"
-        :style="{ background: screenBg('screen8') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -536,7 +536,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 8"
         class="letter-screen"
-        :style="{ background: screenBg('screen9') }"
+        :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -590,15 +590,13 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-size: cover, cover;
-  background-position: center, center;
-  background-blend-mode: multiply;
+  background-image: url(/images/background.png);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   position: relative;
   overflow-y: auto;
   padding: 60px 0 80px;
-  background-size: cover;
-  background-position: center;
-  background-blend-mode: overlay;
 }
 
 .letter-screen:has(.bouquet-preview) {
