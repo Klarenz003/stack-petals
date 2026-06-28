@@ -591,7 +591,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   background-image: url(/images/background.png);
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
