@@ -423,39 +423,50 @@ watch(() => currentScreen.value, (screen) => {
         class="letter-screen"
         :style="{ backgroundColor: screenBg('screen4') }"
       >
+        <!-- Falling petals while typing -->
+        <div class="falling-petals" v-if="isTyping">
+          <span class="fall-petal fp-1">🌸</span>
+          <span class="fall-petal fp-2">🌸</span>
+          <span class="fall-petal fp-3">🌸</span>
+          <span class="fall-petal fp-4">🌸</span>
+        </div>
+
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
 
           <!-- Before reveal -->
           <div v-if="!letterRevealed" class="letter-reveal-wrap">
             <div class="envelope-icon">💌</div>
+            <div class="wax-seal">✦</div>
             <h2 class="letter-title">A letter<br><em>written just for you</em></h2>
             <div class="letter-divider"><span></span>✦<span></span></div>
             <p class="letter-sub">From someone who loves you deeply</p>
             <button class="letter-btn" @click="startLetterReveal">
-              Open Letter
+              Open Letter 💌
             </button>
           </div>
 
           <!-- After reveal — typewriter animation -->
           <div v-else class="letter-reveal-content">
             <div class="letter-heart">🤍</div>
-              <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
-              <div class="letter-divider"><span></span>✦<span></span></div>
-              <div class="letter-message-box">
-                <p class="letter-message-text">{{ displayedText }}<span class="typing-cursor" v-if="isTyping"></span></p>
-              </div>
-              <Transition name="sender-reveal">
-                <div v-if="senderVisible" class="sender-footer">
-              <div class="letter-divider" v-if="!isTyping"><span></span>✦<span></span></div>
-              <p class="letter-from" v-if="!isTyping">— With love, {{ letter.sender }}</p>
-              <button class="letter-btn-outline" style="margin-top: 20px;" v-if="!isTyping" @click="nextScreen">
-                See memories →
-              </button>
-              </div>
-              </Transition>
+            <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
+            <div class="letter-divider"><span></span>✦<span></span></div>
+            <div class="letter-message-box">
+              <div class="letter-lines"></div>
+              <p class="letter-message-text">{{ displayedText }}</p>
             </div>
+
+            <Transition name="sender-reveal">
+              <div v-if="senderVisible" class="sender-footer">
+                <div class="letter-divider"><span></span>✦<span></span></div>
+                <p class="letter-from">— With love, {{ letter.sender }}</p>
+                <button class="letter-btn-outline" style="margin-top: 20px;" @click="nextScreen">
+                  See memories →
+                </button>
+              </div>
+            </Transition>
           </div>
+        </div>
 
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1407,5 +1418,108 @@ watch(() => currentScreen.value, (screen) => {
   50%       { opacity: 0; }
 }
 
+/* ── Wax Seal ─────────────────────────────────────────────────────── */
+.wax-seal {
+  width: 52px;
+  height: 52px;
+  background: radial-gradient(circle at 40% 35%, #E87890, #C0506A);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: rgba(255,255,255,0.9);
+  box-shadow: 0 4px 12px rgba(192, 80, 106, 0.4);
+  margin: 0 auto 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  animation: sealPulse 2s ease-in-out infinite;
+}
 
+@keyframes sealPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 12px rgba(192,80,106,0.4); }
+  50%       { transform: scale(1.05); box-shadow: 0 6px 20px rgba(192,80,106,0.6); }
+}
+
+/* ── Falling Petals ───────────────────────────────────────────────── */
+.falling-petals {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.fall-petal {
+  position: absolute;
+  font-size: 14px;
+  opacity: 0;
+  animation: petalFall 4s linear infinite;
+}
+
+.fp-1 { left: 15%; animation-delay: 0s; }
+.fp-2 { left: 40%; animation-delay: 1s; }
+.fp-3 { left: 65%; animation-delay: 2s; }
+.fp-4 { left: 85%; animation-delay: 3s; }
+
+@keyframes petalFall {
+  0%   { top: -20px; opacity: 0; transform: rotate(0deg) scale(0.8); }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.4; }
+  100% { top: 100vh; opacity: 0; transform: rotate(360deg) scale(1.2); }
+}
+
+/* ── Letter Lines (paper texture) ────────────────────────────────── */
+.letter-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 35px,
+    rgba(232, 180, 192, 0.2) 35px,
+    rgba(232, 180, 192, 0.2) 36px
+  );
+  border-radius: 16px;
+  pointer-events: none;
+  min-height: 100%;
+}
+
+/* ── Letter Box ───────────────────────────────────────────────────── */
+.letter-message-box {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid #F0C4CF;
+  border-radius: 16px;
+  padding: 20px 22px;
+  width: 100%;
+  max-height: 340px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(212,104,122,0.08),
+              0 4px 16px rgba(212,104,122,0.08);
+}
+
+.letter-message-box::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Typing Cursor ────────────────────────────────────────────────── */
+.typing-cursor {
+  display: inline;
+  color: #D4687A;
+  font-weight: 300;
+  animation: cursorBlink 0.8s ease-in-out infinite;
+  margin-left: 1px;
+  font-family: 'Lora', serif;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
 </style>
