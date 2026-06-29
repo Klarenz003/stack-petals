@@ -31,6 +31,20 @@ function validateEmail() {
   emailError.value = pattern.test(cart.customer.email) ? '' : 'Please enter a valid email address'
 }
 
+function formatPhoneInput(event: Event) {
+  const input = event.target as HTMLInputElement
+  const digits = input.value.replace(/\D/g, '').slice(0, 11)
+  cart.customer.phone = digits
+  input.value = formatPhoneDisplay(digits)
+}
+
+function formatPhoneDisplay(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  if (digits.length <= 4) return digits
+  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
+}
+
 function handleAddressInput() {
   cart.updateDeliveryAddress(cart.customer.address, { lat: null, lng: null, placeId: '' })
   const address = cart.customer.address.trim()
@@ -161,8 +175,17 @@ function togglePreviewPetal(i: number) {
             <small class="field-error" v-if="emailError">{{ emailError }}</small>
           </label>
           <label>Phone Number
-            <input v-model="cart.customer.phone" type="tel" placeholder="09XX XXX XXXX" maxlength="11" @input="cart.customer.phone = cart.customer.phone.replace(/\D/g, '')"/>
+            <input
+              :value="formatPhoneDisplay(cart.customer.phone)"
+              type="tel"
+              inputmode="numeric"
+              autocomplete="tel"
+              placeholder="09XX XXX XXXX"
+              maxlength="13"
+              @input="formatPhoneInput"
+            />
             <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11">Phone number must be 11 digits</small>
+            <small class="field-error" v-else-if="cart.customer.phone.length === 11 && !cart.customer.phone.startsWith('09')">Use a valid PH mobile number starting with 09</small>
           </label>
           <label>Delivery Address
             <input

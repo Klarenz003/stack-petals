@@ -116,7 +116,7 @@ export const useCartStore = defineStore('cart', () => {
   const customerValid = computed(() => {
   const c = customer.value
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)
-  const phoneOk = c.phone.length === 11
+  const phoneOk = /^09\d{9}$/.test(c.phone)
   const tomorrow = new Date()
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split('T')[0]
