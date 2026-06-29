@@ -682,13 +682,13 @@ function skipAnimation() {
   font-family: 'Lora', serif;
   width: 100vw;
   height: 100vh;
-  overflow: hidden;
+  overflow: hidden; /* ← prevent outer scroll */
   position: relative;
   user-select: none;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #FFF0F3;
+  background: url(/images/background.png) center/cover no-repeat;
 }
 
 .letter-screens {
@@ -696,6 +696,7 @@ function skipAnimation() {
   height: 100%;
   max-width: 480px;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .letter-screen {
@@ -710,7 +711,7 @@ function skipAnimation() {
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
-  overflow-y: auto;
+  overflow-y: hidden;
   padding: 60px 0 80px;
 }
 
@@ -723,6 +724,7 @@ function skipAnimation() {
   width: 100%;
   max-width: 480px;
   padding: 0 40px;
+  overflow: hidden;
 }
 
 .screen-content.center {
@@ -730,6 +732,7 @@ function skipAnimation() {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  overflow: hidden;
 }
 
 /* ── Typography ───────────────────────────────────────────────────── */
@@ -946,11 +949,34 @@ function skipAnimation() {
   border-radius: 16px;
   padding: 26px 22px;
   width: 100%;
-  max-height: 340px;
+  max-height: 220px;
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(180, 112, 126, 0.28) transparent;
   box-shadow: inset 0 1px 3px rgba(212,104,122,0.08),
               0 4px 16px rgba(212,104,122,0.08);
+}
+
+.letter-message-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.letter-message-box::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.letter-message-box::-webkit-scrollbar-thumb {
+  background: rgba(180, 112, 126, 0.28);
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  background-clip: padding-box;
+}
+
+.letter-message-box::-webkit-scrollbar-thumb:hover {
+  background: rgba(180, 112, 126, 0.42);
+  background-clip: padding-box;
 }
 
 .letter-message-text {
@@ -1341,6 +1367,7 @@ function skipAnimation() {
   .letter-screen {
     height: 90vh;
     border-radius: 24px;
+    overflow: hidden;
   }
 
   .letter-headline { font-size: 48px; }
@@ -1351,6 +1378,11 @@ function skipAnimation() {
   .memory-slideshow { max-width: 420px; }
   .bouquet-preview  { max-width: 420px; }
   .viewer-360-full  { max-width: 700px; }
+
+  .letter-screen-wrapper {
+    height: 90vh;
+    overflow: hidden;
+  }
 }
 
 /* ── Petal Symbol ─────────────────────────────────────────────────── */
@@ -1541,6 +1573,7 @@ function skipAnimation() {
 .letter-screen-wrapper {
   width: 100%;
   height: 100%;
+  overflow: hidden;
 }
 
 /* Forward (next page) */
