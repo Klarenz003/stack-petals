@@ -8,6 +8,7 @@ const ProcessPage  = () => import('@/pages/ProcessPage.vue')
 const GalleryPage  = () => import('@/pages/GalleryPage.vue')
 const ReviewsPage  = () => import('@/pages/ReviewsPage.vue')
 const ContactPage  = () => import('@/pages/ContactPage.vue')
+const TrackOrderPage = () => import('@/pages/TrackOrderPage.vue')
 
 // Used in App.vue to determine slide direction
 export const routeOrder: Record<string, number> = {
@@ -17,7 +18,8 @@ export const routeOrder: Record<string, number> = {
   process:  3,
   gallery:  4,
   reviews:  5,
-  contact:  6,
+  track:    6,
+  contact:  7,
 }
 
 const router = createRouter({
@@ -29,6 +31,7 @@ const router = createRouter({
     { path: '/process',  name: 'process',   component: ProcessPage  },
     { path: '/gallery',  name: 'gallery',   component: GalleryPage  },
     { path: '/reviews',  name: 'reviews',   component: ReviewsPage  },
+    { path: '/track',    name: 'track',     component: TrackOrderPage },
     { path: '/contact',  name: 'contact',   component: ContactPage  },
     { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },

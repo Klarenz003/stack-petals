@@ -12,6 +12,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const checkoutStep = ref<CheckoutStep>(0)
   const confirmedTotal = ref('')
+  const confirmedOrderReference = ref('')
   const paymentMethod = ref<PaymentMethod>('gcash')
   const paymentProof = ref<File | null>(null)
   const paymentProofPreview = ref<string | null>(null)
@@ -242,7 +243,7 @@ export const useCartStore = defineStore('cart', () => {
     ].filter(Boolean).join('\n')
 
     // 2. Insert order into Supabase
-    const { error } = await supabase.from('orders').insert({
+    const { data: insertedOrder, error } = await supabase.from('orders').insert({
       customer_name:  customer.value.name,
       email:          customer.value.email,
       phone:          customer.value.phone,
@@ -254,8 +255,10 @@ export const useCartStore = defineStore('cart', () => {
       payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
       proof_url:      uploadData.path,
       status:         'pending',
-    })
+    }).select('id')
+      .single()
     if (error) throw error
+    confirmedOrderReference.value = insertedOrder?.id ? `SP-${insertedOrder.id}` : ''
 
     // 3. Decrease stock for each item
     for (const item of cartItems.value) {
@@ -338,6 +341,7 @@ export const useCartStore = defineStore('cart', () => {
   function finishCheckout() {
     cartItems.value = []
     checkoutStep.value = 0
+    confirmedOrderReference.value = ''
     paymentProof.value = null
     paymentProofPreview.value = null
     isSubmittingOrder.value = false
@@ -368,7 +372,7 @@ export const useCartStore = defineStore('cart', () => {
 
   return {
       // ── State ──────────────────────────────────────────────────────
-      cartItems, cartOpen, checkoutStep, confirmedTotal,
+      cartItems, cartOpen, checkoutStep, confirmedTotal, confirmedOrderReference,
       paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder, customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────

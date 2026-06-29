@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 const cart = useCartStore()
+const router = useRouter()
 const isShaking = ref(false)
 const emailError = ref('')
 const showPreview = ref(false)
 const previewRevealed = ref([false, false, false, false, false, false])
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
+const receiptDownloaded = ref(false)
+const referenceCopied = ref(false)
 
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
   if (cart.isSubmittingOrder) return
   await cart.submitOrder()
+  receiptDownloaded.value = false
+  referenceCopied.value = false
   cart.checkoutStep = 5
 }
 
@@ -62,6 +68,84 @@ function shakeModal() {
 function handleDone() {
   cart.finishCheckout()
   window.location.reload()
+}
+
+function buildReceiptText() {
+  const itemLines = cart.cartItems.map((item, index) => {
+    const quantity = item.quantity > 1 ? ` x ${item.quantity}` : ''
+    return `${index + 1}. ${item.name}${quantity} - ${item.price}`
+  })
+
+  return [
+    'STACK PETALS ORDER RECEIPT',
+    '==========================',
+    '',
+    `Order Reference: ${cart.confirmedOrderReference}`,
+    `Customer: ${cart.customer.name}`,
+    `Phone: ${cart.customer.phone}`,
+    `Email: ${cart.customer.email}`,
+    '',
+    'Delivery',
+    '--------',
+    `Date: ${cart.customer.date}`,
+    `Address: ${cart.customer.address}`,
+    `Shipping Area: ${cart.shippingLabel}`,
+    '',
+    'Items',
+    '-----',
+    ...itemLines,
+    '',
+    'Payment',
+    '-------',
+    `Payment Method: ${cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya'}`,
+    `Subtotal: ${cart.cartSubtotal}`,
+    `Shipping Fee: PHP ${cart.shippingFee.toFixed(2)}`,
+    `Total: ${cart.confirmedTotal}`,
+    '',
+    'Please keep this receipt and use your order reference when tracking or contacting Stack Petals.',
+  ].join('\n')
+}
+
+function downloadReceipt() {
+  const receipt = buildReceiptText()
+  const blob = new Blob([receipt], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${cart.confirmedOrderReference || 'stack-petals-order'}-receipt.txt`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+  receiptDownloaded.value = true
+}
+
+async function copyOrderReference() {
+  const reference = cart.confirmedOrderReference
+  if (!reference) return
+
+  try {
+    await navigator.clipboard.writeText(reference)
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = reference
+    input.setAttribute('readonly', '')
+    input.style.position = 'fixed'
+    input.style.opacity = '0'
+    document.body.appendChild(input)
+    input.select()
+    document.execCommand('copy')
+    input.remove()
+  }
+
+  referenceCopied.value = true
+  setTimeout(() => { referenceCopied.value = false }, 1800)
+}
+
+function goToTrackOrder() {
+  const reference = cart.confirmedOrderReference
+  cart.finishCheckout()
+  router.push({ name: 'track', query: reference ? { ref: reference } : undefined })
 }
 
 // ── Computed ───────────────────────────────────────
@@ -428,15 +512,29 @@ function togglePreviewPetal(i: number) {
         <h2>Order Received!</h2>
         <p>Thank you, <strong>{{ cart.customer.name }}</strong>! Your order has been submitted successfully.</p>
         <div class="confirm-details">
+          <div><span>Order Reference</span><strong>{{ cart.confirmedOrderReference }}</strong></div>
           <div><span>Order Total</span><strong>{{ cart.confirmedTotal }}</strong></div>
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
+          <div><span>Items</span><strong>{{ cart.cartItems.length }} bouquet{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
           <div><span>Delivery to</span><strong>{{ cart.customer.address }}</strong></div>
           <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>
         </div>
         <p class="confirm-note">We'll review your payment and confirm your order within 24 hours. 🌷</p>
-        <button class="co-btn-primary" @click="handleDone">Done</button>
+        <div class="receipt-actions">
+          <button class="co-btn-primary" @click="downloadReceipt">
+            {{ receiptDownloaded ? 'Receipt Downloaded' : 'Download Receipt' }}
+          </button>
+          <button class="co-btn-outline" @click="copyOrderReference">
+            {{ referenceCopied ? 'Copied' : 'Copy Order ID' }}
+          </button>
+        </div>
+        <p class="receipt-reminder">Please save your receipt or copy your order ID before leaving this screen.</p>
+        <div class="receipt-secondary-actions">
+          <button class="receipt-link-btn" @click="goToTrackOrder">Track Order</button>
+          <button class="receipt-link-btn" @click="handleDone">Done</button>
+        </div>
       </div>
 
       <!-- Close button (not shown on confirmation) -->

@@ -15,6 +15,7 @@ const router = useRouter()
       <RouterLink to="/process">Process</RouterLink>
       <RouterLink to="/gallery">Gallery</RouterLink>
       <RouterLink to="/reviews">Reviews</RouterLink>
+      <RouterLink to="/track">Track Order</RouterLink>
       <RouterLink to="/contact">Contact</RouterLink>
     </nav>
   </header>
