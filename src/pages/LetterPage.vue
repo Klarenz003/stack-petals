@@ -32,6 +32,7 @@ const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
 const senderVisible = ref(false)
+const slideDirection = ref('slide-forward')
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -58,14 +59,17 @@ async function loadLetter() {
 
 // ── Navigation ─────────────────────────────────────────────────────
 function nextScreen() {
+  slideDirection.value = 'slide-forward'
   if (currentScreen.value < totalScreens - 1) currentScreen.value++
 }
 
 function prevScreen() {
+  slideDirection.value = 'slide-back'
   if (currentScreen.value > 0) currentScreen.value--
 }
 
 function goToScreen(n: number) {
+  slideDirection.value = n > currentScreen.value ? 'slide-forward' : 'slide-back'
   currentScreen.value = n
 }
 
@@ -88,7 +92,6 @@ function onTouchEnd(e: TouchEvent) {
   isSwiping = false
   const diffX = swipeStartX - e.changedTouches[0].clientX
   const diffY = Math.abs(swipeStartY - e.changedTouches[0].clientY)
-  // Only swipe page if horizontal movement is dominant and large enough
   if (Math.abs(diffX) > 80 && Math.abs(diffX) > diffY * 2) {
     if (diffX > 0) nextScreen()
     else prevScreen()
@@ -305,6 +308,8 @@ function skipAnimation() {
 
     <!-- Letter Screens -->
     <div v-else-if="letter" class="letter-screens">
+      <Transition :name="slideDirection" mode="out-in">
+        <div :key="currentScreen" class="letter-screen-wrapper">
 
       <!-- ── SCREEN 1 — Welcome ─────────────────────────────────── -->
       <div
@@ -663,6 +668,8 @@ function skipAnimation() {
         </div>
       </div>
 
+    </div>
+      </Transition>
     </div>
   </div>
 </template>
@@ -1528,5 +1535,63 @@ function skipAnimation() {
   background: rgba(212, 104, 122, 0.08);
   border-color: #D4687A;
   color: #D4687A;
+}
+
+/* ── Screen Transitions ───────────────────────────────────────────── */
+.letter-screen-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Forward (next page) */
+.slide-forward-enter-active,
+.slide-forward-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-forward-enter-from {
+  opacity: 0;
+  transform: translateX(40px);
+}
+
+.slide-forward-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-forward-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-forward-leave-to {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+
+/* Back (previous page) */
+.slide-back-enter-active,
+.slide-back-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-back-enter-from {
+  opacity: 0;
+  transform: translateX(-40px);
+}
+
+.slide-back-enter-to {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-back-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.slide-back-leave-to {
+  opacity: 0;
+  transform: translateX(40px);
 }
 </style>
