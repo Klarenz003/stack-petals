@@ -2,7 +2,7 @@
 import { supabase } from '@/supabaseClient'
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { CartItem, Customer, PaymentMethod, CheckoutStep } from '@/types'
+import type { CartItem, Customer, PaymentMethod, CheckoutStep, Product } from '@/types'
 
 
 export const useCartStore = defineStore('cart', () => {
@@ -68,21 +68,38 @@ export const useCartStore = defineStore('cart', () => {
     }, 2500)
   }
 
-  function addToCart(item: CartItem) {
+  function isSameProduct(a: Product, b: Product) {
+    return a.id && b.id ? a.id === b.id : a.name === b.name
+  }
+
+  function cartQuantity(item: Product) {
+    return cartItems.value.find(i => isSameProduct(i, item))?.quantity ?? 0
+  }
+
+  function canAddToCart(item: Product) {
+    return !!item.stock && cartQuantity(item) < item.stock
+  }
+
+  function shouldAnimateAddToCart(item: Product) {
+    return canAddToCart(item)
+  }
+
+  function addToCart(item: Product) {
     if (!item.stock || item.stock === 0) {
       showNotification('This item is out of stock')
-      return
+      return false
     }
-    const existing = cartItems.value.find(i => i.id === item.id)
+    const existing = cartItems.value.find(i => isSameProduct(i, item))
     if (existing) {
       if (existing.quantity >= (item.stock ?? 0)) {
         showNotification(`Only ${item.stock} available in stock`)
-        return
+        return false
       }
       existing.quantity++
     } else {
       cartItems.value.push({ ...item, quantity: 1 })
     }
+    return true
   }
 
   function updateQuantity(index: number, delta: number) {
@@ -261,6 +278,7 @@ export const useCartStore = defineStore('cart', () => {
 
       // ── Actions ────────────────────────────────────────────────────
       addToCart, removeFromCart, updateQuantity,
+      cartQuantity, canAddToCart, shouldAnimateAddToCart,
       openCheckout, closeCheckout, goToPayment,
       handleProofUpload, clearProof,
       submitOrder, finishCheckout, notification

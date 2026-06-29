@@ -10,9 +10,10 @@ const cart = useCartStore()
 const { flyToCart } = useFlyToCart()
 
 function addAndClose(event: MouseEvent) {
-  flyToCart(event)
-  cart.addToCart(props.bouquet)
-  emit('close')
+  const shouldAnimate = cart.shouldAnimateAddToCart(props.bouquet)
+  const added = cart.addToCart(props.bouquet)
+  if (added && shouldAnimate) flyToCart(event)
+  if (added) emit('close')
 }
 </script>
 
@@ -26,8 +27,8 @@ function addAndClose(event: MouseEvent) {
           <img :src="bouquet.image" :alt="bouquet.name" />
           <h2>{{ bouquet.name }}</h2>
           <p>{{ bouquet.price }}</p>
-          <button class="co-btn-primary" style="margin-top:16px" @click="addAndClose">
-            Add to Cart
+          <button class="co-btn-primary" style="margin-top:16px" :disabled="!cart.canAddToCart(bouquet)" @click="addAndClose">
+            {{ cart.canAddToCart(bouquet) ? 'Add to Cart' : (cart.cartQuantity(bouquet) > 0 ? 'In Cart' : 'Out of Stock') }}
           </button>
         </div>
       </Transition>
