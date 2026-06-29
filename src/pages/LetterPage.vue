@@ -267,6 +267,18 @@ watch(() => currentScreen.value, (screen) => {
     }
   }
 })
+
+function skipAnimation() {
+  if (typeInterval) {
+    clearInterval(typeInterval)
+    typeInterval = null
+  }
+  displayedText.value = letter.value?.message || ''
+  isTyping.value = false
+  setTimeout(() => {
+    senderVisible.value = true
+  }, 600)
+}
 </script>
 
 <template>
@@ -455,6 +467,11 @@ watch(() => currentScreen.value, (screen) => {
               <div class="letter-lines"></div>
               <p class="letter-message-text">{{ displayedText }}</p>
             </div>
+
+            <!-- Skip button — only shows while typing -->
+            <button v-if="isTyping" class="skip-btn" @click="skipAnimation">
+               Skip ↓
+            </button>
 
             <Transition name="sender-reveal">
               <div v-if="senderVisible" class="sender-footer">
@@ -910,29 +927,35 @@ watch(() => currentScreen.value, (screen) => {
 
 /* ── Letter Message ───────────────────────────────────────────────── */
 .letter-message-box {
-  background: rgba(255, 255, 255, 0.65);
+  background-color: rgba(255, 255, 255, 0.7);
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 26px,
+    rgba(232, 180, 192, 0.25) 26px,
+    rgba(232, 180, 192, 0.25) 27px
+  );
+  background-attachment: local;
   border: 1px solid #F0C4CF;
   border-radius: 16px;
-  padding: 24px;
+  padding: 26px 22px;
   width: 100%;
   max-height: 340px;
   overflow-y: auto;
   scrollbar-width: none;
+  box-shadow: inset 0 1px 3px rgba(212,104,122,0.08),
+              0 4px 16px rgba(212,104,122,0.08);
 }
 
 .letter-message-text {
   font-family: 'Lora', serif;
   font-size: 14px;
   color: #7A4A54;
-  line-height: 1.8;
-  font-style: italic;
+  line-height: 27px;
   text-align: left;
   margin: 0;
-  white-space: pre-wrap;
-}
-
-.letter-message-box::-webkit-scrollbar {
-  display: none;
+  white-space: pre-line; /* ← change from pre-wrap to pre-line */
+  position: relative;
+  z-index: 1;
 }
 
 .typing-cursor {
@@ -1471,43 +1494,6 @@ watch(() => currentScreen.value, (screen) => {
   100% { top: 100vh; opacity: 0; transform: rotate(360deg) scale(1.2); }
 }
 
-/* ── Letter Lines (paper texture) ────────────────────────────────── */
-.letter-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: repeating-linear-gradient(
-    transparent,
-    transparent 35px,
-    rgba(232, 180, 192, 0.2) 35px,
-    rgba(232, 180, 192, 0.2) 36px
-  );
-  border-radius: 16px;
-  pointer-events: none;
-  min-height: 100%;
-}
-
-/* ── Letter Box ───────────────────────────────────────────────────── */
-.letter-message-box {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid #F0C4CF;
-  border-radius: 16px;
-  padding: 20px 22px;
-  width: 100%;
-  max-height: 340px;
-  overflow-y: auto;
-  scrollbar-width: none;
-  position: relative;
-  box-shadow: inset 0 1px 3px rgba(212,104,122,0.08),
-              0 4px 16px rgba(212,104,122,0.08);
-}
-
-.letter-message-box::-webkit-scrollbar {
-  display: none;
-}
-
 /* ── Typing Cursor ────────────────────────────────────────────────── */
 .typing-cursor {
   display: inline;
@@ -1521,5 +1507,26 @@ watch(() => currentScreen.value, (screen) => {
 @keyframes cursorBlink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0; }
+}
+
+/* ── Skip Button ──────────────────────────────────────────────────── */
+.skip-btn {
+  background: transparent;
+  border: 1px solid rgba(212, 104, 122, 0.3);
+  color: #C48090;
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-family: 'Lora', serif;
+  font-size: 12px;
+  font-style: italic;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
+}
+
+.skip-btn:hover {
+  background: rgba(212, 104, 122, 0.08);
+  border-color: #D4687A;
+  color: #D4687A;
 }
 </style>
