@@ -179,7 +179,15 @@ function togglePreviewPetal(i: number) {
 
           <div class="letter-field">
             <label>Your Message</label>
-            <textarea v-model="cart.letterData.mainMessage" placeholder="Write something from your heart..." class="letter-textarea"></textarea>
+            <textarea
+              v-model="cart.letterData.mainMessage"
+              placeholder="Write something from your heart..."
+              class="letter-textarea"
+              maxlength="300"
+            ></textarea>
+            <span class="petal-char-count" :class="{ warning: cart.letterData.mainMessage.length >= 250 }">
+              {{ cart.letterData.mainMessage.length }}/300
+            </span>
           </div>
 
           <div class="petals-section">

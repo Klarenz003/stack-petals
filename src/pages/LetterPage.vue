@@ -31,6 +31,7 @@ const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
+const senderVisible = ref(false)
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -221,6 +222,51 @@ onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   if (animationFrame) cancelAnimationFrame(animationFrame)
 })
+
+// ── Letter Reveal ──────────────────────────────────────────────────
+const letterRevealed = ref(false)
+const displayedText = ref('')
+const isTyping = ref(false)
+let typeInterval: number | null = null
+
+function startLetterReveal() {
+  letterRevealed.value = true
+  isTyping.value = true
+  displayedText.value = ''
+  senderVisible.value = false
+
+  const fullText = letter.value?.message || ''
+  let i = 0
+
+  typeInterval = window.setInterval(() => {
+    if (i < fullText.length) {
+      displayedText.value += fullText[i]
+      i++
+    } else {
+      isTyping.value = false
+      if (typeInterval) {
+        clearInterval(typeInterval)
+        typeInterval = null
+      }
+      setTimeout(() => {
+        senderVisible.value = true
+      }, 600)
+    }
+  }, 35)
+}
+
+watch(() => currentScreen.value, (screen) => {
+  if (screen !== 3) {
+    letterRevealed.value = false
+    displayedText.value = ''
+    isTyping.value = false
+    senderVisible.value = false
+    if (typeInterval) {
+      clearInterval(typeInterval)
+      typeInterval = null
+    }
+  }
+})
 </script>
 
 <template>
@@ -371,24 +417,46 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- ── SCREEN 4 — The Letter ──────────────────────────────── -->
+      <!-- ── SCREEN 4 — The Letter ──────────────────────────────────────── -->
       <div
         v-if="currentScreen === 3"
         class="letter-screen"
         :style="{ backgroundColor: screenBg('screen4') }"
       >
-        <div class="screen-content">
+        <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="letter-heart">🤍</div>
-          <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <div class="letter-message-box">
-            <p class="letter-message-text">{{ letter.message }}</p>
+
+          <!-- Before reveal -->
+          <div v-if="!letterRevealed" class="letter-reveal-wrap">
+            <div class="envelope-icon">💌</div>
+            <h2 class="letter-title">A letter<br><em>written just for you</em></h2>
+            <div class="letter-divider"><span></span>✦<span></span></div>
+            <p class="letter-sub">From someone who loves you deeply</p>
+            <button class="letter-btn" @click="startLetterReveal">
+              Open Letter
+            </button>
           </div>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <p class="letter-from">— With love, {{ letter.sender }}</p>
-          <button class="letter-btn-outline" style="margin-top: 20px;" @click="nextScreen">See memories →</button>
-        </div>
+
+          <!-- After reveal — typewriter animation -->
+          <div v-else class="letter-reveal-content">
+            <div class="letter-heart">🤍</div>
+              <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
+              <div class="letter-divider"><span></span>✦<span></span></div>
+              <div class="letter-message-box">
+                <p class="letter-message-text">{{ displayedText }}<span class="typing-cursor" v-if="isTyping"></span></p>
+              </div>
+              <Transition name="sender-reveal">
+                <div v-if="senderVisible" class="sender-footer">
+              <div class="letter-divider" v-if="!isTyping"><span></span>✦<span></span></div>
+              <p class="letter-from" v-if="!isTyping">— With love, {{ letter.sender }}</p>
+              <button class="letter-btn-outline" style="margin-top: 20px;" v-if="!isTyping" @click="nextScreen">
+                See memories →
+              </button>
+              </div>
+              </Transition>
+            </div>
+          </div>
+
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
         </div>
@@ -836,22 +904,55 @@ onUnmounted(() => {
   border-radius: 16px;
   padding: 24px;
   width: 100%;
-  max-height: 300px;
+  max-height: 340px;
   overflow-y: auto;
+  scrollbar-width: none;
 }
 
 .letter-message-text {
   font-family: 'Lora', serif;
-  font-size: 15px;
+  font-size: 14px;
   color: #7A4A54;
-  line-height: 2;
+  line-height: 1.8;
   font-style: italic;
-  text-align: center;
+  text-align: left;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 10;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  white-space: pre-wrap;
+}
+
+.letter-message-box::-webkit-scrollbar {
+  display: none;
+}
+
+.typing-cursor {
+  display: inline;
+  color: #D4687A;
+  font-weight: 300;
+  animation: cursorBlink 0.8s ease-in-out infinite;
+  margin-left: 1px;
+  vertical-align: baseline;
+}
+
+/* ── Sender Footer Transition ─────────────────────────────────────── */
+.sender-footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sender-reveal-enter-active {
+  transition: all 0.8s ease;
+}
+
+.sender-reveal-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.sender-reveal-enter-to {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* ── Memories ─────────────────────────────────────────────────────── */
@@ -1254,4 +1355,57 @@ onUnmounted(() => {
   from { opacity: 0; transform: scale(0.8); }
   to   { opacity: 1; transform: scale(1); }
 }
+
+/* ── Letter Reveal ────────────────────────────────────────────────── */
+.letter-reveal-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.envelope-icon {
+  font-size: 72px;
+  margin-bottom: 24px;
+  animation: envelopePulse 2s ease-in-out infinite;
+}
+
+@keyframes envelopePulse {
+  0%, 100% { transform: scale(1) rotate(-3deg); }
+  50%       { transform: scale(1.08) rotate(3deg); }
+}
+
+.letter-reveal-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ── Typewriter ───────────────────────────────────────────────────── */
+.typed-char {
+  opacity: 0;
+  animation: fadeInChar 0.1s forwards;
+}
+
+@keyframes fadeInChar {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.typing-cursor {
+  display: inline;
+  color: #D4687A;
+  font-weight: 300;
+  animation: cursorBlink 0.8s ease-in-out infinite;
+  margin-left: 1px;
+  vertical-align: baseline;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+
 </style>
