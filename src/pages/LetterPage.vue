@@ -33,6 +33,7 @@ const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
+const memorySlideDirection = ref('memory-forward')
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -81,7 +82,7 @@ let isSwiping = false
 function onTouchStart(e: TouchEvent) {
   // Don't start page swipe if touching the 360 viewer
   const target = e.target as HTMLElement
-  if (target.closest('.viewer-360')) return
+  if (target.closest('.viewer-360') || target.closest('.memory-frame')) return
   swipeStartX = e.touches[0].clientX
   swipeStartY = e.touches[0].clientY
   isSwiping = true
@@ -100,7 +101,7 @@ function onTouchEnd(e: TouchEvent) {
 
 function onMouseDown(e: MouseEvent) {
   const target = e.target as HTMLElement
-  if (target.closest('.viewer-360')) return
+  if (target.closest('.viewer-360') || target.closest('.memory-frame')) return
   isDragging.value = true
   dragStartX.value = e.clientX
 }
@@ -121,12 +122,75 @@ function revealPetal(i: number) {
 }
 
 // ── Memory Slideshow ───────────────────────────────────────────────
+let memorySwipeStartX = 0
+let memorySwipeStartY = 0
+let isMemorySwiping = false
+
 function startMemoryTimer() {
+  if (memoryTimer.value) clearInterval(memoryTimer.value)
   memoryTimer.value = window.setInterval(() => {
     if (letter.value && letter.value.memories.length > 1) {
-      currentMemory.value = (currentMemory.value + 1) % letter.value.memories.length
+      nextMemory()
     }
   }, 3000)
+}
+
+function nextMemory() {
+  if (!letter.value || letter.value.memories.length <= 1) return
+  memorySlideDirection.value = 'memory-forward'
+  currentMemory.value = (currentMemory.value + 1) % letter.value.memories.length
+}
+
+function prevMemory() {
+  if (!letter.value || letter.value.memories.length <= 1) return
+  memorySlideDirection.value = 'memory-back'
+  currentMemory.value = (currentMemory.value - 1 + letter.value.memories.length) % letter.value.memories.length
+}
+
+function goToMemory(index: number) {
+  memorySlideDirection.value = index > currentMemory.value ? 'memory-forward' : 'memory-back'
+  currentMemory.value = index
+  startMemoryTimer()
+}
+
+function onMemoryTouchStart(e: TouchEvent) {
+  memorySwipeStartX = e.touches[0].clientX
+  memorySwipeStartY = e.touches[0].clientY
+  isMemorySwiping = true
+}
+
+function onMemoryTouchEnd(e: TouchEvent) {
+  if (!isMemorySwiping) return
+  isMemorySwiping = false
+  const diffX = memorySwipeStartX - e.changedTouches[0].clientX
+  const diffY = Math.abs(memorySwipeStartY - e.changedTouches[0].clientY)
+  if (Math.abs(diffX) > 45 && Math.abs(diffX) > diffY * 1.5) {
+    if (diffX > 0) nextMemory()
+    else prevMemory()
+    startMemoryTimer()
+  }
+}
+
+function onMemoryMouseDown(e: MouseEvent) {
+  memorySwipeStartX = e.clientX
+  memorySwipeStartY = e.clientY
+  isMemorySwiping = true
+}
+
+function onMemoryMouseUp(e: MouseEvent) {
+  if (!isMemorySwiping) return
+  isMemorySwiping = false
+  const diffX = memorySwipeStartX - e.clientX
+  const diffY = Math.abs(memorySwipeStartY - e.clientY)
+  if (Math.abs(diffX) > 45 && Math.abs(diffX) > diffY * 1.5) {
+    if (diffX > 0) nextMemory()
+    else prevMemory()
+    startMemoryTimer()
+  }
+}
+
+function cancelMemorySwipe() {
+  isMemorySwiping = false
 }
 
 // ── 360° Drag (smooth with momentum) ──────────────────────────────
@@ -507,22 +571,31 @@ function skipAnimation() {
           <div class="letter-divider"><span></span>✦<span></span></div>
 
           <div v-if="letter.memories && letter.memories.length > 0" class="memory-slideshow">
-            <div class="memory-frame">
-              <img
-                v-for="(mem, i) in letter.memories"
-                :key="i"
-                :src="mem"
-                :class="{ active: i === currentMemory }"
-                class="memory-slide"
-                :alt="`Memory ${i + 1}`"
-              />
+            <div
+              class="memory-frame"
+              @touchstart.stop="onMemoryTouchStart"
+              @touchend.stop="onMemoryTouchEnd"
+              @touchcancel.stop="cancelMemorySwipe"
+              @mousedown.stop="onMemoryMouseDown"
+              @mouseup.stop="onMemoryMouseUp"
+              @mouseleave="cancelMemorySwipe"
+            >
+              <Transition :name="memorySlideDirection" mode="out-in">
+                <img
+                  :key="currentMemory"
+                  :src="letter.memories[currentMemory]"
+                  class="memory-slide"
+                  :alt="`Memory ${currentMemory + 1}`"
+                  draggable="false"
+                />
+              </Transition>
             </div>
             <div class="memory-dots">
               <span
                 v-for="(_, i) in letter.memories"
                 :key="i"
                 :class="{ active: i === currentMemory }"
-                @click="currentMemory = i"
+                @click="goToMemory(i)"
               ></span>
             </div>
           </div>
@@ -1042,6 +1115,13 @@ function skipAnimation() {
   overflow: hidden;
   aspect-ratio: 1;
   background: #F9E8EE;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.memory-frame:active {
+  cursor: grabbing;
 }
 
 .memory-slide {
@@ -1050,12 +1130,34 @@ function skipAnimation() {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.6s ease;
+  pointer-events: none;
 }
 
-.memory-slide.active {
+.memory-forward-enter-active,
+.memory-forward-leave-active,
+.memory-back-enter-active,
+.memory-back-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.memory-forward-enter-from,
+.memory-back-leave-to {
+  opacity: 0;
+  transform: translateX(28px);
+}
+
+.memory-forward-leave-to,
+.memory-back-enter-from {
+  opacity: 0;
+  transform: translateX(-28px);
+}
+
+.memory-forward-enter-to,
+.memory-forward-leave-from,
+.memory-back-enter-to,
+.memory-back-leave-from {
   opacity: 1;
+  transform: translateX(0);
 }
 
 .memory-dots {
