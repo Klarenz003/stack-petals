@@ -682,8 +682,10 @@ function skipAnimation() {
   font-family: 'Lora', serif;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden; /* ← prevent outer scroll */
-  position: relative;
+  position: fixed;
+  inset: 0;
   user-select: none;
   display: flex;
   justify-content: center;
@@ -693,7 +695,8 @@ function skipAnimation() {
 
 .letter-screens {
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
   overflow: hidden;
@@ -701,7 +704,8 @@ function skipAnimation() {
 
 .letter-screen {
   width: 100%;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -711,8 +715,8 @@ function skipAnimation() {
   background-position: center;
   background-repeat: no-repeat;
   position: relative;
-  overflow-y: hidden;
-  padding: 60px 0 80px;
+  overflow: hidden;
+  padding: 48px 0 72px;
 }
 
 .letter-screen:has(.bouquet-preview) {
@@ -723,7 +727,8 @@ function skipAnimation() {
 .screen-content {
   width: 100%;
   max-width: 480px;
-  padding: 0 40px;
+  max-height: 100%;
+  padding: 0 32px;
   overflow: hidden;
 }
 
@@ -731,6 +736,7 @@ function skipAnimation() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
   overflow: hidden;
 }
@@ -805,8 +811,8 @@ function skipAnimation() {
 }
 
 .letter-heart {
-  font-size: 40px;
-  margin-bottom: 20px;
+  font-size: 32px;
+  margin-bottom: 12px;
 }
 
 /* ── Divider ──────────────────────────────────────────────────────── */
@@ -865,7 +871,7 @@ function skipAnimation() {
 
 /* ── Screen Dots ──────────────────────────────────────────────────── */
 .screen-dots {
-  position: fixed;
+  position: absolute;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
@@ -949,7 +955,8 @@ function skipAnimation() {
   border-radius: 16px;
   padding: 26px 22px;
   width: 100%;
-  max-height: 220px;
+  height: clamp(240px, 42dvh, 420px);
+  max-height: 100%;
   overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -1361,11 +1368,12 @@ function skipAnimation() {
     border-radius: 24px;
     overflow: hidden;
     height: 90vh;
+    height: 90dvh;
     margin: auto;
   }
 
   .letter-screen {
-    height: 90vh;
+    height: 100%;
     border-radius: 24px;
     overflow: hidden;
   }
@@ -1380,8 +1388,46 @@ function skipAnimation() {
   .viewer-360-full  { max-width: 700px; }
 
   .letter-screen-wrapper {
-    height: 90vh;
+    height: 100%;
     overflow: hidden;
+  }
+}
+
+@media (max-height: 700px) {
+  .letter-screen {
+    padding: 32px 0 52px;
+  }
+
+  .screen-content {
+    padding: 0 24px;
+  }
+
+  .letter-divider {
+    margin: 10px auto;
+  }
+
+  .letter-heart {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .letter-message-box {
+    height: clamp(220px, 48dvh, 320px);
+    padding: 22px 18px;
+  }
+
+  .screen-dots {
+    bottom: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .screen-content {
+    padding: 0 20px;
+  }
+
+  .letter-message-box {
+    padding: 22px 16px;
   }
 }
 
@@ -1450,9 +1496,12 @@ function skipAnimation() {
 
 .letter-reveal-content {
   width: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 /* ── Typewriter ───────────────────────────────────────────────────── */
