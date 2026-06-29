@@ -20,6 +20,10 @@ export interface Customer {
   email: string
   phone: string
   address: string
+  addressLat: number | null
+  addressLng: number | null
+  addressPlaceId: string
+  shippingZone: string
   date: string
   note: string
 }

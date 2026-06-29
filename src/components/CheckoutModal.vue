@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 
 const cart = useCartStore()
 const isShaking = ref(false)
 const emailError = ref('')
 const showPreview = ref(false)
 const previewRevealed = ref([false, false, false, false, false, false])
+const addressInput = ref<HTMLInputElement | null>(null)
+const mapEl = ref<HTMLElement | null>(null)
+const mapStatus = ref('')
+
+let googleMapsPromise: Promise<void> | null = null
+let deliveryMap: any = null
+let deliveryMarker: any = null
+let deliveryGeocoder: any = null
+let deliveryAutocomplete: any = null
 
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
@@ -28,6 +37,114 @@ function handleDrop(e: DragEvent) {
 function validateEmail() {
   const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   emailError.value = pattern.test(cart.customer.email) ? '' : 'Please enter a valid email address'
+}
+
+function handleAddressInput() {
+  cart.updateDeliveryAddress(cart.customer.address, { lat: null, lng: null, placeId: '' })
+}
+
+function loadGoogleMaps() {
+  const existingGoogle = (window as any).google
+  if (existingGoogle?.maps?.places) return Promise.resolve()
+  if (googleMapsPromise) return googleMapsPromise
+
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  if (!apiKey) return Promise.reject(new Error('Missing Google Maps API key'))
+
+  googleMapsPromise = new Promise((resolve, reject) => {
+    const existingScript = document.getElementById('google-maps-script') as HTMLScriptElement | null
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Google Maps failed to load')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = 'google-maps-script'
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Google Maps failed to load'))
+    document.head.appendChild(script)
+  })
+
+  return googleMapsPromise
+}
+
+async function initDeliveryMap() {
+  if (!mapEl.value) return
+  try {
+    await loadGoogleMaps()
+    const google = (window as any).google
+    const defaultPosition = {
+      lat: cart.customer.addressLat ?? 14.5586,
+      lng: cart.customer.addressLng ?? 121.1366,
+    }
+
+    deliveryMap = new google.maps.Map(mapEl.value, {
+      center: defaultPosition,
+      zoom: cart.customer.addressLat ? 15 : 12,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+    })
+    deliveryMarker = new google.maps.Marker({
+      position: defaultPosition,
+      map: deliveryMap,
+      draggable: true,
+    })
+    deliveryGeocoder = new google.maps.Geocoder()
+
+    deliveryMap.addListener('click', (event: any) => {
+      if (event.latLng) setPinnedLocation(event.latLng)
+    })
+
+    deliveryMarker.addListener('dragend', (event: any) => {
+      if (event.latLng) setPinnedLocation(event.latLng)
+    })
+
+    if (addressInput.value) {
+      deliveryAutocomplete = new google.maps.places.Autocomplete(addressInput.value, {
+        componentRestrictions: { country: 'ph' },
+        fields: ['formatted_address', 'geometry', 'place_id'],
+      })
+      deliveryAutocomplete.addListener('place_changed', () => {
+        const place = deliveryAutocomplete.getPlace()
+        const location = place.geometry?.location
+        if (!location) {
+          handleAddressInput()
+          return
+        }
+        pinAddress(place.formatted_address || cart.customer.address, location.lat(), location.lng(), place.place_id || '')
+      })
+    }
+
+    mapStatus.value = 'Search or tap the map to pin the delivery point.'
+  } catch {
+    mapStatus.value = 'Google Map is unavailable. Type the full address to estimate shipping.'
+  }
+}
+
+function setPinnedLocation(latLng: any) {
+  const lat = latLng.lat()
+  const lng = latLng.lng()
+  deliveryMarker?.setPosition({ lat, lng })
+  deliveryMap?.panTo({ lat, lng })
+
+  deliveryGeocoder?.geocode({ location: { lat, lng } }, (results: any[], status: string) => {
+    const address = status === 'OK' && results?.[0]?.formatted_address
+      ? results[0].formatted_address
+      : cart.customer.address
+    pinAddress(address, lat, lng, results?.[0]?.place_id || '')
+  })
+}
+
+function pinAddress(address: string, lat: number, lng: number, placeId = '') {
+  cart.updateDeliveryAddress(address, { lat, lng, placeId })
+  deliveryMarker?.setPosition({ lat, lng })
+  deliveryMap?.panTo({ lat, lng })
+  deliveryMap?.setZoom(15)
 }
 
 function shakeModal() {
@@ -79,6 +196,12 @@ function handleMemoryDrop(e: DragEvent) {
 function togglePreviewPetal(i: number) {
   previewRevealed.value[i] = !previewRevealed.value[i]
 }
+
+watch(() => cart.checkoutStep, async (step) => {
+  if (step !== 2) return
+  await nextTick()
+  initDeliveryMap()
+}, { immediate: true })
 </script>
 
 <template>
@@ -122,7 +245,11 @@ function togglePreviewPetal(i: number) {
             <span class="co-item-price">{{ item.price }}</span>
           </div>
         </div>
-        <div class="co-total">Total: <strong>{{ cart.cartTotal }}</strong></div>
+        <div class="co-total order-total-breakdown">
+          <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
+          <div><span>Shipping</span><strong>{{ cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Add address' }}</strong></div>
+          <div><span>Total</span><strong>{{ cart.cartTotal }}</strong></div>
+        </div>
         <div class="co-actions">
           <button class="co-btn-outline" @click="cart.closeCheckout()">Cancel</button>
           <button class="co-btn-primary" @click="cart.checkoutStep = 2">Continue →</button>
@@ -145,8 +272,22 @@ function togglePreviewPetal(i: number) {
             <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11">Phone number must be 11 digits</small>
           </label>
           <label>Delivery Address
-            <textarea v-model="cart.customer.address" placeholder="House no., Street, Barangay, City" rows="3"></textarea>
+            <input
+              ref="addressInput"
+              v-model="cart.customer.address"
+              type="text"
+              placeholder="Search or type your full delivery address"
+              @input="handleAddressInput"
+            />
           </label>
+          <div class="address-map-card">
+            <div ref="mapEl" class="address-map"></div>
+            <p class="map-status">{{ mapStatus }}</p>
+            <div class="shipping-estimate">
+              <span>{{ cart.shippingLabel }}</span>
+              <strong>{{ cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Pending' }}</strong>
+            </div>
+          </div>
           <label>Delivery Date
             <input v-model="cart.customer.date" type="date" :min="minDate" @keydown.prevent/>
           </label>
@@ -295,7 +436,11 @@ function togglePreviewPetal(i: number) {
       <!-- STEP 4 — Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
         <h2>Payment</h2>
-        <p class="co-subtitle">Total to pay: <strong>{{ cart.cartTotal }}</strong></p>
+        <div class="payment-total-card">
+          <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
+          <div><span>Shipping</span><strong>₱{{ cart.shippingFee.toFixed(2) }}</strong></div>
+          <div><span>Total to pay</span><strong>{{ cart.cartTotal }}</strong></div>
+        </div>
 
         <div class="payment-toggle">
           <button
@@ -369,6 +514,7 @@ function togglePreviewPetal(i: number) {
           <div><span>Order Total</span><strong>{{ cart.confirmedTotal }}</strong></div>
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
           <div><span>Delivery to</span><strong>{{ cart.customer.address }}</strong></div>
+          <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>
         </div>
