@@ -271,18 +271,33 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 1"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen2') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="bloom-animation">
-            <div class="bloom-circle bloom-1">🌸</div>
-            <div class="bloom-circle bloom-2">🌺</div>
-            <div class="bloom-circle bloom-3">🌷</div>
+
+          <div class="bloom-wrapper">
+            <div class="bloom-ring bloom-ring-1"></div>
+            <div class="bloom-ring bloom-ring-2"></div>
+            <div class="bloom-ring bloom-ring-3"></div>
+            <div class="bloom-center">
+              <svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9"/>
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(60 50 50)"/>
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F0B4C4" opacity="0.9" transform="rotate(120 50 50)"/>
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(180 50 50)"/>
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F0B4C4" opacity="0.9" transform="rotate(240 50 50)"/>
+                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(300 50 50)"/>
+                <circle cx="50" cy="50" r="14" fill="#FAD4A8"/>
+                <circle cx="50" cy="50" r="10" fill="#FFE4B5"/>
+              </svg>
+            </div>
           </div>
-          <h2 class="letter-title">Something special<br><em>is blooming for you...</em></h2>
+
+          <h2 class="letter-title" style="margin-top: 32px;">Something special<br><em>is blooming for you...</em></h2>
+          <div class="letter-divider"><span></span>✦<span></span></div>
           <p class="letter-sub">Please wait a moment</p>
-          <button class="letter-btn-outline" @click="nextScreen">Continue →</button>
+          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -293,62 +308,59 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 2"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen3') }"
       >
-        <div class="screen-content">
+        <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <h2 class="letter-title" style="text-align:center; margin-bottom: 8px;">Your petals</h2>
-          <p class="letter-sub" style="text-align:center; margin-bottom: 24px;">Tap a petal to reveal your message</p>
+          <h2 class="letter-title" style="margin-bottom: 4px;">Your petals</h2>
+          <p class="letter-sub" style="margin-bottom: 20px;">Tap a petal to reveal your message</p>
 
           <div class="petals-flower">
-            <!-- Flower SVG background -->
             <svg class="flower-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.7"/>
-              <ellipse cx="210" cy="95"  rx="32" ry="48" fill="#F0B4C4" opacity="0.7" transform="rotate(60 210 95)"/>
-              <ellipse cx="210" cy="185" rx="32" ry="48" fill="#F4C0CE" opacity="0.7" transform="rotate(120 210 185)"/>
-              <ellipse cx="140" cy="220" rx="32" ry="48" fill="#F0B4C4" opacity="0.7"/>
-              <ellipse cx="70"  cy="185" rx="32" ry="48" fill="#F4C0CE" opacity="0.7" transform="rotate(240 70 185)"/>
-              <ellipse cx="70"  cy="95"  rx="32" ry="48" fill="#F0B4C4" opacity="0.7" transform="rotate(300 70 95)"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(60 140 140)"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(120 140 140)"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(180 140 140)"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(240 140 140)"/>
+              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(300 140 140)"/>
               <circle cx="140" cy="140" r="30" fill="#FAD4A8"/>
               <circle cx="140" cy="140" r="22" fill="#FFE4B5"/>
             </svg>
 
-            <!-- Petal tap zones -->
+            <!-- Petal 1 — Top -->
             <div class="petal-zone petal-z-1" @click="revealPetal(0)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[0] }">
-                <span v-if="!revealedPetals[0]">✦</span>
-                <span v-else>{{ letter.petal_messages[0] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[0]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[0] }}</div>
             </div>
+
+            <!-- Petal 2 — Top Right -->
             <div class="petal-zone petal-z-2" @click="revealPetal(1)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[1] }">
-                <span v-if="!revealedPetals[1]">✦</span>
-                <span v-else>{{ letter.petal_messages[1] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[1]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[1] }}</div>
             </div>
+
+            <!-- Petal 3 — Bottom Right -->
             <div class="petal-zone petal-z-3" @click="revealPetal(2)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[2] }">
-                <span v-if="!revealedPetals[2]">✦</span>
-                <span v-else>{{ letter.petal_messages[2] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[2]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[2] }}</div>
             </div>
+
+            <!-- Petal 4 — Bottom -->
             <div class="petal-zone petal-z-4" @click="revealPetal(3)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[3] }">
-                <span v-if="!revealedPetals[3]">✦</span>
-                <span v-else>{{ letter.petal_messages[3] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[3]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[3] }}</div>
             </div>
+
+            <!-- Petal 5 — Bottom Left -->
             <div class="petal-zone petal-z-5" @click="revealPetal(4)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[4] }">
-                <span v-if="!revealedPetals[4]">✦</span>
-                <span v-else>{{ letter.petal_messages[4] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[4]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[4] }}</div>
             </div>
+
+            <!-- Petal 6 — Top Left -->
             <div class="petal-zone petal-z-6" @click="revealPetal(5)">
-              <div class="petal-bubble" :class="{ revealed: revealedPetals[5] }">
-                <span v-if="!revealedPetals[5]">✦</span>
-                <span v-else>{{ letter.petal_messages[5] }}</span>
-              </div>
+              <div class="petal-symbol" v-if="!revealedPetals[5]">✦</div>
+              <div class="petal-pill" v-else>{{ letter.petal_messages[5] }}</div>
             </div>
           </div>
 
@@ -363,7 +375,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 3"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen4') }"
       >
         <div class="screen-content">
           <div class="letter-logo">Stack Petals</div>
@@ -386,7 +398,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 4"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen5') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -430,7 +442,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 5"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen6') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -496,7 +508,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 6"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen7') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -517,7 +529,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 7"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen8') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -536,7 +548,7 @@ onUnmounted(() => {
       <div
         v-if="currentScreen === 8"
         class="letter-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
+        :style="{ backgroundColor: screenBg('screen9') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
@@ -783,28 +795,6 @@ onUnmounted(() => {
   to   { transform: scale(1.1); }
 }
 
-.bloom-animation {
-  position: relative;
-  width: 120px;
-  height: 120px;
-  margin: 0 auto 28px;
-}
-
-.bloom-circle {
-  position: absolute;
-  font-size: 48px;
-  animation: float 3s ease-in-out infinite;
-}
-
-.bloom-1 { top: 0; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.bloom-2 { top: 50%; left: 0; transform: translateY(-50%); animation-delay: 0.5s; font-size: 36px; opacity: 0.7; }
-.bloom-3 { top: 50%; right: 0; transform: translateY(-50%); animation-delay: 1s; font-size: 36px; opacity: 0.7; }
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-8px); }
-}
-
 /* ── Petals ───────────────────────────────────────────────────────── */
 .petals-flower {
   position: relative;
@@ -839,32 +829,6 @@ onUnmounted(() => {
 .petal-z-5 { bottom: 18%; left: 4%; }
 .petal-z-6 { top: 18%;  left: 4%; }
 
-.petal-bubble {
-  background: rgba(255,255,255,0.7);
-  border: 1px solid #F4C0CE;
-  border-radius: 12px;
-  padding: 6px 8px;
-  font-size: 10px;
-  font-family: 'Lora', serif;
-  color: #9A5060;
-  text-align: center;
-  font-style: italic;
-  max-width: 72px;
-  line-height: 1.4;
-  transition: all 0.3s;
-  min-width: 28px;
-  min-height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.petal-bubble.revealed {
-  background: #FFF0F3;
-  border-color: #D4687A;
-  color: #7A3A4A;
-}
-
 /* ── Letter Message ───────────────────────────────────────────────── */
 .letter-message-box {
   background: rgba(255, 255, 255, 0.65);
@@ -872,6 +836,8 @@ onUnmounted(() => {
   border-radius: 16px;
   padding: 24px;
   width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .letter-message-text {
@@ -882,6 +848,10 @@ onUnmounted(() => {
   font-style: italic;
   text-align: center;
   margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 10;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── Memories ─────────────────────────────────────────────────────── */
@@ -1053,14 +1023,6 @@ onUnmounted(() => {
   transform: translateX(-50%);
 }
 
-.viewer-frame {
-  font-family: 'Lora', serif;
-  font-size: 12px;
-  color: #B08090;
-  font-style: italic;
-  margin: 0;
-  letter-spacing: 1px;
-}
 
 /* ── Quote ────────────────────────────────────────────────────────── */
 .quote-flower {
@@ -1164,6 +1126,65 @@ onUnmounted(() => {
   color: #B08090;
 }
 
+/* ── Bloom Animation ──────────────────────────────────────────────── */
+.bloom-wrapper {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.bloom-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(212, 104, 122, 0.3);
+  animation: ringPulse 3s ease-in-out infinite;
+}
+
+.bloom-ring-1 {
+  width: 100px;
+  height: 100px;
+  animation-delay: 0s;
+}
+
+.bloom-ring-2 {
+  width: 130px;
+  height: 130px;
+  animation-delay: 0.5s;
+  border-color: rgba(212, 104, 122, 0.2);
+}
+
+.bloom-ring-3 {
+  width: 160px;
+  height: 160px;
+  animation-delay: 1s;
+  border-color: rgba(212, 104, 122, 0.1);
+}
+
+@keyframes ringPulse {
+  0%   { transform: scale(0.95); opacity: 0.8; }
+  50%  { transform: scale(1.05); opacity: 0.4; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+.bloom-center {
+  position: relative;
+  z-index: 10;
+  animation: flowerSpin 12s linear infinite;
+  filter: drop-shadow(0 4px 12px rgba(212, 104, 122, 0.3));
+}
+
+@keyframes flowerSpin {
+  0%   { transform: rotate(0deg) scale(1); }
+  25%  { transform: rotate(5deg) scale(1.05); }
+  50%  { transform: rotate(0deg) scale(1); }
+  75%  { transform: rotate(-5deg) scale(1.05); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
 /* ── Desktop ────────────────────────────────────────────────────── */
 @media (min-width: 768px) {
   .letter-screens {
@@ -1188,5 +1209,49 @@ onUnmounted(() => {
   .memory-slideshow { max-width: 420px; }
   .bouquet-preview  { max-width: 420px; }
   .viewer-360-full  { max-width: 700px; }
+}
+
+/* ── Petal Symbol ─────────────────────────────────────────────────── */
+.petal-symbol {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid #F4C0CE;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #C48090;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.petal-symbol:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transform: scale(1.1);
+}
+
+/* ── Petal Pill ───────────────────────────────────────────────────── */
+.petal-pill {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #F4C0CE;
+  border-radius: 20px;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-family: 'Lora', serif;
+  color: #9A5060;
+  text-align: center;
+  font-style: italic;
+  max-width: 80px;
+  line-height: 1.4;
+  cursor: pointer;
+  animation: pillReveal 0.4s ease;
+  box-shadow: 0 2px 8px rgba(212, 104, 122, 0.15);
+}
+
+@keyframes pillReveal {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: scale(1); }
 }
 </style>

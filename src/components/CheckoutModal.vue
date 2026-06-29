@@ -6,6 +6,7 @@ const cart = useCartStore()
 const isShaking = ref(false)
 const emailError = ref('')
 const showPreview = ref(false)
+const previewRevealed = ref([false, false, false, false, false, false])
 
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
@@ -72,6 +73,10 @@ function handleMemoryDrop(e: DragEvent) {
       }
     }
   }
+}
+
+function togglePreviewPetal(i: number) {
+  previewRevealed.value[i] = !previewRevealed.value[i]
 }
 </script>
 
@@ -157,128 +162,125 @@ function handleMemoryDrop(e: DragEvent) {
       </div>
 
       <!-- STEP 3 — Love Letter -->
-<div v-if="cart.checkoutStep === 3" class="checkout-body letter-step">
-  <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter 💌</h2>
-  <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this bouquet even more special</p>
-  
-  <label class="letter-toggle">
-    <input v-model="cart.letterData.include" type="checkbox" />
-    <span>Yes, include a personalized love letter</span>
-  </label>
+      <div v-if="cart.checkoutStep === 3" class="checkout-body letter-step">
+        <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter 💌</h2>
+        <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this bouquet even more special</p>
 
-  <div v-if="cart.letterData.include" class="letter-card">
-    <div class="letter-field">
-      <label>For</label>
-      <input v-model="cart.letterData.recipientName" type="text" placeholder="Their name..." class="letter-input" />
-    </div>
+        <label class="letter-toggle">
+          <input v-model="cart.letterData.include" type="checkbox" />
+          <span>Yes, include a personalized love letter</span>
+        </label>
 
-    <div class="letter-field">
-      <label>Your Message</label>
-      <textarea v-model="cart.letterData.mainMessage" placeholder="Write something from your heart..." class="letter-textarea"></textarea>
-    </div>
+        <div v-if="cart.letterData.include" class="letter-card">
+          <div class="letter-field">
+            <label>For</label>
+            <input v-model="cart.letterData.recipientName" type="text" placeholder="Their name..." class="letter-input" />
+          </div>
 
-    <div class="petals-section">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-        <div>
-          <label style="display: block; font-size: 14px; font-weight: 500; margin-bottom: 4px;">6 Petal Messages</label>
-          <p style="font-size: 12px; color: #999; margin: 0;">One message per petal</p>
-        </div>
-        <button class="flower-preview-btn" @click="showPreview = true">👀 Preview</button>
-      </div>
-      
-      <div class="petals-grid">
-        <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-field">
-          <span class="petal-number">{{ i + 1 }}</span>
-          <input v-model="cart.letterData.petalMessages[i]" :placeholder="`Petal ${i + 1}...`" class="petal-input" />
-        </div>
-      </div>
-    </div>
+          <div class="letter-field">
+            <label>Your Message</label>
+            <textarea v-model="cart.letterData.mainMessage" placeholder="Write something from your heart..." class="letter-textarea"></textarea>
+          </div>
 
-    <div class="letter-field">
-      <label>Memories</label>
-      <div class="upload-zone" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
-        <input ref="memoryInput" type="file" accept="image/*" multiple style="display:none" @change="handleMemoryUpload" />
-        <div v-if="cart.letterData.memories.length === 0" class="upload-empty">
-          <span>📸</span>
-          <p>Add up to 3 photos</p>
-        </div>
-        <div v-else class="memory-grid">
-          <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-item">
-            <img :src="mem" :alt="`Memory ${idx + 1}`" />
-            <button class="memory-remove" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+          <div class="petals-section">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+              <label style="margin: 0;">6 Petal Messages</label>
+              <button class="flower-preview-btn" @click="showPreview = true">👀 Preview</button>
+            </div>
+
+            <div class="petals-grid">
+              <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-field">
+                <span class="petal-number">{{ i + 1 }}</span>
+                <div class="petal-input-wrap">
+                  <input
+                    v-model="cart.letterData.petalMessages[i]"
+                    :placeholder="`Petal ${i + 1}...`"
+                    class="petal-input"
+                    maxlength="30"
+                  />
+                  <span class="petal-char-count" :class="{ warning: cart.letterData.petalMessages[i].length >= 25 }">
+                    {{ cart.letterData.petalMessages[i].length }}/30
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="letter-field">
+            <label>Memories</label>
+            <div class="upload-zone" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
+              <input ref="memoryInput" type="file" accept="image/*" multiple style="display:none" @change="handleMemoryUpload" />
+              <div v-if="cart.letterData.memories.length === 0" class="upload-empty">
+                <span>📸</span>
+                <p>Add up to 3 photos</p>
+              </div>
+              <div v-else class="memory-grid">
+                <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-item">
+                  <img :src="mem" :alt="`Memory ${idx + 1}`" />
+                  <button class="memory-remove" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <div class="co-actions">
-    <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
-    <button class="co-btn-primary" @click="cart.checkoutStep = 4">Continue →</button>
-  </div>
-</div>
+        <div class="co-actions">
+          <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
+          <button class="co-btn-primary" @click="cart.checkoutStep = 4">Continue →</button>
+        </div>
+      </div>
 
     <!-- Flower Preview Modal -->
     <div v-if="showPreview" class="flower-modal-overlay" @click.self="showPreview = false">
       <div class="flower-modal">
         <button class="flower-modal-close" @click="showPreview = false">✕</button>
         
-        <h3 style="text-align: center; margin: 0 0 24px; font-size: 16px;">Your Flower 🌸</h3>
-        
+        <h3 style="text-align: center; margin: 0 0 4px; font-size: 16px; font-family: 'Lora', serif;">Your Flower 🌸</h3>
+        <p style="text-align: center; font-size: 12px; color: #B08090; margin: 0 0 16px; font-style: italic; font-family: 'Lora', serif;">Tap a petal to reveal</p>
+
         <div class="flower-container">
-          <svg class="flower-svg" viewBox="0 0 300 320" xmlns="http://www.w3.org/2000/svg">
-            <!-- Petals -->
-            <g class="petals-group">
-              <!-- Petal 1 (Top) -->
-              <ellipse cx="150" cy="60" rx="35" ry="50" fill="#E8B5C9" opacity="0.95" />
-              <!-- Petal 2 (Top Right) -->
-              <ellipse cx="215" cy="90" rx="35" ry="50" fill="#F0C4D1" opacity="0.95" transform="rotate(60 215 90)" />
-              <!-- Petal 3 (Bottom Right) -->
-              <ellipse cx="215" cy="230" rx="35" ry="50" fill="#E8B5C9" opacity="0.95" transform="rotate(120 215 230)" />
-              <!-- Petal 4 (Bottom) -->
-              <ellipse cx="150" cy="260" rx="35" ry="50" fill="#F0C4D1" opacity="0.95" />
-              <!-- Petal 5 (Bottom Left) -->
-              <ellipse cx="85" cy="230" rx="35" ry="50" fill="#E8B5C9" opacity="0.95" transform="rotate(240 85 230)" />
-              <!-- Petal 6 (Top Left) -->
-              <ellipse cx="85" cy="90" rx="35" ry="50" fill="#F0C4D1" opacity="0.95" transform="rotate(300 85 90)" />
-            </g>
-            
-            <!-- Center circle -->
-            <circle cx="150" cy="160" r="28" fill="#F4D4A8" />
-            <circle cx="150" cy="160" r="22" fill="#FFE4B5" />
+          <svg class="flower-svg-preview" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88"/>
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(60 140 140)"/>
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(120 140 140)"/>
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(180 140 140)"/>
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(240 140 140)"/>
+            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(300 140 140)"/>
+            <circle cx="140" cy="140" r="30" fill="#FAD4A8"/>
+            <circle cx="140" cy="140" r="22" fill="#FFE4B5"/>
           </svg>
 
-          <div class="petals-preview-text">
-            <div class="petal-preview-item" style="top: 8%; left: 45%; transform: translateX(-50%);">
-              <small>1</small>
-              <p>{{ cart.letterData.petalMessages[0] }}</p>
-            </div>
-            <div class="petal-preview-item" style="top: 28%; right: 8%;">
-              <small>2</small>
-              <p>{{ cart.letterData.petalMessages[1] }}</p>
-            </div>
-            <div class="petal-preview-item" style="bottom: 28%; right: 8%;">
-              <small>3</small>
-              <p>{{ cart.letterData.petalMessages[2] }}</p>
-            </div>
-            <div class="petal-preview-item" style="bottom: 8%; left: 45%; transform: translateX(-50%);">
-              <small>4</small>
-              <p>{{ cart.letterData.petalMessages[3] }}</p>
-            </div>
-            <div class="petal-preview-item" style="bottom: 28%; left: 8%;">
-              <small>5</small>
-              <p>{{ cart.letterData.petalMessages[4] }}</p>
-            </div>
-            <div class="petal-preview-item" style="top: 28%; left: 8%;">
-              <small>6</small>
-              <p>{{ cart.letterData.petalMessages[5] }}</p>
-            </div>
+          <div class="preview-petal-zone preview-petal-1" @click="togglePreviewPetal(0)">
+            <div class="preview-symbol" v-if="!previewRevealed[0]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[0] || '...' }}</div>
+          </div>
+          <div class="preview-petal-zone preview-petal-2" @click="togglePreviewPetal(1)">
+            <div class="preview-symbol" v-if="!previewRevealed[1]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[1] || '...' }}</div>
+          </div>
+          <div class="preview-petal-zone preview-petal-3" @click="togglePreviewPetal(2)">
+            <div class="preview-symbol" v-if="!previewRevealed[2]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[2] || '...' }}</div>
+          </div>
+          <div class="preview-petal-zone preview-petal-4" @click="togglePreviewPetal(3)">
+            <div class="preview-symbol" v-if="!previewRevealed[3]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[3] || '...' }}</div>
+          </div>
+          <div class="preview-petal-zone preview-petal-5" @click="togglePreviewPetal(4)">
+            <div class="preview-symbol" v-if="!previewRevealed[4]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[4] || '...' }}</div>
+          </div>
+          <div class="preview-petal-zone preview-petal-6" @click="togglePreviewPetal(5)">
+            <div class="preview-symbol" v-if="!previewRevealed[5]">✦</div>
+            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[5] || '...' }}</div>
           </div>
         </div>
 
-          <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">Tap each petal in the letter to reveal the message</p>
-        </div>
+        <p style="text-align: center; font-size: 11px; color: #C48090; margin-top: 16px; font-family: 'Lora', serif; font-style: italic;">
+          This is how your petals will look to the recipient
+        </p>
       </div>
+    </div>
 
 
       <!-- STEP 4 — Payment -->
