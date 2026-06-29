@@ -15,6 +15,8 @@ export const useCartStore = defineStore('cart', () => {
   const paymentMethod = ref<PaymentMethod>('gcash')
   const paymentProof = ref<File | null>(null)
   const paymentProofPreview = ref<string | null>(null)
+  const isSubmittingOrder = ref(false)
+  let orderSubmissionPromise: Promise<void> | null = null
 
   const customer = ref<Customer>({
     name: '',
@@ -126,7 +128,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
 
-  async function submitOrder(): Promise<void> {
+  async function createOrder(): Promise<void> {
     if (!paymentProof.value) throw new Error('No proof')
 
     confirmedTotal.value = cartTotal.value
@@ -216,11 +218,26 @@ export const useCartStore = defineStore('cart', () => {
     console.log('Edge function response:', emailRes.status, await emailRes.text())
   }
 
+  async function submitOrder(): Promise<void> {
+    if (orderSubmissionPromise) return orderSubmissionPromise
+
+    isSubmittingOrder.value = true
+    orderSubmissionPromise = createOrder()
+      .finally(() => {
+        isSubmittingOrder.value = false
+        orderSubmissionPromise = null
+      })
+
+    return orderSubmissionPromise
+  }
+
   function finishCheckout() {
     cartItems.value = []
     checkoutStep.value = 0
     paymentProof.value = null
     paymentProofPreview.value = null
+    isSubmittingOrder.value = false
+    orderSubmissionPromise = null
     customer.value = { name: '', email: '', phone: '', address: '', date: '', note: '' }
 
     letterData.value = {
@@ -237,7 +254,7 @@ export const useCartStore = defineStore('cart', () => {
   return {
       // ── State ──────────────────────────────────────────────────────
       cartItems, cartOpen, checkoutStep, confirmedTotal,
-      paymentMethod, paymentProof, paymentProofPreview, customer, letterData,
+      paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder, customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────
       cartTotal, customerValid,

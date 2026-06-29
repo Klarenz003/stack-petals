@@ -10,6 +10,7 @@ const previewRevealed = ref([false, false, false, false, false, false])
 
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
+  if (cart.isSubmittingOrder) return
   await cart.submitOrder()
   cart.checkoutStep = 5
 }
@@ -352,9 +353,9 @@ function togglePreviewPetal(i: number) {
         </div>
 
         <div class="co-actions">
-          <button class="co-btn-outline" @click="cart.checkoutStep = 3">← Back</button>
-          <button class="co-btn-primary" @click="submitOrder" :disabled="!cart.paymentProof">
-            Submit Order →
+          <button class="co-btn-outline" @click="cart.checkoutStep = 3" :disabled="cart.isSubmittingOrder">← Back</button>
+          <button class="co-btn-primary" @click="submitOrder" :disabled="!cart.paymentProof || cart.isSubmittingOrder">
+            {{ cart.isSubmittingOrder ? 'Submitting...' : 'Submit Order →' }}
           </button>
         </div>
       </div>
@@ -376,7 +377,7 @@ function togglePreviewPetal(i: number) {
       </div>
 
       <!-- Close button (not shown on confirmation) -->
-      <button v-if="cart.checkoutStep < 5" class="checkout-close" @click="cart.closeCheckout()">✕</button>
+      <button v-if="cart.checkoutStep < 5" class="checkout-close" :disabled="cart.isSubmittingOrder" @click="cart.closeCheckout()">✕</button>
     </div>
   </div>
 </template>

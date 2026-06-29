@@ -410,6 +410,10 @@ nav a.router-link-active::after {
   transition: color 0.2s;
 }
 .checkout-close:hover { color: #222; }
+.checkout-close:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .checkout-steps {
   display: flex;
@@ -544,7 +548,11 @@ nav a.router-link-active::after {
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
 }
-.co-btn-outline:hover { border-color: #5f8872; color: #5f8872; }
+.co-btn-outline:hover:not(:disabled) { border-color: #5f8872; color: #5f8872; }
+.co-btn-outline:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .payment-toggle { display: flex; gap: 12px; }
 

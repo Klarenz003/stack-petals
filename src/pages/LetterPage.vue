@@ -532,15 +532,17 @@ function skipAnimation() {
             <div class="letter-heart">🤍</div>
             <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
             <div class="letter-divider"><span></span>✦<span></span></div>
-            <div class="letter-message-box">
+            <div class="letter-message-box" :class="{ 'typing-complete': senderVisible }">
               <div class="letter-lines"></div>
               <p class="letter-message-text">{{ displayedText }}</p>
             </div>
 
             <!-- Skip button — only shows while typing -->
-            <button v-if="isTyping" class="skip-btn" @click="skipAnimation">
-               Skip ↓
-            </button>
+            <Transition name="soft-fade">
+              <button v-if="isTyping" class="skip-btn" @click="skipAnimation">
+                 Skip ↓
+              </button>
+            </Transition>
 
             <Transition name="sender-reveal">
               <div v-if="senderVisible" class="sender-footer">
@@ -796,6 +798,15 @@ function skipAnimation() {
   overflow: hidden;
 }
 
+.letter-screen:has(.bouquet-preview) .letter-divider {
+  margin: 12px auto;
+}
+
+.letter-screen:has(.bouquet-preview) .letter-btn-outline {
+  flex-shrink: 0;
+  margin-top: 16px !important;
+}
+
 /* ── Content ──────────────────────────────────────────────────────── */
 .screen-content {
   width: 100%;
@@ -1036,6 +1047,14 @@ function skipAnimation() {
   scrollbar-color: rgba(180, 112, 126, 0.28) transparent;
   box-shadow: inset 0 1px 3px rgba(212,104,122,0.08),
               0 4px 16px rgba(212,104,122,0.08);
+  transition: box-shadow 0.7s ease, transform 0.7s ease, background-color 0.7s ease;
+}
+
+.letter-message-box.typing-complete {
+  background-color: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 3px rgba(212,104,122,0.06),
+              0 8px 24px rgba(212,104,122,0.12);
+  transform: translateY(-2px);
 }
 
 .letter-message-box::-webkit-scrollbar {
@@ -1086,20 +1105,44 @@ function skipAnimation() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
 }
 
 .sender-reveal-enter-active {
-  transition: all 0.8s ease;
+  transition: opacity 0.75s ease, transform 0.75s cubic-bezier(0.22, 1, 0.36, 1), max-height 0.75s ease;
 }
 
 .sender-reveal-enter-from {
   opacity: 0;
-  transform: translateY(16px);
+  max-height: 0;
+  transform: translateY(18px);
 }
 
 .sender-reveal-enter-to {
   opacity: 1;
+  max-height: 160px;
   transform: translateY(0);
+}
+
+.sender-reveal-enter-active .letter-divider,
+.sender-reveal-enter-active .letter-from,
+.sender-reveal-enter-active .letter-btn-outline {
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.sender-reveal-enter-from .letter-divider,
+.sender-reveal-enter-from .letter-from,
+.sender-reveal-enter-from .letter-btn-outline {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.sender-reveal-enter-active .letter-from {
+  transition-delay: 0.12s;
+}
+
+.sender-reveal-enter-active .letter-btn-outline {
+  transition-delay: 0.24s;
 }
 
 /* ── Memories ─────────────────────────────────────────────────────── */
@@ -1188,7 +1231,9 @@ function skipAnimation() {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 360px;
+  max-width: min(360px, 100%, 46dvh);
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .bouquet-main-photo {
@@ -1200,7 +1245,7 @@ function skipAnimation() {
 }
 
 .btn-360 {
-  margin-top: 16px;
+  margin-top: 12px;
   padding: 12px 32px;
   background: white;
   color: #D4687A;
@@ -1486,7 +1531,7 @@ function skipAnimation() {
   .letter-quote    { font-size: 22px; }
   .petals-flower   { width: 380px; height: 380px; }
   .memory-slideshow { max-width: 420px; }
-  .bouquet-preview  { max-width: 420px; }
+  .bouquet-preview  { max-width: min(420px, 100%, 48dvh); }
   .viewer-360-full  { max-width: 700px; }
 
   .letter-screen-wrapper {
@@ -1516,6 +1561,15 @@ function skipAnimation() {
   .letter-message-box {
     height: clamp(220px, 48dvh, 320px);
     padding: 22px 18px;
+  }
+
+  .bouquet-preview {
+    max-width: min(320px, 100%, 40dvh);
+  }
+
+  .btn-360 {
+    margin-top: 10px;
+    padding: 10px 24px;
   }
 
   .screen-dots {
@@ -1718,6 +1772,17 @@ function skipAnimation() {
   background: rgba(212, 104, 122, 0.08);
   border-color: #D4687A;
   color: #D4687A;
+}
+
+.soft-fade-enter-active,
+.soft-fade-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.soft-fade-enter-from,
+.soft-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 /* ── Screen Transitions ───────────────────────────────────────────── */
