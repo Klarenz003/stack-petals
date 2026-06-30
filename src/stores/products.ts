@@ -31,6 +31,9 @@ export const useProductsStore = defineStore('products', () => {
       badge: p.badge,
       stock: p.stock,
       featured: p.featured,
+      preOrderAllowed: p.pre_order_allowed ?? true,
+      prepDays: p.prep_days ?? 5,
+      deliveryRestrictions: p.delivery_restrictions ?? '',
     }))
     loading.value = false
   }

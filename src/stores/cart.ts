@@ -239,16 +239,22 @@ export const useCartStore = defineStore('cart', () => {
   const cartTotal = computed(() => formatPeso(itemSubtotalAmount.value + shippingFee.value))
   const deliveryDateFull = computed(() => deliveryDateCapacity.value.isFull)
   const hasPreOrderItems = computed(() => cartItems.value.some(item => item.preOrder))
+  const preOrderPrepDays = computed(() => {
+    const prepDays = cartItems.value
+      .filter(item => item.preOrder)
+      .map(item => item.prepDays ?? 5)
+    return prepDays.length ? Math.max(...prepDays) : 5
+  })
   const preOrderDateValid = computed(() => {
     if (!hasPreOrderItems.value) return true
     if (!customer.value.date) return false
     const minimum = new Date()
-    minimum.setDate(minimum.getDate() + 5)
+    minimum.setDate(minimum.getDate() + preOrderPrepDays.value)
     return customer.value.date >= minimum.toISOString().split('T')[0]
   })
   const preOrderDateMessage = computed(() =>
     hasPreOrderItems.value && !preOrderDateValid.value
-      ? 'Pre-order bouquets need a delivery date at least 5 days from today.'
+      ? `Pre-order bouquet(s) need a delivery date at least ${preOrderPrepDays.value} days from today.`
       : ''
   )
 
@@ -488,8 +494,16 @@ export const useCartStore = defineStore('cart', () => {
     return cartItems.value.find(i => isSameProduct(i, item))?.quantity ?? 0
   }
 
+  function productAllowsPreOrder(item: Product) {
+    return item.preOrderAllowed !== false
+  }
+
+  function isProductPreOrder(item: Product) {
+    return (item.stock ?? 0) <= 0 && productAllowsPreOrder(item)
+  }
+
   function canAddToCart(item: Product) {
-    if ((item.stock ?? 0) <= 0) return cartQuantity(item) === 0
+    if ((item.stock ?? 0) <= 0) return isProductPreOrder(item) && cartQuantity(item) === 0
     return cartQuantity(item) < (item.stock ?? 0)
   }
 
@@ -498,7 +512,11 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function addToCart(item: Product) {
-    const isPreOrder = (item.stock ?? 0) <= 0
+    const isPreOrder = isProductPreOrder(item)
+    if ((item.stock ?? 0) <= 0 && !isPreOrder) {
+      showNotification('This bouquet is currently out of stock')
+      return false
+    }
     const existing = cartItems.value.find(i => isSameProduct(i, item))
     if (existing) {
       if (existing.preOrder) {
@@ -603,7 +621,7 @@ export const useCartStore = defineStore('cart', () => {
 
     const orderNote = [
       customer.value.note,
-      hasPreOrderItems.value ? 'Order type: Pre-order (estimated prep time: 3-5 days)' : '',
+      hasPreOrderItems.value ? `Order type: Pre-order (estimated prep time: ${preOrderPrepDays.value} day${preOrderPrepDays.value === 1 ? '' : 's'})` : '',
       `Shipping: ${shippingLabel.value} (${formatPeso(shippingFee.value)})`,
       customer.value.landmark ? `Landmark: ${customer.value.landmark}` : '',
       customer.value.barangay ? `Barangay: ${customer.value.barangay}` : '',
@@ -622,7 +640,15 @@ export const useCartStore = defineStore('cart', () => {
       address:        fullDeliveryAddress.value,
       delivery_date:  customer.value.date,
       note:           orderNote,
-      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image, quantity: i.quantity, preOrder: !!i.preOrder })),
+      items:          cartItems.value.map(i => ({
+        name: i.name,
+        price: i.price,
+        image: i.image,
+        quantity: i.quantity,
+        preOrder: !!i.preOrder,
+        prepDays: i.prepDays ?? 5,
+        deliveryRestrictions: i.deliveryRestrictions || '',
+      })),
       total:          confirmedTotal.value,
       payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
       proof_url:      uploadData.path,
@@ -754,10 +780,12 @@ export const useCartStore = defineStore('cart', () => {
       cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
       fullDeliveryAddress, shippingEstimateAddress,
       deliveryDateFull, hasPreOrderItems, preOrderDateValid, preOrderDateMessage,
+      preOrderPrepDays,
 
       // ── Actions ────────────────────────────────────────────────────
       addToCart, removeFromCart, updateQuantity,
       cartQuantity, canAddToCart, shouldAnimateAddToCart,
+      isProductPreOrder, productAllowsPreOrder,
       openCheckout, closeCheckout, goToPayment,
       reserveStockForPayment, releaseStockReservation,
       updateDeliveryAddress, refreshShippingEstimate,

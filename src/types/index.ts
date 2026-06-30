@@ -9,6 +9,9 @@ export interface Product {
   badge?: string | null
   stock?: number
   featured?: boolean
+  preOrderAllowed?: boolean
+  prepDays?: number
+  deliveryRestrictions?: string
 }
 
 export interface CartItem extends Product {
@@ -93,6 +96,9 @@ export interface CartItem {
   badge?: string | null
   stock?: number
   featured?: boolean
+  preOrderAllowed?: boolean
+  prepDays?: number
+  deliveryRestrictions?: string
   quantity: number
   preOrder?: boolean
 }

@@ -277,13 +277,13 @@ function toggleLetterPreviewPetal(i: number) {
           <img :src="item.image" :alt="item.name" />
           <div class="co-item-info">
             <span class="co-item-name">{{ item.name }}</span>
-            <span v-if="item.preOrder" class="checkout-preorder-tag">Pre-order • 3-5 days prep</span>
+            <span v-if="item.preOrder" class="checkout-preorder-tag">Pre-order • {{ item.prepDays ?? 5 }} day{{ (item.prepDays ?? 5) === 1 ? '' : 's' }} prep</span>
             <span class="co-item-price">{{ item.price }}</span>
           </div>
         </div>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
           <strong>Pre-order included</strong>
-          <span>Choose a delivery date at least 5 days from today.</span>
+          <span>Choose a delivery date at least {{ cart.preOrderPrepDays }} day{{ cart.preOrderPrepDays === 1 ? '' : 's' }} from today.</span>
         </div>
         <div class="co-total order-total-breakdown">
           <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
@@ -664,7 +664,7 @@ function toggleLetterPreviewPetal(i: number) {
         <h2>Payment</h2>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
           <strong>Pre-order payment</strong>
-          <span>These bouquet(s) will be prepared for your selected delivery date. Estimated prep time is 3-5 days.</span>
+          <span>These bouquet(s) will be prepared for your selected delivery date. Estimated prep time is {{ cart.preOrderPrepDays }} day{{ cart.preOrderPrepDays === 1 ? '' : 's' }}.</span>
         </div>
         <div v-if="cart.stockReservationExpiresAt" class="reservation-notice">
           <strong>Stock reserved</strong>
