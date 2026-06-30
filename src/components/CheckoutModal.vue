@@ -8,7 +8,10 @@ const router = useRouter()
 const isShaking = ref(false)
 const emailError = ref('')
 const showPreview = ref(false)
+const showLetterExperiencePreview = ref(false)
+const letterPreviewScreen = ref(0)
 const previewRevealed = ref([false, false, false, false, false, false])
+const letterPreviewPetals = ref([false, false, false, false, false, false])
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
@@ -216,6 +219,24 @@ function togglePreviewPetal(i: number) {
   previewRevealed.value[i] = !previewRevealed.value[i]
 }
 
+function openLetterExperiencePreview() {
+  letterPreviewScreen.value = 0
+  letterPreviewPetals.value = [false, false, false, false, false, false]
+  showLetterExperiencePreview.value = true
+}
+
+function nextLetterPreviewScreen() {
+  if (letterPreviewScreen.value < 3) letterPreviewScreen.value++
+}
+
+function prevLetterPreviewScreen() {
+  if (letterPreviewScreen.value > 0) letterPreviewScreen.value--
+}
+
+function toggleLetterPreviewPetal(i: number) {
+  letterPreviewPetals.value[i] = !letterPreviewPetals.value[i]
+}
+
 </script>
 
 <template>
@@ -400,6 +421,10 @@ function togglePreviewPetal(i: number) {
             </div>
           </div>
 
+          <button class="letter-experience-preview-btn" @click="openLetterExperiencePreview">
+            Preview Full Letter Experience
+          </button>
+
           <div class="letter-field">
             <label>Memories</label>
             <div class="upload-zone" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
@@ -482,7 +507,122 @@ function togglePreviewPetal(i: number) {
     </div>
 
 
-      <!-- STEP 4 — Payment -->
+    <!-- Full Letter Experience Preview Modal -->
+    <div
+      v-if="showLetterExperiencePreview"
+      class="letter-experience-overlay"
+      @click.self="showLetterExperiencePreview = false"
+    >
+      <div class="letter-experience-modal">
+        <button class="flower-modal-close" @click="showLetterExperiencePreview = false">x</button>
+
+        <div class="letter-preview-phone">
+          <section v-if="letterPreviewScreen === 0" class="letter-preview-screen center">
+            <div class="letter-preview-logo">Stack Petals</div>
+            <div class="letter-preview-flower-mark">
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#f4c0ce" />
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#efb3c3" transform="rotate(60 60 60)" />
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#f4c0ce" transform="rotate(120 60 60)" />
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#efb3c3" transform="rotate(180 60 60)" />
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#f4c0ce" transform="rotate(240 60 60)" />
+                <ellipse cx="60" cy="28" rx="16" ry="28" fill="#efb3c3" transform="rotate(300 60 60)" />
+                <circle cx="60" cy="60" r="16" fill="#fad4a8" />
+                <circle cx="60" cy="60" r="10" fill="#ffe4b5" />
+              </svg>
+            </div>
+            <h3>For {{ cart.letterData.recipientName || 'your recipient' }}</h3>
+            <p>A little letter experience from {{ cart.customer.name || 'someone special' }}.</p>
+            <button class="letter-preview-action" @click="nextLetterPreviewScreen">Open Letter</button>
+          </section>
+
+          <section v-else-if="letterPreviewScreen === 1" class="letter-preview-screen">
+            <div class="letter-preview-title">
+              <span>Petal Messages</span>
+              <h3>Tap each petal</h3>
+            </div>
+
+            <div class="letter-preview-flower-wrap">
+              <svg class="flower-svg-preview" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88"/>
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(60 140 140)"/>
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(120 140 140)"/>
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(180 140 140)"/>
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(240 140 140)"/>
+                <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(300 140 140)"/>
+                <circle cx="140" cy="140" r="30" fill="#FAD4A8"/>
+                <circle cx="140" cy="140" r="22" fill="#FFE4B5"/>
+              </svg>
+
+              <div
+                v-for="(_, i) in cart.letterData.petalMessages"
+                :key="i"
+                :class="['letter-preview-petal-zone', `letter-preview-petal-${i + 1}`]"
+                @click="toggleLetterPreviewPetal(i)"
+              >
+                <div class="preview-symbol" v-if="!letterPreviewPetals[i]">*</div>
+                <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[i] || '...' }}</div>
+              </div>
+            </div>
+          </section>
+
+          <section v-else-if="letterPreviewScreen === 2" class="letter-preview-screen">
+            <div class="letter-preview-title">
+              <span>Main Letter</span>
+              <h3>Message</h3>
+            </div>
+            <div class="letter-preview-message-box">
+              <p>{{ cart.letterData.mainMessage || 'Your full letter message will appear here.' }}</p>
+              <p class="letter-preview-sender">- {{ cart.customer.name || 'Your name' }}</p>
+            </div>
+          </section>
+
+          <section v-else class="letter-preview-screen">
+            <div class="letter-preview-title">
+              <span>Memories</span>
+              <h3>Photos together</h3>
+            </div>
+            <div v-if="cart.letterData.memories.length" class="letter-preview-memory-grid">
+              <img
+                v-for="(memory, i) in cart.letterData.memories"
+                :key="i"
+                :src="memory"
+                :alt="`Memory ${i + 1}`"
+              />
+            </div>
+            <div v-else class="letter-preview-empty">
+              Add up to 3 memories and they will appear in this final part of the letter.
+            </div>
+          </section>
+        </div>
+
+        <div class="letter-preview-controls">
+          <button
+            class="co-btn-outline"
+            :disabled="letterPreviewScreen === 0"
+            @click="prevLetterPreviewScreen"
+          >
+            Back
+          </button>
+          <div class="letter-preview-dots" aria-label="Letter preview screens">
+            <span
+              v-for="screen in 4"
+              :key="screen"
+              :class="{ active: letterPreviewScreen === screen - 1 }"
+              @click="letterPreviewScreen = screen - 1"
+            ></span>
+          </div>
+          <button
+            class="co-btn-primary"
+            @click="letterPreviewScreen === 3 ? showLetterExperiencePreview = false : nextLetterPreviewScreen()"
+          >
+            {{ letterPreviewScreen === 3 ? 'Done' : 'Next' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+      <!-- STEP 4 - Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
         <h2>Payment</h2>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
