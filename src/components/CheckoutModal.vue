@@ -403,6 +403,9 @@ function togglePreviewPetal(i: number) {
             {{ cart.isReservingStock ? 'Reserving stock...' : 'Continue →' }}
           </button>
         </div>
+        <p v-if="cart.stockReservationError" class="reservation-error">
+          {{ cart.stockReservationError }}
+        </p>
       </div>
 
     <!-- Flower Preview Modal -->

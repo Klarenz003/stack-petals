@@ -618,6 +618,14 @@ nav a.router-link-active::after {
   font-size: 14px;
 }
 
+.reservation-error {
+  margin: -6px 0 0;
+  color: #9f3434;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .co-btn-primary {
   background: #5f8872;
   color: white;

@@ -1,9 +1,10 @@
 // src/stores/cart.ts
 import { supabase } from '@/supabaseClient'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep, Product } from '@/types'
 
+const CHECKOUT_RECOVERY_KEY = 'stack-petals-checkout-recovery'
 
 export const useCartStore = defineStore('cart', () => {
   // ── State ──────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ export const useCartStore = defineStore('cart', () => {
   const isSubmittingOrder = ref(false)
   const isReservingStock = ref(false)
   const stockReservationExpiresAt = ref('')
+  const stockReservationError = ref('')
   let orderSubmissionPromise: Promise<void> | null = null
   let stockReservationToken = ''
 
@@ -43,6 +45,80 @@ export const useCartStore = defineStore('cart', () => {
     petalMessages: ['', '', '', '', '', ''],
     memories: [] as string[],
   })
+
+  type CheckoutRecovery = {
+    cartItems: CartItem[]
+    checkoutStep: CheckoutStep
+    customer: Customer
+    letterData: typeof letterData.value
+    paymentMethod: PaymentMethod
+    stockReservationExpiresAt: string
+    savedAt: string
+  }
+
+  function persistCheckoutRecovery() {
+    try {
+      if (checkoutStep.value === 5 || (cartItems.value.length === 0 && checkoutStep.value === 0)) {
+        localStorage.removeItem(CHECKOUT_RECOVERY_KEY)
+        return
+      }
+
+      const recovery: CheckoutRecovery = {
+        cartItems: cartItems.value,
+        checkoutStep: checkoutStep.value,
+        customer: customer.value,
+        letterData: letterData.value,
+        paymentMethod: paymentMethod.value,
+        stockReservationExpiresAt: stockReservationExpiresAt.value,
+        savedAt: new Date().toISOString(),
+      }
+
+      localStorage.setItem(CHECKOUT_RECOVERY_KEY, JSON.stringify(recovery))
+    } catch (error) {
+      console.error('Checkout recovery save failed:', error)
+    }
+  }
+
+  function restoreCheckoutRecovery() {
+    try {
+      const saved = localStorage.getItem(CHECKOUT_RECOVERY_KEY)
+      if (!saved) return
+
+      const recovery = JSON.parse(saved) as Partial<CheckoutRecovery>
+      if (!Array.isArray(recovery.cartItems) || recovery.cartItems.length === 0) return
+
+      const recoveredStep = Number(recovery.checkoutStep || 0) as CheckoutStep
+      const hasActiveReservation = recovery.stockReservationExpiresAt
+        ? new Date(recovery.stockReservationExpiresAt).getTime() > Date.now() + 30000
+        : false
+
+      cartItems.value = recovery.cartItems
+      customer.value = { ...customer.value, ...recovery.customer }
+      letterData.value = { ...letterData.value, ...recovery.letterData }
+      paymentMethod.value = recovery.paymentMethod || 'gcash'
+      paymentProof.value = null
+      paymentProofPreview.value = null
+      stockReservationExpiresAt.value = hasActiveReservation ? recovery.stockReservationExpiresAt || '' : ''
+      checkoutStep.value = recoveredStep >= 1 && recoveredStep <= 4
+        ? (recoveredStep === 4 && !hasActiveReservation ? 3 : recoveredStep)
+        : 0
+    } catch (error) {
+      console.error('Checkout recovery restore failed:', error)
+      localStorage.removeItem(CHECKOUT_RECOVERY_KEY)
+    }
+  }
+
+  function clearCheckoutRecovery() {
+    localStorage.removeItem(CHECKOUT_RECOVERY_KEY)
+  }
+
+  restoreCheckoutRecovery()
+
+  watch(
+    [cartItems, checkoutStep, customer, letterData, paymentMethod, stockReservationExpiresAt],
+    persistCheckoutRecovery,
+    { deep: true }
+  )
 
   // ── Computed ───────────────────────────────────────────────────
   const itemSubtotalAmount = computed(() => {
@@ -144,6 +220,14 @@ export const useCartStore = defineStore('cart', () => {
     return a.id && b.id ? a.id === b.id : a.name === b.name
   }
 
+  function withTimeout<T>(promise: PromiseLike<T>, ms: number, message: string) {
+    let timeoutId: ReturnType<typeof setTimeout>
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(message)), ms)
+    })
+    return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timeoutId))
+  }
+
   function getStockReservationToken() {
     if (stockReservationToken) return stockReservationToken
 
@@ -172,59 +256,93 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function reserveStockForPayment() {
+    stockReservationError.value = ''
+
     if (cartItems.value.length === 0) {
-      showNotification('Your cart is empty')
+      stockReservationError.value = 'Your cart is empty.'
+      showNotification(stockReservationError.value)
       return false
     }
 
     const items = reservableItems()
     if (items.length !== cartItems.value.length) {
-      showNotification('Some cart items cannot be reserved. Please refresh and try again.')
+      stockReservationError.value = 'Some cart items cannot be reserved. Please refresh and try again.'
+      showNotification(stockReservationError.value)
       return false
     }
 
     isReservingStock.value = true
-    const { data, error } = await supabase.rpc('reserve_cart_stock', {
-      p_session_token: getStockReservationToken(),
-      p_items: items,
-      p_minutes: 15,
-    })
-    isReservingStock.value = false
+    try {
+      const { data, error } = await withTimeout(
+        supabase.rpc('reserve_cart_stock', {
+          p_session_token: getStockReservationToken(),
+          p_items: items,
+          p_minutes: 15,
+        }),
+        10000,
+        'Stock reservation took too long.'
+      )
 
-    if (error) {
+      if (error) {
+        console.error('Stock reservation failed:', error)
+        const message = error.message?.includes('reserve_cart_stock')
+          ? 'Stock reservation is not ready yet. Please apply the latest Supabase migration.'
+          : 'Could not reserve stock. Please try again.'
+        stockReservationError.value = message
+        showNotification(stockReservationError.value)
+        return false
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      if (!result?.success) {
+        stockReservationExpiresAt.value = ''
+        stockReservationError.value = result?.message || 'Some items are no longer available.'
+        showNotification(stockReservationError.value)
+        return false
+      }
+
+      stockReservationExpiresAt.value = result.expires_at
+      stockReservationError.value = ''
+      showNotification('Stock reserved for 15 minutes')
+      return true
+    } catch (error) {
       console.error('Stock reservation failed:', error)
-      showNotification('Could not reserve stock. Please try again.')
+      stockReservationError.value = error instanceof Error && error.message === 'Stock reservation took too long.'
+        ? 'Stock reservation is taking too long. Please check your Supabase migration/connection and try again.'
+        : 'Could not reserve stock. Please try again.'
+      showNotification(stockReservationError.value)
       return false
+    } finally {
+      isReservingStock.value = false
     }
-
-    const result = Array.isArray(data) ? data[0] : data
-    if (!result?.success) {
-      stockReservationExpiresAt.value = ''
-      showNotification(result?.message || 'Some items are no longer available.')
-      return false
-    }
-
-    stockReservationExpiresAt.value = result.expires_at
-    showNotification('Stock reserved for 15 minutes')
-    return true
   }
 
   async function releaseStockReservation() {
     if (!stockReservationExpiresAt.value) return
-    const { error } = await supabase.rpc('release_stock_reservation', {
-      p_session_token: getStockReservationToken(),
-    })
-    if (error) console.error('Stock reservation release failed:', error)
+    try {
+      const { error } = await supabase.rpc('release_stock_reservation', {
+        p_session_token: getStockReservationToken(),
+      })
+      if (error) console.error('Stock reservation release failed:', error)
+    } catch (error) {
+      console.error('Stock reservation release failed:', error)
+    }
     stockReservationExpiresAt.value = ''
+    stockReservationError.value = ''
   }
 
   async function commitStockReservation() {
     if (!stockReservationExpiresAt.value) return
-    const { error } = await supabase.rpc('commit_stock_reservation', {
-      p_session_token: getStockReservationToken(),
-    })
-    if (error) console.error('Stock reservation commit failed:', error)
+    try {
+      const { error } = await supabase.rpc('commit_stock_reservation', {
+        p_session_token: getStockReservationToken(),
+      })
+      if (error) console.error('Stock reservation commit failed:', error)
+    } catch (error) {
+      console.error('Stock reservation commit failed:', error)
+    }
     stockReservationExpiresAt.value = ''
+    stockReservationError.value = ''
   }
 
   async function ensureStockReservation() {
@@ -429,10 +547,12 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function finishCheckout() {
+    clearCheckoutRecovery()
     cartItems.value = []
     checkoutStep.value = 0
     confirmedOrderReference.value = ''
     stockReservationExpiresAt.value = ''
+    stockReservationError.value = ''
     paymentProof.value = null
     paymentProofPreview.value = null
     isSubmittingOrder.value = false
@@ -465,7 +585,7 @@ export const useCartStore = defineStore('cart', () => {
       // ── State ──────────────────────────────────────────────────────
       cartItems, cartOpen, checkoutStep, confirmedTotal, confirmedOrderReference,
       paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder,
-      isReservingStock, stockReservationExpiresAt, customer, letterData,
+      isReservingStock, stockReservationExpiresAt, stockReservationError, customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────
       cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
