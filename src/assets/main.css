@@ -602,6 +602,22 @@ nav a.router-link-active::after {
   color: #555;
 }
 
+.reservation-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid #d8eadf;
+  border-radius: 12px;
+  background: #f2faf5;
+  color: #3f6f53;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.reservation-notice strong {
+  font-size: 14px;
+}
+
 .co-btn-primary {
   background: #5f8872;
   color: white;

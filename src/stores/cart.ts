@@ -17,7 +17,10 @@ export const useCartStore = defineStore('cart', () => {
   const paymentProof = ref<File | null>(null)
   const paymentProofPreview = ref<string | null>(null)
   const isSubmittingOrder = ref(false)
+  const isReservingStock = ref(false)
+  const stockReservationExpiresAt = ref('')
   let orderSubmissionPromise: Promise<void> | null = null
+  let stockReservationToken = ''
 
   const customer = ref<Customer>({
     name: '',
@@ -141,6 +144,94 @@ export const useCartStore = defineStore('cart', () => {
     return a.id && b.id ? a.id === b.id : a.name === b.name
   }
 
+  function getStockReservationToken() {
+    if (stockReservationToken) return stockReservationToken
+
+    const stored = localStorage.getItem('stack-petals-stock-reservation-token')
+    if (stored) {
+      stockReservationToken = stored
+      return stockReservationToken
+    }
+
+    stockReservationToken = crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+    localStorage.setItem('stack-petals-stock-reservation-token', stockReservationToken)
+    return stockReservationToken
+  }
+
+  function reservableItems() {
+    return cartItems.value
+      .filter(item => item.id && item.quantity > 0)
+      .map(item => ({ product_id: item.id, quantity: item.quantity }))
+  }
+
+  function hasActiveStockReservation() {
+    if (!stockReservationExpiresAt.value) return false
+    return new Date(stockReservationExpiresAt.value).getTime() > Date.now() + 30000
+  }
+
+  async function reserveStockForPayment() {
+    if (cartItems.value.length === 0) {
+      showNotification('Your cart is empty')
+      return false
+    }
+
+    const items = reservableItems()
+    if (items.length !== cartItems.value.length) {
+      showNotification('Some cart items cannot be reserved. Please refresh and try again.')
+      return false
+    }
+
+    isReservingStock.value = true
+    const { data, error } = await supabase.rpc('reserve_cart_stock', {
+      p_session_token: getStockReservationToken(),
+      p_items: items,
+      p_minutes: 15,
+    })
+    isReservingStock.value = false
+
+    if (error) {
+      console.error('Stock reservation failed:', error)
+      showNotification('Could not reserve stock. Please try again.')
+      return false
+    }
+
+    const result = Array.isArray(data) ? data[0] : data
+    if (!result?.success) {
+      stockReservationExpiresAt.value = ''
+      showNotification(result?.message || 'Some items are no longer available.')
+      return false
+    }
+
+    stockReservationExpiresAt.value = result.expires_at
+    showNotification('Stock reserved for 15 minutes')
+    return true
+  }
+
+  async function releaseStockReservation() {
+    if (!stockReservationExpiresAt.value) return
+    const { error } = await supabase.rpc('release_stock_reservation', {
+      p_session_token: getStockReservationToken(),
+    })
+    if (error) console.error('Stock reservation release failed:', error)
+    stockReservationExpiresAt.value = ''
+  }
+
+  async function commitStockReservation() {
+    if (!stockReservationExpiresAt.value) return
+    const { error } = await supabase.rpc('commit_stock_reservation', {
+      p_session_token: getStockReservationToken(),
+    })
+    if (error) console.error('Stock reservation commit failed:', error)
+    stockReservationExpiresAt.value = ''
+  }
+
+  async function ensureStockReservation() {
+    if (hasActiveStockReservation()) return true
+    return reserveStockForPayment()
+  }
+
   function cartQuantity(item: Product) {
     return cartItems.value.find(i => isSameProduct(i, item))?.quantity ?? 0
   }
@@ -171,7 +262,8 @@ export const useCartStore = defineStore('cart', () => {
     return true
   }
 
-  function updateQuantity(index: number, delta: number) {
+  async function updateQuantity(index: number, delta: number) {
+    await releaseStockReservation()
     const item = cartItems.value[index]
     const newQty = item.quantity + delta
     if (newQty < 1) {
@@ -185,7 +277,8 @@ export const useCartStore = defineStore('cart', () => {
     item.quantity = newQty
   }
 
-  function removeFromCart(index: number) {
+  async function removeFromCart(index: number) {
+    await releaseStockReservation()
     cartItems.value.splice(index, 1)
   }
 
@@ -194,7 +287,8 @@ export const useCartStore = defineStore('cart', () => {
     checkoutStep.value = 1
   }
 
-  function closeCheckout() {
+  async function closeCheckout() {
+    await releaseStockReservation()
     checkoutStep.value = 0
   }
 
@@ -206,9 +300,10 @@ export const useCartStore = defineStore('cart', () => {
     customer.value.shippingZone = estimateShippingZone(address, customer.value.addressLat, customer.value.addressLng)
   }
 
-  function goToPayment() {
+  async function goToPayment() {
     if (!customerValid.value) return
-    checkoutStep.value = letterData.value.include ? 3 : 4
+    const reserved = await reserveStockForPayment()
+    if (reserved) checkoutStep.value = 4
   }
 
   function handleProofUpload(file: File) {
@@ -224,6 +319,8 @@ export const useCartStore = defineStore('cart', () => {
 
   async function createOrder(): Promise<void> {
     if (!paymentProof.value) throw new Error('No proof')
+    const stockReserved = await ensureStockReservation()
+    if (!stockReserved) throw new Error('Stock is no longer available')
 
     confirmedTotal.value = cartTotal.value
 
@@ -260,15 +357,8 @@ export const useCartStore = defineStore('cart', () => {
     if (error) throw error
     confirmedOrderReference.value = insertedOrder?.id ? `SP-${insertedOrder.id}` : ''
 
-    // 3. Decrease stock for each item
-    for (const item of cartItems.value) {
-      if (!item.id) continue
-      const { error: stockError } = await supabase.rpc('decrement_stock', {
-        p_id: item.id,
-        p_qty: item.quantity,
-      })
-      if (stockError) console.error('Stock update failed for', item.id, stockError)
-    }
+    // 3. Consume the reserved stock. The stock was already decremented at payment step.
+    await commitStockReservation()
 
     // 4. Save letter draft if included
     if (letterData.value.include) {
@@ -342,6 +432,7 @@ export const useCartStore = defineStore('cart', () => {
     cartItems.value = []
     checkoutStep.value = 0
     confirmedOrderReference.value = ''
+    stockReservationExpiresAt.value = ''
     paymentProof.value = null
     paymentProofPreview.value = null
     isSubmittingOrder.value = false
@@ -373,7 +464,8 @@ export const useCartStore = defineStore('cart', () => {
   return {
       // ── State ──────────────────────────────────────────────────────
       cartItems, cartOpen, checkoutStep, confirmedTotal, confirmedOrderReference,
-      paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder, customer, letterData,
+      paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder,
+      isReservingStock, stockReservationExpiresAt, customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────
       cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
@@ -382,6 +474,7 @@ export const useCartStore = defineStore('cart', () => {
       addToCart, removeFromCart, updateQuantity,
       cartQuantity, canAddToCart, shouldAnimateAddToCart,
       openCheckout, closeCheckout, goToPayment,
+      reserveStockForPayment, releaseStockReservation,
       updateDeliveryAddress,
       handleProofUpload, clearProof,
       submitOrder, finishCheckout, notification

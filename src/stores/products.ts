@@ -9,6 +9,8 @@ export const useProductsStore = defineStore('products', () => {
 
   async function fetchProducts() {
     loading.value = true
+    await supabase.rpc('release_expired_stock_reservations')
+
     const { data, error } = await supabase
       .from('products')
       .select('*')

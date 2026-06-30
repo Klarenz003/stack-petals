@@ -16,10 +16,14 @@ const referenceCopied = ref(false)
 // ── Functions ──────────────────────────────────────
 async function submitOrder() {
   if (cart.isSubmittingOrder) return
-  await cart.submitOrder()
-  receiptDownloaded.value = false
-  referenceCopied.value = false
-  cart.checkoutStep = 5
+  try {
+    await cart.submitOrder()
+    receiptDownloaded.value = false
+    referenceCopied.value = false
+    cart.checkoutStep = 5
+  } catch (error) {
+    console.error(error)
+  }
 }
 
 function handleProofUpload(e: Event) {
@@ -68,6 +72,16 @@ function shakeModal() {
 function handleDone() {
   cart.finishCheckout()
   window.location.reload()
+}
+
+async function continueToPayment() {
+  const reserved = await cart.reserveStockForPayment()
+  if (reserved) cart.checkoutStep = 4
+}
+
+async function backFromPayment() {
+  await cart.releaseStockReservation()
+  cart.checkoutStep = 3
 }
 
 function buildReceiptText() {
@@ -159,6 +173,14 @@ const googleMapsSearchUrl = computed(() => {
   const address = cart.customer.address.trim()
   const query = address || 'Taytay Rizal Philippines'
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
+})
+
+const reservationExpiresAt = computed(() => {
+  if (!cart.stockReservationExpiresAt) return ''
+  return new Date(cart.stockReservationExpiresAt).toLocaleTimeString('en-PH', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 })
 
 function handleMemoryUpload(e: Event) {
@@ -377,7 +399,9 @@ function togglePreviewPetal(i: number) {
 
         <div class="co-actions">
           <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
-          <button class="co-btn-primary" @click="cart.checkoutStep = 4">Continue →</button>
+          <button class="co-btn-primary" @click="continueToPayment" :disabled="cart.isReservingStock">
+            {{ cart.isReservingStock ? 'Reserving stock...' : 'Continue →' }}
+          </button>
         </div>
       </div>
 
@@ -437,6 +461,10 @@ function togglePreviewPetal(i: number) {
       <!-- STEP 4 — Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
         <h2>Payment</h2>
+        <div v-if="cart.stockReservationExpiresAt" class="reservation-notice">
+          <strong>Stock reserved</strong>
+          <span>Please finish payment by {{ reservationExpiresAt }} to keep these items reserved.</span>
+        </div>
         <div class="payment-total-card">
           <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
           <div><span>Shipping</span><strong>₱{{ cart.shippingFee.toFixed(2) }}</strong></div>
@@ -499,7 +527,7 @@ function togglePreviewPetal(i: number) {
         </div>
 
         <div class="co-actions">
-          <button class="co-btn-outline" @click="cart.checkoutStep = 3" :disabled="cart.isSubmittingOrder">← Back</button>
+          <button class="co-btn-outline" @click="backFromPayment" :disabled="cart.isSubmittingOrder">← Back</button>
           <button class="co-btn-primary" @click="submitOrder" :disabled="!cart.paymentProof || cart.isSubmittingOrder">
             {{ cart.isSubmittingOrder ? 'Submitting...' : 'Submit Order →' }}
           </button>
