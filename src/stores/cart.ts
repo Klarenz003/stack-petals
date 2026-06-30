@@ -210,6 +210,19 @@ export const useCartStore = defineStore('cart', () => {
   const cartSubtotal = computed(() => formatPeso(itemSubtotalAmount.value))
   const cartTotal = computed(() => formatPeso(itemSubtotalAmount.value + shippingFee.value))
   const deliveryDateFull = computed(() => deliveryDateCapacity.value.isFull)
+  const hasPreOrderItems = computed(() => cartItems.value.some(item => item.preOrder))
+  const preOrderDateValid = computed(() => {
+    if (!hasPreOrderItems.value) return true
+    if (!customer.value.date) return false
+    const minimum = new Date()
+    minimum.setDate(minimum.getDate() + 5)
+    return customer.value.date >= minimum.toISOString().split('T')[0]
+  })
+  const preOrderDateMessage = computed(() =>
+    hasPreOrderItems.value && !preOrderDateValid.value
+      ? 'Pre-order bouquets need a delivery date at least 5 days from today.'
+      : ''
+  )
 
   const customerValid = computed(() => {
   const c = customer.value
@@ -219,7 +232,7 @@ export const useCartStore = defineStore('cart', () => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split('T')[0]
   const dateOk = !!c.date && c.date >= minDate
-  return !!(c.name && emailOk && phoneOk && c.address && dateOk && !deliveryDateFull.value && !isCheckingDeliveryDate.value)
+  return !!(c.name && emailOk && phoneOk && c.address && dateOk && preOrderDateValid.value && !deliveryDateFull.value && !isCheckingDeliveryDate.value)
 })
 
   // ── Actions ────────────────────────────────────────────────────
@@ -320,7 +333,7 @@ export const useCartStore = defineStore('cart', () => {
 
   function reservableItems() {
     return cartItems.value
-      .filter(item => item.id && item.quantity > 0)
+      .filter(item => !item.preOrder && item.id && item.quantity > 0)
       .map(item => ({ product_id: item.id, quantity: item.quantity }))
   }
 
@@ -339,10 +352,16 @@ export const useCartStore = defineStore('cart', () => {
     }
 
     const items = reservableItems()
-    if (items.length !== cartItems.value.length) {
+    if (cartItems.value.some(item => !item.preOrder && !item.id)) {
       stockReservationError.value = 'Some cart items cannot be reserved. Please refresh and try again.'
       showNotification(stockReservationError.value)
       return false
+    }
+
+    if (items.length === 0) {
+      stockReservationExpiresAt.value = ''
+      stockReservationError.value = ''
+      return true
     }
 
     isReservingStock.value = true
@@ -420,6 +439,7 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function ensureStockReservation() {
+    if (reservableItems().length === 0) return true
     if (hasActiveStockReservation()) return true
     return reserveStockForPayment()
   }
@@ -429,27 +449,30 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function canAddToCart(item: Product) {
-    return !!item.stock && cartQuantity(item) < item.stock
+    if ((item.stock ?? 0) <= 0) return cartQuantity(item) === 0
+    return cartQuantity(item) < (item.stock ?? 0)
   }
 
   function shouldAnimateAddToCart(item: Product) {
-    return canAddToCart(item)
+    return (item.stock ?? 0) > 0 && canAddToCart(item)
   }
 
   function addToCart(item: Product) {
-    if (!item.stock || item.stock === 0) {
-      showNotification('This item is out of stock')
-      return false
-    }
+    const isPreOrder = (item.stock ?? 0) <= 0
     const existing = cartItems.value.find(i => isSameProduct(i, item))
     if (existing) {
+      if (existing.preOrder) {
+        showNotification('This pre-order bouquet is already in your cart')
+        return false
+      }
       if (existing.quantity >= (item.stock ?? 0)) {
         showNotification(`Only ${item.stock} available in stock`)
         return false
       }
       existing.quantity++
     } else {
-      cartItems.value.push({ ...item, quantity: 1 })
+      cartItems.value.push({ ...item, quantity: 1, preOrder: isPreOrder })
+      if (isPreOrder) showNotification('Pre-order bouquet added to cart')
     }
     return true
   }
@@ -460,6 +483,10 @@ export const useCartStore = defineStore('cart', () => {
     const newQty = item.quantity + delta
     if (newQty < 1) {
       cartItems.value.splice(index, 1)
+      return
+    }
+    if (item.preOrder && newQty > 1) {
+      showNotification('Pre-order bouquets are limited to 1 per checkout')
       return
     }
     if (newQty > (item.stock ?? 0)) {
@@ -494,6 +521,10 @@ export const useCartStore = defineStore('cart', () => {
 
   async function goToPayment() {
     if (!customerValid.value) return
+    if (preOrderDateMessage.value) {
+      showNotification(preOrderDateMessage.value)
+      return
+    }
     const reserved = await reserveStockForPayment()
     if (reserved) checkoutStep.value = 4
   }
@@ -525,6 +556,7 @@ export const useCartStore = defineStore('cart', () => {
 
     const orderNote = [
       customer.value.note,
+      hasPreOrderItems.value ? 'Order type: Pre-order (estimated prep time: 3-5 days)' : '',
       `Shipping: ${shippingLabel.value} (${formatPeso(shippingFee.value)})`,
       customer.value.addressLat !== null && customer.value.addressLng !== null
         ? `Pinned location: ${customer.value.addressLat}, ${customer.value.addressLng}`
@@ -539,11 +571,11 @@ export const useCartStore = defineStore('cart', () => {
       address:        customer.value.address,
       delivery_date:  customer.value.date,
       note:           orderNote,
-      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image, quantity: i.quantity })),
+      items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image, quantity: i.quantity, preOrder: !!i.preOrder })),
       total:          confirmedTotal.value,
       payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
       proof_url:      uploadData.path,
-      status:         'pending',
+      status:         hasPreOrderItems.value ? 'preorder' : 'pending',
     }).select('id')
       .single()
     if (error) throw error
@@ -664,7 +696,8 @@ export const useCartStore = defineStore('cart', () => {
       customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────
-      cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid, deliveryDateFull,
+      cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
+      deliveryDateFull, hasPreOrderItems, preOrderDateValid, preOrderDateMessage,
 
       // ── Actions ────────────────────────────────────────────────────
       addToCart, removeFromCart, updateQuantity,

@@ -9,6 +9,10 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 const cart = useCartStore()
 const { flyToCart } = useFlyToCart()
 
+function isPreorder(product: Product) {
+  return (product.stock ?? 0) <= 0
+}
+
 function addAndClose(event: MouseEvent) {
   const shouldAnimate = cart.shouldAnimateAddToCart(props.bouquet)
   const added = cart.addToCart(props.bouquet)
@@ -27,8 +31,12 @@ function addAndClose(event: MouseEvent) {
           <img :src="bouquet.image" :alt="bouquet.name" />
           <h2>{{ bouquet.name }}</h2>
           <p>{{ bouquet.price }}</p>
-          <button class="co-btn-primary" style="margin-top:16px" :disabled="!cart.canAddToCart(bouquet)" @click="addAndClose">
-            {{ cart.canAddToCart(bouquet) ? 'Add to Cart' : (cart.cartQuantity(bouquet) > 0 ? 'In Cart' : 'Out of Stock') }}
+          <div v-if="isPreorder(bouquet)" class="preorder-note preview-preorder-note">
+            <strong>Available for Pre-order</strong>
+            <span>Estimated prep time: 3-5 days</span>
+          </div>
+          <button class="co-btn-primary preorder-preview-btn" :disabled="!cart.canAddToCart(bouquet)" @click="addAndClose">
+            {{ cart.canAddToCart(bouquet) ? (isPreorder(bouquet) ? 'Pre-order Now' : 'Add to Cart') : (cart.cartQuantity(bouquet) > 0 ? 'In Cart' : 'Out of Stock') }}
           </button>
         </div>
       </Transition>

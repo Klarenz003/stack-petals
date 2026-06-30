@@ -90,4 +90,5 @@ export interface CartItem {
   stock?: number
   featured?: boolean
   quantity: number
+  preOrder?: boolean
 }

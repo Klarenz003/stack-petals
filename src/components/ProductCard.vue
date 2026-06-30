@@ -10,6 +10,10 @@ const cart = useCartStore()
 const preview = usePreviewStore()
 const { flyToCart } = useFlyToCart()
 
+function isPreorder(product: Product) {
+  return (product.stock ?? 0) <= 0
+}
+
 function handleAddToCart(product: Product, event: MouseEvent) {
   const shouldAnimate = cart.shouldAnimateAddToCart(product)
   const added = cart.addToCart(product)
@@ -28,10 +32,17 @@ function handleAddToCart(product: Product, event: MouseEvent) {
     <h3>{{ product.name }}</h3>
     <p v-if="product.category" class="card-category">{{ product.category }}</p>
     <p>{{ product.price }}</p>
+    <div v-if="isPreorder(product)" class="preorder-note">
+      <strong>Available for Pre-order</strong>
+      <span>Estimated prep time: 3-5 days</span>
+    </div>
     <button
-      class="add-to-cart-btn" :disabled="!cart.canAddToCart(product)" @click="handleAddToCart(product, $event)"
+      class="add-to-cart-btn"
+      :class="{ preorder: isPreorder(product) }"
+      :disabled="!cart.canAddToCart(product)"
+      @click="handleAddToCart(product, $event)"
     >
-      {{ cart.canAddToCart(product) ? 'Add to Cart' : (cart.cartQuantity(product) > 0 ? 'In Cart' : 'Out of Stock') }}
+      {{ cart.canAddToCart(product) ? (isPreorder(product) ? 'Pre-order Now' : 'Add to Cart') : (cart.cartQuantity(product) > 0 ? 'In Cart' : 'Out of Stock') }}
     </button>
   </div>
 </template>

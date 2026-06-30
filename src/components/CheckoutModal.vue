@@ -95,6 +95,7 @@ function buildReceiptText() {
     '==========================',
     '',
     `Order Reference: ${cart.confirmedOrderReference}`,
+    `Order Type: ${cart.hasPreOrderItems ? 'Pre-order' : 'Standard'}`,
     `Customer: ${cart.customer.name}`,
     `Phone: ${cart.customer.phone}`,
     `Email: ${cart.customer.email}`,
@@ -255,8 +256,13 @@ function togglePreviewPetal(i: number) {
           <img :src="item.image" :alt="item.name" />
           <div class="co-item-info">
             <span class="co-item-name">{{ item.name }}</span>
+            <span v-if="item.preOrder" class="checkout-preorder-tag">Pre-order • 3-5 days prep</span>
             <span class="co-item-price">{{ item.price }}</span>
           </div>
+        </div>
+        <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
+          <strong>Pre-order included</strong>
+          <span>Choose a delivery date at least 5 days from today.</span>
         </div>
         <div class="co-total order-total-breakdown">
           <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
@@ -324,6 +330,9 @@ function togglePreviewPetal(i: number) {
               :class="['delivery-slot-message', { full: cart.deliveryDateFull, limited: cart.deliveryDateCapacity.isLimited }]"
             >
               {{ cart.isCheckingDeliveryDate ? 'Checking delivery slots...' : cart.deliveryDateMessage }}
+            </small>
+            <small v-if="cart.preOrderDateMessage" class="field-error preorder-date-error">
+              {{ cart.preOrderDateMessage }}
             </small>
           </label>
           <label>Note (optional)
@@ -476,6 +485,10 @@ function togglePreviewPetal(i: number) {
       <!-- STEP 4 — Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
         <h2>Payment</h2>
+        <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
+          <strong>Pre-order payment</strong>
+          <span>These bouquet(s) will be prepared for your selected delivery date. Estimated prep time is 3-5 days.</span>
+        </div>
         <div v-if="cart.stockReservationExpiresAt" class="reservation-notice">
           <strong>Stock reserved</strong>
           <span>Please finish payment by {{ reservationExpiresAt }} to keep these items reserved.</span>
@@ -558,6 +571,7 @@ function togglePreviewPetal(i: number) {
           <div><span>Order Reference</span><strong>{{ cart.confirmedOrderReference }}</strong></div>
           <div><span>Order Total</span><strong>{{ cart.confirmedTotal }}</strong></div>
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
+          <div v-if="cart.hasPreOrderItems"><span>Order Type</span><strong>Pre-order</strong></div>
           <div><span>Items</span><strong>{{ cart.cartItems.length }} bouquet{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
           <div><span>Delivery to</span><strong>{{ cart.customer.address }}</strong></div>
           <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>

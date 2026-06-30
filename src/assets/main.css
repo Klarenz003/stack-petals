@@ -211,6 +211,32 @@ nav a.router-link-active::after {
 .card p { padding: 0 20px 10px; color: #555; text-align: center; }
 .card-category { font-size: 12px; color: #999 !important; text-transform: uppercase; letter-spacing: 1px; }
 
+.preorder-note {
+  width: calc(100% - 40px);
+  margin: 0 auto 12px;
+  border: 1px solid #e7c5cb;
+  border-radius: 10px;
+  background: #fff6f7;
+  color: #8a4a5a;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.preorder-note strong,
+.preorder-note span {
+  display: block;
+}
+
+.preorder-note strong {
+  font-size: 13px;
+}
+
+.preorder-note span {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #9b6b74;
+}
+
 .card-badge {
   position: absolute;
   top: 12px;
@@ -238,10 +264,25 @@ nav a.router-link-active::after {
 }
 .add-to-cart-btn:hover { background: #4a6b5a; transform: translateY(-1px); }
 
-.add-to-cart:disabled {
-  background: #ccc;
+.add-to-cart-btn.preorder {
+  background: #8a5c66;
+}
+
+.add-to-cart-btn.preorder:hover {
+  background: #744c55;
+}
+
+.add-to-cart-btn:disabled {
+  background: #c8b8b4;
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.85;
+  transform: none;
+}
+
+.add-to-cart-btn.preorder:disabled {
+  background: #8a5c66;
+  color: #fff;
+  opacity: 1;
 }
 
 
@@ -344,6 +385,16 @@ nav a.router-link-active::after {
 .cart-item img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; }
 .cart-item-info { flex: 1; }
 .cart-item-name { font-weight: 500; font-size: 14px; }
+.cart-preorder-label {
+  display: inline-block;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: #fff0f4;
+  color: #8a4a5a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+}
 .cart-item-price { color: #5f8872; font-size: 13px; margin-top: 2px; }
 
 .cart-item-remove {
@@ -479,9 +530,40 @@ nav a.router-link-active::after {
   border-radius: 12px;
 }
 .co-item img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; }
-.co-item-info { display: flex; justify-content: space-between; flex: 1; align-items: center; }
+.co-item-info { display: flex; justify-content: space-between; flex: 1; align-items: center; gap: 10px; }
 .co-item-name { font-size: 14px; font-weight: 500; }
 .co-item-price { font-size: 14px; color: #5f8872; font-weight: 600; }
+
+.checkout-preorder-tag {
+  margin-right: auto;
+  border-radius: 999px;
+  background: #fff0f4;
+  color: #8a4a5a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.checkout-preorder-notice {
+  border: 1px solid #e7c5cb;
+  border-radius: 12px;
+  background: #fff6f7;
+  color: #8a4a5a;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.checkout-preorder-notice strong {
+  font-size: 14px;
+}
+
+.preorder-date-error {
+  margin-top: 2px;
+}
 
 .co-total {
   border-top: 1px solid #eee;
@@ -847,6 +929,16 @@ nav a.router-link-active::after {
 .preview-content { text-align: center; color: white; }
 .preview-content h2 { margin-top: 20px; font-family: 'Cormorant Garamond', serif; font-size: 32px; }
 .preview-content p { margin-top: 8px; font-size: 20px; color: #f5d5d7; }
+
+.preview-preorder-note {
+  margin-top: 12px;
+  margin-bottom: 0;
+  background: rgba(255, 246, 247, 0.96);
+}
+
+.preorder-preview-btn {
+  margin-top: 16px;
+}
 
 /* Overlay — fades in/out */
 .preview-enter-active,
