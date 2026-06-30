@@ -21,6 +21,7 @@ export const useCartStore = defineStore('cart', () => {
   const isReservingStock = ref(false)
   const stockReservationExpiresAt = ref('')
   const stockReservationError = ref('')
+  const orderSubmitError = ref('')
   const isCheckingDeliveryDate = ref(false)
   const deliveryDateCapacity = ref({
     max: 0,
@@ -606,6 +607,7 @@ export const useCartStore = defineStore('cart', () => {
 
 
   async function createOrder(): Promise<void> {
+    orderSubmitError.value = ''
     if (!paymentProof.value) throw new Error('No proof')
     const stockReserved = await ensureStockReservation()
     if (!stockReserved) throw new Error('Stock is no longer available')
@@ -658,6 +660,16 @@ export const useCartStore = defineStore('cart', () => {
     if (error) throw error
     confirmedOrderReference.value = insertedOrder?.id ? `SP-${insertedOrder.id}` : ''
 
+    if (insertedOrder?.id) {
+      const { error: historyError } = await supabase.rpc('record_order_status_history', {
+        p_order_id: insertedOrder.id,
+        p_status: hasPreOrderItems.value ? 'preorder' : 'pending',
+        p_label: hasPreOrderItems.value ? 'Pre-order received' : 'Order received',
+        p_note: 'Order was submitted by the customer.',
+      })
+      if (historyError) console.warn('Order history was not recorded:', historyError)
+    }
+
     // 3. Consume the reserved stock. The stock was already decremented at payment step.
     await commitStockReservation()
 
@@ -689,38 +701,51 @@ export const useCartStore = defineStore('cart', () => {
         }
       }
 
-    // 5. Send email notifications
-    const emailRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        order: {
-          customer_name:  customer.value.name,
-          email:          customer.value.email,
-          phone:          customer.value.phone,
-          address:        fullDeliveryAddress.value,
-          delivery_date:  customer.value.date,
-          note:           orderNote,
-          items:          cartItems.value,
-          subtotal:       cartSubtotal.value,
-          shipping_fee:   formatPeso(shippingFee.value),
-          shipping_zone:  shippingLabel.value,
-          total:          cartTotal.value,
-          payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
+    // 5. Send email notifications if the edge function is available.
+    try {
+      const emailRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-order-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-      }),
-    })
-    console.log('Edge function response:', emailRes.status, await emailRes.text())
+        body: JSON.stringify({
+          order: {
+            customer_name:  customer.value.name,
+            email:          customer.value.email,
+            phone:          customer.value.phone,
+            address:        fullDeliveryAddress.value,
+            delivery_date:  customer.value.date,
+            note:           orderNote,
+            items:          cartItems.value,
+            subtotal:       cartSubtotal.value,
+            shipping_fee:   formatPeso(shippingFee.value),
+            shipping_zone:  shippingLabel.value,
+            total:          cartTotal.value,
+            payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
+          },
+        }),
+      })
+      console.log('Edge function response:', emailRes.status, await emailRes.text())
+    } catch (emailError) {
+      console.warn('Order email notification skipped:', emailError)
+    }
   }
 
   async function submitOrder(): Promise<void> {
     if (orderSubmissionPromise) return orderSubmissionPromise
 
     isSubmittingOrder.value = true
+    orderSubmitError.value = ''
     orderSubmissionPromise = createOrder()
+      .catch(error => {
+        console.error('Order submit failed:', error)
+        orderSubmitError.value = error instanceof Error
+          ? error.message
+          : 'Could not submit order. Please try again.'
+        showNotification(orderSubmitError.value)
+        throw error
+      })
       .finally(() => {
         isSubmittingOrder.value = false
         orderSubmissionPromise = null
@@ -736,6 +761,7 @@ export const useCartStore = defineStore('cart', () => {
     confirmedOrderReference.value = ''
     stockReservationExpiresAt.value = ''
     stockReservationError.value = ''
+    orderSubmitError.value = ''
     paymentProof.value = null
     paymentProofPreview.value = null
     isSubmittingOrder.value = false
@@ -773,6 +799,7 @@ export const useCartStore = defineStore('cart', () => {
       cartItems, cartOpen, checkoutStep, confirmedTotal, confirmedOrderReference,
       paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder,
       isReservingStock, stockReservationExpiresAt, stockReservationError,
+      orderSubmitError,
       isCheckingDeliveryDate, deliveryDateCapacity, deliveryDateMessage,
       customer, letterData,
 

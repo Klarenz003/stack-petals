@@ -9,6 +9,7 @@ const GalleryPage  = () => import('@/pages/GalleryPage.vue')
 const ReviewsPage  = () => import('@/pages/ReviewsPage.vue')
 const ContactPage  = () => import('@/pages/ContactPage.vue')
 const TrackOrderPage = () => import('@/pages/TrackOrderPage.vue')
+const ReceiptPage = () => import('@/pages/ReceiptPage.vue')
 
 // Used in App.vue to determine slide direction
 export const routeOrder: Record<string, number> = {
@@ -19,7 +20,8 @@ export const routeOrder: Record<string, number> = {
   gallery:  4,
   reviews:  5,
   track:    6,
-  contact:  7,
+  receipt:  7,
+  contact:  8,
 }
 
 const router = createRouter({
@@ -32,6 +34,7 @@ const router = createRouter({
     { path: '/gallery',  name: 'gallery',   component: GalleryPage  },
     { path: '/reviews',  name: 'reviews',   component: ReviewsPage  },
     { path: '/track',    name: 'track',     component: TrackOrderPage },
+    { path: '/receipt',  name: 'receipt',   component: ReceiptPage },
     { path: '/contact',  name: 'contact',   component: ContactPage  },
     { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },

@@ -2356,8 +2356,129 @@ label[for], select, summary {
   text-align: right;
 }
 
+.track-history {
+  border-top: 1px solid #eee;
+  padding-top: 18px;
+  margin: 20px 0;
+}
+
+.track-history h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: #5f8872;
+}
+
+.track-history-item {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.track-history-item > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #5f8872;
+  margin-top: 5px;
+}
+
+.track-history-item strong {
+  color: #333;
+  font-size: 14px;
+}
+
+.track-history-item p {
+  margin: 3px 0;
+  color: #777;
+  font-size: 13px;
+}
+
+.track-history-item small {
+  color: #aaa;
+  font-size: 11px;
+}
+
+.receipt-page {
+  min-height: 70vh;
+}
+
+.receipt-shell {
+  width: min(920px, 90%);
+  margin: 0 auto 80px;
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.receipt-card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.05);
+}
+
+.receipt-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eee;
+}
+
+.receipt-card-header span {
+  color: #888;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.receipt-card-header h2 {
+  margin: 4px 0 0;
+  color: #5f8872;
+}
+
+.receipt-lines,
+.receipt-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.receipt-lines div,
+.receipt-items div,
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 14px;
+}
+
+.receipt-lines span,
+.receipt-total span {
+  color: #888;
+}
+
+.receipt-lines strong,
+.receipt-items strong,
+.receipt-total strong {
+  text-align: right;
+}
+
+.receipt-total {
+  padding-top: 18px;
+  font-size: 18px;
+}
+
 @media (max-width: 768px) {
   .track-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .receipt-shell {
     grid-template-columns: 1fr;
   }
 

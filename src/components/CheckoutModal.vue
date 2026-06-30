@@ -17,6 +17,44 @@ const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
 
 // ── Functions ──────────────────────────────────────
+async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promise<File> {
+  if (!file.type.startsWith('image/')) return file
+
+  const image = new Image()
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve()
+      image.onerror = reject
+      image.src = objectUrl
+    })
+
+    const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(image.width * scale))
+    canvas.height = Math.max(1, Math.round(image.height * scale))
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
+
+    const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', quality))
+    if (!blob) return file
+    return new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' })
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
+async function fileToDataUrl(file: File) {
+  const compressed = await compressImage(file, 1200, 0.8)
+  return await new Promise<string>((resolve) => {
+    const reader = new FileReader()
+    reader.onload = event => resolve(event.target?.result as string)
+    reader.readAsDataURL(compressed)
+  })
+}
+
 async function submitOrder() {
   if (cart.isSubmittingOrder) return
   try {
@@ -29,14 +67,14 @@ async function submitOrder() {
   }
 }
 
-function handleProofUpload(e: Event) {
+async function handleProofUpload(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) cart.handleProofUpload(file)
+  if (file) cart.handleProofUpload(await compressImage(file))
 }
 
-function handleDrop(e: DragEvent) {
+async function handleDrop(e: DragEvent) {
   const file = e.dataTransfer?.files[0]
-  if (file && file.type.startsWith('image/')) cart.handleProofUpload(file)
+  if (file && file.type.startsWith('image/')) cart.handleProofUpload(await compressImage(file))
 }
 
 function validateEmail() {
@@ -166,6 +204,12 @@ function goToTrackOrder() {
   router.push({ name: 'track', query: reference ? { ref: reference } : undefined })
 }
 
+function goToReceipt() {
+  const reference = cart.confirmedOrderReference
+  cart.finishCheckout()
+  router.push({ name: 'receipt', query: reference ? { ref: reference } : undefined })
+}
+
 // ── Computed ───────────────────────────────────────
 const minDate = computed(() => {
   const tomorrow = new Date()
@@ -187,29 +231,21 @@ const reservationExpiresAt = computed(() => {
   })
 })
 
-function handleMemoryUpload(e: Event) {
+async function handleMemoryUpload(e: Event) {
   const files = (e.target as HTMLInputElement).files
   if (files) {
     for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        cart.letterData.memories.push(event.target?.result as string)
-      }
-      reader.readAsDataURL(files[i])
+      cart.letterData.memories.push(await fileToDataUrl(files[i]))
     }
   }
 }
 
-function handleMemoryDrop(e: DragEvent) {
+async function handleMemoryDrop(e: DragEvent) {
   const files = e.dataTransfer?.files
   if (files) {
     for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
       if (files[i].type.startsWith('image/')) {
-        const reader = new FileReader()
-        reader.onload = (event) => {
-          cart.letterData.memories.push(event.target?.result as string)
-        }
-        reader.readAsDataURL(files[i])
+        cart.letterData.memories.push(await fileToDataUrl(files[i]))
       }
     }
   }
@@ -740,6 +776,10 @@ function toggleLetterPreviewPetal(i: number) {
       </div>
 
       <!-- STEP 5 — Confirmation -->
+      <p v-if="cart.checkoutStep === 4 && cart.orderSubmitError" class="reservation-error">
+        {{ cart.orderSubmitError }}
+      </p>
+
       <div v-if="cart.checkoutStep === 5" class="checkout-body confirmation">
         <div class="confirm-icon">🌸</div>
         <h2>Order Received!</h2>
@@ -766,6 +806,7 @@ function toggleLetterPreviewPetal(i: number) {
         </div>
         <p class="receipt-reminder">Please save your receipt or copy your order ID before leaving this screen.</p>
         <div class="receipt-secondary-actions">
+          <button class="receipt-link-btn" @click="goToReceipt">View Receipt</button>
           <button class="receipt-link-btn" @click="goToTrackOrder">Track Order</button>
           <button class="receipt-link-btn" @click="handleDone">Done</button>
         </div>

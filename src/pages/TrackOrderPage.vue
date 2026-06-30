@@ -17,6 +17,14 @@ type TrackedOrder = {
   status?: string
 }
 
+type StatusHistory = {
+  id: string
+  status: string
+  label: string
+  note?: string
+  created_at?: string
+}
+
 const route = useRoute()
 const initialReference = typeof route.query.ref === 'string' ? route.query.ref : ''
 const reference = ref(initialReference)
@@ -24,6 +32,7 @@ const phone = ref('')
 const loading = ref(false)
 const error = ref('')
 const order = ref<TrackedOrder | null>(null)
+const history = ref<StatusHistory[]>([])
 
 const normalizedPhone = computed(() => phone.value.replace(/\D/g, '').slice(0, 11))
 const normalizedReference = computed(() =>
@@ -80,6 +89,7 @@ function formatPhoneDisplay(value: string) {
 async function trackOrder() {
   error.value = ''
   order.value = null
+  history.value = []
 
   if (!normalizedReference.value || !/^09\d{9}$/.test(normalizedPhone.value)) {
     error.value = 'Enter your order reference and valid 11-digit phone number.'
@@ -107,6 +117,14 @@ async function trackOrder() {
   }
 
   order.value = data
+
+  const { data: historyData } = await supabase
+    .from('order_status_history')
+    .select('*')
+    .eq('order_id', data.id)
+    .order('created_at', { ascending: true })
+
+  history.value = historyData || []
 }
 </script>
 
@@ -153,6 +171,18 @@ async function trackOrder() {
           <div v-for="step in timeline" :key="step.key" :class="['track-step', { active: step.active }]">
             <span></span>
             <p>{{ step.label }}</p>
+          </div>
+        </div>
+
+        <div v-if="history.length" class="track-history">
+          <h3>Status Updates</h3>
+          <div v-for="item in history" :key="item.id" class="track-history-item">
+            <span></span>
+            <div>
+              <strong>{{ item.label }}</strong>
+              <p v-if="item.note">{{ item.note }}</p>
+              <small>{{ item.created_at ? new Date(item.created_at).toLocaleString('en-PH') : '' }}</small>
+            </div>
           </div>
         </div>
 
