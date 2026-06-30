@@ -48,10 +48,6 @@ const team: TeamMember[] = [
           To revolutionize traditional gifting by embedding interactive technology into 
           artisan floral design, creating seamless, memorable, and high-tech expressions of love.
         </p>
-        <p>
-          It really strikes a great balance between your engineering background and the magical 
-          user experience of the QR code.
-        </p>
       </div>
     </div>
 
