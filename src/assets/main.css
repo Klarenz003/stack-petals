@@ -606,7 +606,19 @@ nav a.router-link-active::after {
 
 .co-actions { display: flex; gap: 12px; margin-top: 8px; }
 
+.co-form .full-field {
+  grid-column: 1 / -1;
+}
+
+.address-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .address-detect-card {
+  grid-column: 1 / -1;
   border: 1px solid #eee;
   border-radius: 14px;
   overflow: hidden;
@@ -618,6 +630,17 @@ nav a.router-link-active::after {
   padding: 10px 12px 0;
   color: #777;
   font-size: 12px;
+}
+
+.address-preview {
+  margin: 8px 12px 0;
+  border: 1px dashed #e5cbc5;
+  border-radius: 10px;
+  background: #fffaf9;
+  color: #6f5550;
+  padding: 9px 10px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .shipping-estimate {
@@ -653,6 +676,12 @@ nav a.router-link-active::after {
 .map-adjust-btn:hover {
   background: #fdf0ef;
   border-color: #c48b8d;
+}
+
+@media (max-width: 640px) {
+  .address-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .order-total-breakdown,

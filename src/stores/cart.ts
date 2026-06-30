@@ -38,6 +38,10 @@ export const useCartStore = defineStore('cart', () => {
     email: '',
     phone: '',
     address: '',
+    landmark: '',
+    barangay: '',
+    city: '',
+    province: '',
     addressLat: null,
     addressLng: null,
     addressPlaceId: '',
@@ -192,16 +196,40 @@ export const useCartStore = defineStore('cart', () => {
     return address.trim() ? 'luzon-far' : ''
   }
 
+  function buildDeliveryAddress() {
+    const c = customer.value
+    return [
+      c.address.trim(),
+      c.landmark.trim() ? `Landmark: ${c.landmark.trim()}` : '',
+      c.barangay.trim() ? `Barangay ${c.barangay.trim()}` : '',
+      c.city.trim(),
+      c.province.trim(),
+    ].filter(Boolean).join(', ')
+  }
+
+  const fullDeliveryAddress = computed(() => buildDeliveryAddress())
+
+  function buildShippingAddress() {
+    const c = customer.value
+    return [
+      c.barangay.trim() ? `Barangay ${c.barangay.trim()}` : '',
+      c.city.trim(),
+      c.province.trim(),
+    ].filter(Boolean).join(', ')
+  }
+
+  const shippingEstimateAddress = computed(() => buildShippingAddress())
+
   const shippingFee = computed(() => {
     const zone = customer.value.shippingZone.toLowerCase()
     if (zone === 'metro-near') return 150
     if (zone === 'outside-luzon') return 350
-    if (customer.value.address.trim()) return 250
+    if (shippingEstimateAddress.value.trim()) return 250
     return 0
   })
 
   const shippingLabel = computed(() => {
-    if (!customer.value.address.trim()) return 'Add delivery address'
+    if (!shippingEstimateAddress.value.trim()) return 'Add barangay, city, and province'
     if (customer.value.shippingZone === 'metro-near') return 'Metro Manila / near Taytay'
     if (customer.value.shippingZone === 'outside-luzon') return 'Outside Luzon'
     return 'Luzon provincial / farther area'
@@ -232,7 +260,19 @@ export const useCartStore = defineStore('cart', () => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split('T')[0]
   const dateOk = !!c.date && c.date >= minDate
-  return !!(c.name && emailOk && phoneOk && c.address && dateOk && preOrderDateValid.value && !deliveryDateFull.value && !isCheckingDeliveryDate.value)
+  return !!(
+    c.name &&
+    emailOk &&
+    phoneOk &&
+    c.address &&
+    c.barangay &&
+    c.city &&
+    c.province &&
+    dateOk &&
+    preOrderDateValid.value &&
+    !deliveryDateFull.value &&
+    !isCheckingDeliveryDate.value
+  )
 })
 
   // ── Actions ────────────────────────────────────────────────────
@@ -516,7 +556,14 @@ export const useCartStore = defineStore('cart', () => {
     if (options.lat !== undefined) customer.value.addressLat = options.lat
     if (options.lng !== undefined) customer.value.addressLng = options.lng
     if (options.placeId !== undefined) customer.value.addressPlaceId = options.placeId
-    customer.value.shippingZone = estimateShippingZone(address, customer.value.addressLat, customer.value.addressLng)
+    customer.value.shippingZone = estimateShippingZone(shippingEstimateAddress.value, customer.value.addressLat, customer.value.addressLng)
+  }
+
+  function refreshShippingEstimate() {
+    customer.value.addressLat = null
+    customer.value.addressLng = null
+    customer.value.addressPlaceId = ''
+    customer.value.shippingZone = estimateShippingZone(shippingEstimateAddress.value)
   }
 
   async function goToPayment() {
@@ -558,6 +605,10 @@ export const useCartStore = defineStore('cart', () => {
       customer.value.note,
       hasPreOrderItems.value ? 'Order type: Pre-order (estimated prep time: 3-5 days)' : '',
       `Shipping: ${shippingLabel.value} (${formatPeso(shippingFee.value)})`,
+      customer.value.landmark ? `Landmark: ${customer.value.landmark}` : '',
+      customer.value.barangay ? `Barangay: ${customer.value.barangay}` : '',
+      customer.value.city ? `City/Municipality: ${customer.value.city}` : '',
+      customer.value.province ? `Province: ${customer.value.province}` : '',
       customer.value.addressLat !== null && customer.value.addressLng !== null
         ? `Pinned location: ${customer.value.addressLat}, ${customer.value.addressLng}`
         : '',
@@ -568,7 +619,7 @@ export const useCartStore = defineStore('cart', () => {
       customer_name:  customer.value.name,
       email:          customer.value.email,
       phone:          customer.value.phone,
-      address:        customer.value.address,
+      address:        fullDeliveryAddress.value,
       delivery_date:  customer.value.date,
       note:           orderNote,
       items:          cartItems.value.map(i => ({ name: i.name, price: i.price, image: i.image, quantity: i.quantity, preOrder: !!i.preOrder })),
@@ -624,7 +675,7 @@ export const useCartStore = defineStore('cart', () => {
           customer_name:  customer.value.name,
           email:          customer.value.email,
           phone:          customer.value.phone,
-          address:        customer.value.address,
+          address:        fullDeliveryAddress.value,
           delivery_date:  customer.value.date,
           note:           orderNote,
           items:          cartItems.value,
@@ -668,6 +719,10 @@ export const useCartStore = defineStore('cart', () => {
       email: '',
       phone: '',
       address: '',
+      landmark: '',
+      barangay: '',
+      city: '',
+      province: '',
       addressLat: null,
       addressLng: null,
       addressPlaceId: '',
@@ -697,6 +752,7 @@ export const useCartStore = defineStore('cart', () => {
 
       // ── Computed ───────────────────────────────────────────────────
       cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
+      fullDeliveryAddress, shippingEstimateAddress,
       deliveryDateFull, hasPreOrderItems, preOrderDateValid, preOrderDateMessage,
 
       // ── Actions ────────────────────────────────────────────────────
@@ -704,7 +760,7 @@ export const useCartStore = defineStore('cart', () => {
       cartQuantity, canAddToCart, shouldAnimateAddToCart,
       openCheckout, closeCheckout, goToPayment,
       reserveStockForPayment, releaseStockReservation,
-      updateDeliveryAddress,
+      updateDeliveryAddress, refreshShippingEstimate,
       checkDeliveryDateCapacity,
       handleProofUpload, clearProof,
       submitOrder, finishCheckout, notification

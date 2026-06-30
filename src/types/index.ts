@@ -20,6 +20,10 @@ export interface Customer {
   email: string
   phone: string
   address: string
+  landmark: string
+  barangay: string
+  city: string
+  province: string
   addressLat: number | null
   addressLng: number | null
   addressPlaceId: string

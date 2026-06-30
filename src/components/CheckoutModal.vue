@@ -59,11 +59,11 @@ function formatPhoneDisplay(value: string) {
 }
 
 function handleAddressInput() {
-  cart.updateDeliveryAddress(cart.customer.address, { lat: null, lng: null, placeId: '' })
-  const address = cart.customer.address.trim()
+  cart.refreshShippingEstimate()
+  const address = cart.shippingEstimateAddress.trim()
   addressStatus.value = address.length >= 8
-    ? 'Shipping is estimated from the typed address. Add city/province or a landmark for better accuracy.'
-    : 'Type the full delivery address so we can estimate the shipping area.'
+    ? 'Shipping is estimated from the barangay, city/municipality, and province fields.'
+    : 'Fill in barangay, city/municipality, and province so we can estimate the shipping area.'
 }
 
 function shakeModal() {
@@ -106,7 +106,7 @@ function buildReceiptText() {
     'Delivery',
     '--------',
     `Date: ${cart.customer.date}`,
-    `Address: ${cart.customer.address}`,
+    `Address: ${cart.fullDeliveryAddress}`,
     `Shipping Area: ${cart.shippingLabel}`,
     '',
     'Items',
@@ -174,7 +174,7 @@ const minDate = computed(() => {
 })
 
 const googleMapsSearchUrl = computed(() => {
-  const address = cart.customer.address.trim()
+  const address = cart.fullDeliveryAddress.trim()
   const query = address || 'Taytay Rizal Philippines'
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 })
@@ -320,16 +320,53 @@ function toggleLetterPreviewPetal(i: number) {
             <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11">Phone number must be 11 digits</small>
             <small class="field-error" v-else-if="cart.customer.phone.length === 11 && !cart.customer.phone.startsWith('09')">Use a valid PH mobile number starting with 09</small>
           </label>
-          <label>Delivery Address
+          <label class="full-field">Delivery Address
             <input
               v-model="cart.customer.address"
               type="text"
-              placeholder="Search or type your full delivery address"
+              placeholder="House/unit/building and street"
               @input="handleAddressInput"
             />
           </label>
+          <label class="full-field">Nearest Landmark (optional)
+            <input
+              v-model="cart.customer.landmark"
+              type="text"
+              placeholder="Near church, school, mall, subdivision gate, etc."
+              @input="handleAddressInput"
+            />
+          </label>
+          <div class="address-grid">
+            <label>Barangay
+              <input
+                v-model="cart.customer.barangay"
+                type="text"
+                placeholder="Barangay"
+                @input="handleAddressInput"
+              />
+            </label>
+            <label>City / Municipality
+              <input
+                v-model="cart.customer.city"
+                type="text"
+                placeholder="Taytay"
+                @input="handleAddressInput"
+              />
+            </label>
+            <label>Province
+              <input
+                v-model="cart.customer.province"
+                type="text"
+                placeholder="Rizal"
+                @input="handleAddressInput"
+              />
+            </label>
+          </div>
           <div class="address-detect-card">
             <p class="map-status">{{ addressStatus }}</p>
+            <p v-if="cart.fullDeliveryAddress" class="address-preview">
+              {{ cart.fullDeliveryAddress }}
+            </p>
             <div class="shipping-estimate">
               <span>{{ cart.shippingLabel }}</span>
               <strong>{{ cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Pending' }}</strong>
@@ -713,7 +750,7 @@ function toggleLetterPreviewPetal(i: number) {
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
           <div v-if="cart.hasPreOrderItems"><span>Order Type</span><strong>Pre-order</strong></div>
           <div><span>Items</span><strong>{{ cart.cartItems.length }} bouquet{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
-          <div><span>Delivery to</span><strong>{{ cart.customer.address }}</strong></div>
+          <div><span>Delivery to</span><strong>{{ cart.fullDeliveryAddress }}</strong></div>
           <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>
