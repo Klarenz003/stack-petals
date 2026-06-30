@@ -21,6 +21,15 @@ export const useCartStore = defineStore('cart', () => {
   const isReservingStock = ref(false)
   const stockReservationExpiresAt = ref('')
   const stockReservationError = ref('')
+  const isCheckingDeliveryDate = ref(false)
+  const deliveryDateCapacity = ref({
+    max: 0,
+    booked: 0,
+    remaining: 0,
+    isFull: false,
+    isLimited: false,
+  })
+  const deliveryDateMessage = ref('')
   let orderSubmissionPromise: Promise<void> | null = null
   let stockReservationToken = ''
 
@@ -120,6 +129,14 @@ export const useCartStore = defineStore('cart', () => {
     { deep: true }
   )
 
+  watch(
+    () => customer.value.date,
+    date => {
+      checkDeliveryDateCapacity(date)
+    },
+    { immediate: true }
+  )
+
   // ── Computed ───────────────────────────────────────────────────
   const itemSubtotalAmount = computed(() => {
     return cartItems.value.reduce((acc, item) => {
@@ -192,6 +209,7 @@ export const useCartStore = defineStore('cart', () => {
 
   const cartSubtotal = computed(() => formatPeso(itemSubtotalAmount.value))
   const cartTotal = computed(() => formatPeso(itemSubtotalAmount.value + shippingFee.value))
+  const deliveryDateFull = computed(() => deliveryDateCapacity.value.isFull)
 
   const customerValid = computed(() => {
   const c = customer.value
@@ -201,7 +219,7 @@ export const useCartStore = defineStore('cart', () => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split('T')[0]
   const dateOk = !!c.date && c.date >= minDate
-  return !!(c.name && emailOk && phoneOk && c.address && dateOk)
+  return !!(c.name && emailOk && phoneOk && c.address && dateOk && !deliveryDateFull.value && !isCheckingDeliveryDate.value)
 })
 
   // ── Actions ────────────────────────────────────────────────────
@@ -226,6 +244,62 @@ export const useCartStore = defineStore('cart', () => {
       timeoutId = setTimeout(() => reject(new Error(message)), ms)
     })
     return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timeoutId))
+  }
+
+  async function checkDeliveryDateCapacity(date = customer.value.date) {
+    deliveryDateMessage.value = ''
+    deliveryDateCapacity.value = {
+      max: 0,
+      booked: 0,
+      remaining: 0,
+      isFull: false,
+      isLimited: false,
+    }
+
+    if (!date) return
+
+    isCheckingDeliveryDate.value = true
+    try {
+      const { data, error } = await withTimeout(
+        supabase.rpc('get_delivery_date_availability', {
+          p_delivery_date: date,
+        }),
+        8000,
+        'Delivery date check took too long.'
+      )
+
+      if (error) {
+        console.error('Delivery date check failed:', error)
+        deliveryDateMessage.value = error.message?.includes('get_delivery_date_availability')
+          ? 'Delivery slot checking is not ready yet. Please apply the latest Supabase migration.'
+          : 'Could not check delivery slots right now.'
+        return
+      }
+
+      const result = Array.isArray(data) ? data[0] : data
+      if (!result) return
+
+      deliveryDateCapacity.value = {
+        max: result.max_deliveries ?? 0,
+        booked: result.booked_deliveries ?? 0,
+        remaining: result.remaining_slots ?? 0,
+        isFull: !!result.is_full,
+        isLimited: !!result.is_limited,
+      }
+
+      if (deliveryDateCapacity.value.isFull) {
+        deliveryDateMessage.value = 'This delivery date is full. Please choose another date.'
+      } else if (deliveryDateCapacity.value.isLimited) {
+        deliveryDateMessage.value = `${deliveryDateCapacity.value.remaining} delivery slot${deliveryDateCapacity.value.remaining === 1 ? '' : 's'} left for this date.`
+      } else {
+        deliveryDateMessage.value = `${deliveryDateCapacity.value.remaining} delivery slots available.`
+      }
+    } catch (error) {
+      console.error('Delivery date check failed:', error)
+      deliveryDateMessage.value = 'Could not check delivery slots right now.'
+    } finally {
+      isCheckingDeliveryDate.value = false
+    }
   }
 
   function getStockReservationToken() {
@@ -585,10 +659,12 @@ export const useCartStore = defineStore('cart', () => {
       // ── State ──────────────────────────────────────────────────────
       cartItems, cartOpen, checkoutStep, confirmedTotal, confirmedOrderReference,
       paymentMethod, paymentProof, paymentProofPreview, isSubmittingOrder,
-      isReservingStock, stockReservationExpiresAt, stockReservationError, customer, letterData,
+      isReservingStock, stockReservationExpiresAt, stockReservationError,
+      isCheckingDeliveryDate, deliveryDateCapacity, deliveryDateMessage,
+      customer, letterData,
 
       // ── Computed ───────────────────────────────────────────────────
-      cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid,
+      cartSubtotal, cartTotal, shippingFee, shippingLabel, customerValid, deliveryDateFull,
 
       // ── Actions ────────────────────────────────────────────────────
       addToCart, removeFromCart, updateQuantity,
@@ -596,6 +672,7 @@ export const useCartStore = defineStore('cart', () => {
       openCheckout, closeCheckout, goToPayment,
       reserveStockForPayment, releaseStockReservation,
       updateDeliveryAddress,
+      checkDeliveryDateCapacity,
       handleProofUpload, clearProof,
       submitOrder, finishCheckout, notification
     }

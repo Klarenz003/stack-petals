@@ -312,7 +312,19 @@ function togglePreviewPetal(i: number) {
             </a>
           </div>
           <label>Delivery Date
-            <input v-model="cart.customer.date" type="date" :min="minDate" @keydown.prevent/>
+            <input
+              v-model="cart.customer.date"
+              type="date"
+              :min="minDate"
+              @change="cart.checkDeliveryDateCapacity()"
+              @keydown.prevent
+            />
+            <small
+              v-if="cart.deliveryDateMessage"
+              :class="['delivery-slot-message', { full: cart.deliveryDateFull, limited: cart.deliveryDateCapacity.isLimited }]"
+            >
+              {{ cart.isCheckingDeliveryDate ? 'Checking delivery slots...' : cart.deliveryDateMessage }}
+            </small>
           </label>
           <label>Note (optional)
             <textarea v-model="cart.customer.note" placeholder="Any special requests?" rows="2"></textarea>
@@ -321,7 +333,7 @@ function togglePreviewPetal(i: number) {
         <div class="co-actions">
           <button class="co-btn-outline" @click="cart.checkoutStep = 1">← Back</button>
           <button class="co-btn-primary" @click="cart.checkoutStep = 3" :disabled="!cart.customerValid">
-            Continue →
+            {{ cart.isCheckingDeliveryDate ? 'Checking slots...' : 'Continue →' }}
           </button>
         </div>
       </div>

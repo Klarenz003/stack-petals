@@ -1224,6 +1224,21 @@ footer {
   margin-top: -8px;
 }
 
+.delivery-slot-message {
+  display: block;
+  color: #4f7f62;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.delivery-slot-message.limited {
+  color: #9a6a12;
+}
+
+.delivery-slot-message.full {
+  color: #c0392b;
+}
+
 input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
 }
