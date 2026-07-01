@@ -463,10 +463,10 @@ function toggleLetterPreviewPetal(i: number) {
               v-model="cart.letterData.mainMessage"
               placeholder="Write something from your heart..."
               class="letter-textarea"
-              maxlength="300"
+              maxlength="3000"
             ></textarea>
             <span class="petal-char-count" :class="{ warning: cart.letterData.mainMessage.length >= 250 }">
-              {{ cart.letterData.mainMessage.length }}/300
+              {{ cart.letterData.mainMessage.length }}/3000
             </span>
           </div>
 

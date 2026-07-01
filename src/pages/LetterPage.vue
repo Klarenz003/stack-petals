@@ -7,6 +7,7 @@ import { supabase } from '@/supabaseClient'
 // ── Types ──────────────────────────────────────────────────────────
 interface Letter {
   id: string
+  order_id: string
   recipient: string
   sender: string
   message: string
@@ -34,6 +35,7 @@ const show360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
 const memorySlideDirection = ref('memory-forward')
+const bouquetImage = ref('/images/b5.png')
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -54,8 +56,33 @@ async function loadLetter() {
   }
 
   letter.value = data
+  await loadBouquetImage(data.order_id)
   loading.value = false
   startMemoryTimer()
+}
+
+async function loadBouquetImage(orderId: string) {
+  if (!orderId) return
+
+  const { data, error } = await supabase
+    .from('orders')
+    .select('items')
+    .eq('id', orderId)
+    .single()
+
+  if (error) {
+    console.warn('Bouquet image could not be loaded:', error)
+    return
+  }
+
+  const firstItem = Array.isArray(data?.items) ? data.items[0] : null
+  if (firstItem?.image) bouquetImage.value = normalizeImageSrc(firstItem.image)
+}
+
+function normalizeImageSrc(src: string) {
+  if (!src) return '/images/b5.png'
+  if (/^(https?:|data:|blob:|\/)/.test(src)) return src
+  return `/${src}`
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
@@ -625,20 +652,16 @@ function skipAnimation() {
           <h2 class="letter-title">Your bouquet<br><em>up close</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
-          <div v-if="letter.angle_photos && letter.angle_photos.length > 0" class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
+          <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
             <img
-              :src="letter.angle_photos[0]"
+              :src="bouquetImage"
               alt="Your bouquet"
               class="bouquet-main-photo"
             />
-            <button class="btn-360" @click.stop="show360 = true">
+            <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" @click.stop="show360 = true">
               ✦ View in 360°
             </button>
-          </div>
-
-          <div v-else class="no-photos">
-            <p>🌸</p>
-            <p class="letter-sub">Photos coming soon</p>
+            <p v-else class="letter-sub bouquet-note">360° photos coming soon</p>
           </div>
 
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -650,7 +673,7 @@ function skipAnimation() {
 
       <!-- ── 360° Full Screen Viewer ────────────────────────────────────── -->
       <Teleport to="body">
-        <div v-if="show360" class="viewer-fullscreen">
+        <div v-if="show360 && letter.angle_photos && letter.angle_photos.length > 0" class="viewer-fullscreen">
           <button class="viewer-close" @click="show360 = false">✕</button>
 
           <div class="viewer-header">
@@ -1261,6 +1284,10 @@ function skipAnimation() {
 .btn-360:hover {
   background: #FFF0F3;
   border-color: #D4687A;
+}
+
+.bouquet-note {
+  margin-top: 12px;
 }
 
 /* ── 360° Full Screen Viewer ──────────────────────────────────────── */
