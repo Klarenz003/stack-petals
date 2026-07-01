@@ -306,6 +306,11 @@ nav a.router-link-active::after {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
+.featured-grid {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+
 .card {
   background: #efe6e3;
   border-radius: 20px;
@@ -2007,7 +2012,9 @@ input, textarea, [contenteditable="true"] {
   .buttons { flex-direction: column; align-items: center; }
   .primary, .secondary { width: 220px; }
   .feature-bar { width: 95%; }
+  .products { padding: 56px 5%; }
   .products h2 { font-size: 40px; }
+  .featured-grid { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
   .cart-panel { width: 100%; }
   .checkout-modal { border-radius: 16px; }
   .checkout-body { padding: 20px; }
@@ -2019,6 +2026,8 @@ input, textarea, [contenteditable="true"] {
   .hero-left h1 { font-size: 3rem; }
   .hero-left p { font-size: 1rem; }
   .feature { flex-direction: column; text-align: center; }
+  .featured-grid { gap: 18px; }
+  .products .card img { height: 240px; }
   .gallery-grid { columns: 1; }
   .checkout-steps { padding: 20px 16px 0; }
   .step-line { width: 28px; }

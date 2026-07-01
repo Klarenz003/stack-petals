@@ -47,7 +47,7 @@ const features: Feature[] = [
 
     <section class="products" id="products">
       <h2>Featured Bouquets</h2>
-      <div class="grid">
+      <div class="grid wide-grid featured-grid">
         <ProductCard v-for="product in products.featuredProducts" :key="product.name" :product="product" />
       </div>
     </section>
