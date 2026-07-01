@@ -653,15 +653,19 @@ function skipAnimation() {
           <div class="letter-divider"><span></span>✦<span></span></div>
 
           <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
-            <img
-              :src="bouquetImage"
-              alt="Your bouquet"
-              class="bouquet-main-photo"
-            />
+            <div class="bouquet-stage">
+              <div class="bouquet-halo"></div>
+              <img
+                :src="bouquetImage"
+                alt="Your bouquet"
+                class="bouquet-main-photo"
+              />
+              <div class="bouquet-pedestal"></div>
+            </div>
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" @click.stop="show360 = true">
               ✦ View in 360°
             </button>
-            <p v-else class="letter-sub bouquet-note">360° photos coming soon</p>
+            <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
           </div>
 
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -1259,18 +1263,53 @@ function skipAnimation() {
   min-height: 0;
 }
 
-.bouquet-main-photo {
+.bouquet-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   aspect-ratio: 1;
+  isolation: isolate;
+  animation: bouquetReveal 0.7s ease both;
+}
+
+.bouquet-halo {
+  position: absolute;
+  width: 78%;
+  height: 78%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 238, 244, 0.68) 46%, rgba(255, 238, 244, 0) 72%);
+  box-shadow: 0 22px 60px rgba(212, 104, 122, 0.18);
+  z-index: -2;
+}
+
+.bouquet-main-photo {
+  width: min(86%, 320px);
+  height: min(86%, 320px);
   object-fit: contain;
   border-radius: 20px;
   pointer-events: none;
+  filter: drop-shadow(0 20px 20px rgba(122, 58, 74, 0.16));
+  transform: translateY(-2px);
+}
+
+.bouquet-pedestal {
+  position: absolute;
+  bottom: 8%;
+  width: 58%;
+  height: 12%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(122, 58, 74, 0.2) 0%, rgba(122, 58, 74, 0.08) 42%, rgba(122, 58, 74, 0) 72%);
+  filter: blur(2px);
+  z-index: -1;
 }
 
 .btn-360 {
-  margin-top: 12px;
-  padding: 12px 32px;
-  background: white;
+  margin-top: 8px;
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.82);
   color: #D4687A;
   border: 1.5px solid #E8B4C0;
   border-radius: 28px;
@@ -1284,17 +1323,36 @@ function skipAnimation() {
 .btn-360:hover {
   background: #FFF0F3;
   border-color: #D4687A;
+  transform: translateY(-1px);
 }
 
 .bouquet-note {
-  margin-top: 12px;
+  max-width: 280px;
+  margin-top: 8px;
+  color: #B08090;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@keyframes bouquetReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── 360° Full Screen Viewer ──────────────────────────────────────── */
 .viewer-fullscreen {
   position: fixed;
   inset: 0;
-  background: linear-gradient(160deg, #FFF0F3 0%, #FFE4EC 100%);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.58) 0%, rgba(255, 240, 244, 0.28) 42%, rgba(255, 240, 244, 0.08) 72%),
+    rgba(255, 245, 247, 0.72);
+  backdrop-filter: blur(10px);
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -1310,8 +1368,8 @@ function skipAnimation() {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: white;
-  border: 1px solid #E8B4C0;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(232, 180, 192, 0.72);
   color: #D4687A;
   font-size: 20px;
   cursor: pointer;
@@ -1341,14 +1399,38 @@ function skipAnimation() {
   color: #B08090;
   font-style: italic;
   margin: 0;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(232, 180, 192, 0.42);
+  border-radius: 999px;
+  padding: 8px 14px;
 }
 
 .viewer-360-full {
-  width: 90vw;
-  max-width: 600px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(88vw, 70dvh);
+  max-width: 620px;
   aspect-ratio: 1;
   cursor: grab;
   touch-action: none;
+  background: transparent;
+  animation: floatingBouquet 3.8s ease-in-out infinite;
+}
+
+.viewer-360-full::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  width: 54%;
+  height: 10%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(122, 58, 74, 0.22) 0%, rgba(122, 58, 74, 0.08) 48%, rgba(122, 58, 74, 0) 74%);
+  filter: blur(4px);
+  transform: translateX(-50%);
+  z-index: -1;
 }
 
 .viewer-360-full:active {
@@ -1356,13 +1438,14 @@ function skipAnimation() {
 }
 
 .angle-photo-full {
-  width: 100%;
-  height: 100%;
+  width: 92%;
+  height: 92%;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
   will-change: contents;
   image-rendering: auto;
+  filter: drop-shadow(0 28px 24px rgba(122, 58, 74, 0.18));
 }
 
 .viewer-footer {
@@ -1370,6 +1453,15 @@ function skipAnimation() {
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
+}
+
+@keyframes floatingBouquet {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 
@@ -1822,52 +1914,68 @@ function skipAnimation() {
 /* Forward (next page) */
 .slide-forward-enter-active,
 .slide-forward-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.32s ease;
+  will-change: opacity, transform, filter;
 }
 
 .slide-forward-enter-from {
   opacity: 0;
-  transform: translateX(40px);
+  transform: translateX(34px) scale(0.985);
+  filter: blur(1px);
 }
 
 .slide-forward-enter-to {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) scale(1);
+  filter: blur(0);
 }
 
 .slide-forward-leave-from {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) scale(1);
+  filter: blur(0);
 }
 
 .slide-forward-leave-to {
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(-22px) scale(0.992);
+  filter: blur(1px);
 }
 
 /* Back (previous page) */
 .slide-back-enter-active,
 .slide-back-leave-active {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    opacity 0.32s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.32s ease;
+  will-change: opacity, transform, filter;
 }
 
 .slide-back-enter-from {
   opacity: 0;
-  transform: translateX(-40px);
+  transform: translateX(-34px) scale(0.985);
+  filter: blur(1px);
 }
 
 .slide-back-enter-to {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) scale(1);
+  filter: blur(0);
 }
 
 .slide-back-leave-from {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateX(0) scale(1);
+  filter: blur(0);
 }
 
 .slide-back-leave-to {
   opacity: 0;
-  transform: translateX(40px);
+  transform: translateX(22px) scale(0.992);
+  filter: blur(1px);
 }
 </style>
