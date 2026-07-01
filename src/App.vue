@@ -11,6 +11,7 @@ import CartSidebar from '@/components/CartSidebar.vue'
 import CheckoutModal from '@/components/CheckoutModal.vue'
 import BouquetPreviewModal from '@/components/BouquetPreviewModal.vue'
 import CartNotification from '@/components/CartNotification.vue'
+import PetalCodeBackground from '@/components/PetalCodeBackground.vue'
 
 useCanvas()
 
@@ -37,6 +38,7 @@ watch(
   <template v-if="!isLetterPage">
     <canvas id="circuit-canvas"></canvas>
     <canvas id="petal-canvas"></canvas>
+    <PetalCodeBackground />
 
     <button class="cart-btn" @click="cart.cartOpen = true" title="View Cart">
       <img src="/images/cart-icon.png" alt="Cart" width="28" height="28" />

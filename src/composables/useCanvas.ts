@@ -25,6 +25,9 @@ const PETAL_COLORS = [
 export function useCanvas() {
   let rafId: number | null = null
   let resizeHandler: (() => void) | null = null
+  let pointerDownHandler: ((event: PointerEvent) => void) | null = null
+  let pointerMoveHandler: ((event: PointerEvent) => void) | null = null
+  let pointerUpHandler: ((event: PointerEvent) => void) | null = null
 
   onMounted(() => {
     const cc = document.getElementById('circuit-canvas') as HTMLCanvasElement
@@ -94,6 +97,74 @@ export function useCanvas() {
 
     let circuit = buildCircuit()
     const petals: Petal[] = Array.from({ length: 28 }, () => makePetal(false))
+    let grabbedPetal: Petal | null = null
+    let grabOffsetX = 0
+    let grabOffsetY = 0
+    let lastGrabX = 0
+    let lastGrabY = 0
+    let lastMoveX = 0
+    let lastMoveY = 0
+
+    function isInteractiveTarget(target: EventTarget | null) {
+      if (!(target instanceof HTMLElement)) return false
+      return !!target.closest('a, button, input, textarea, select, summary, [role="button"], [contenteditable="true"], .cart-btn, .checkout-modal, .cart-sidebar')
+    }
+
+    function findPetalAt(x: number, y: number) {
+      for (let i = petals.length - 1; i >= 0; i--) {
+        const petal = petals[i]
+        const dx = x - petal.x
+        const dy = y - petal.y
+        const hitRadius = Math.max(14, petal.size * 1.8)
+        if (Math.sqrt(dx * dx + dy * dy) <= hitRadius) return petal
+      }
+      return null
+    }
+
+    pointerDownHandler = (event: PointerEvent) => {
+      if (isInteractiveTarget(event.target)) return
+
+      const petal = findPetalAt(event.clientX, event.clientY)
+      if (!petal) return
+
+      event.preventDefault()
+      grabbedPetal = petal
+      grabOffsetX = petal.x - event.clientX
+      grabOffsetY = petal.y - event.clientY
+      lastGrabX = event.clientX
+      lastGrabY = event.clientY
+      lastMoveX = 0
+      lastMoveY = 0
+      petal.vx = 0
+      petal.vy = 0
+      document.body.classList.add('canvas-petal-grabbing')
+    }
+
+    pointerMoveHandler = (event: PointerEvent) => {
+      if (!grabbedPetal) return
+
+      lastMoveX = event.clientX - lastGrabX
+      lastMoveY = event.clientY - lastGrabY
+      lastGrabX = event.clientX
+      lastGrabY = event.clientY
+      grabbedPetal.x = event.clientX + grabOffsetX
+      grabbedPetal.y = event.clientY + grabOffsetY
+      grabbedPetal.rot += lastMoveX * 0.01
+    }
+
+    pointerUpHandler = () => {
+      if (!grabbedPetal) return
+
+      grabbedPetal.vx = Math.max(-1.2, Math.min(1.2, lastMoveX * 0.08))
+      grabbedPetal.vy = Math.max(0.35, Math.min(1.4, 0.45 + Math.abs(lastMoveY) * 0.04))
+      grabbedPetal = null
+      document.body.classList.remove('canvas-petal-grabbing')
+    }
+
+    document.addEventListener('pointerdown', pointerDownHandler)
+    document.addEventListener('pointermove', pointerMoveHandler)
+    document.addEventListener('pointerup', pointerUpHandler)
+    document.addEventListener('pointercancel', pointerUpHandler)
 
     resizeHandler = () => {
       cc.width = pc.width = window.innerWidth
@@ -112,19 +183,26 @@ export function useCanvas() {
       const pctx = pc.getContext('2d')!
       pctx.clearRect(0, 0, W(), H())
       petals.forEach(p => {
-        p.swing += p.swingSpeed
-        p.x += p.vx + Math.sin(p.swing) * 0.5
-        p.y += p.vy
-        p.rot += p.rotSpeed
-        if (p.y > H() + 20) Object.assign(p, makePetal(true))
+        if (p !== grabbedPetal) {
+          p.swing += p.swingSpeed
+          p.x += p.vx + Math.sin(p.swing) * 0.5
+          p.y += p.vy
+          p.rot += p.rotSpeed
+          if (p.y > H() + 20) Object.assign(p, makePetal(true))
+        }
         pctx.save()
         pctx.translate(p.x, p.y)
         pctx.rotate(p.rot)
-        pctx.globalAlpha = p.opacity
+        pctx.globalAlpha = p === grabbedPetal ? Math.min(p.opacity + 0.2, 1) : p.opacity
         pctx.fillStyle = p.color
         pctx.beginPath()
         pctx.ellipse(0, 0, p.size * 0.42, p.size, 0, 0, Math.PI * 2)
         pctx.fill()
+        if (p === grabbedPetal) {
+          pctx.strokeStyle = 'rgba(95,136,114,0.45)'
+          pctx.lineWidth = 1
+          pctx.stroke()
+        }
         pctx.restore()
       })
 
@@ -137,5 +215,12 @@ export function useCanvas() {
   onBeforeUnmount(() => {
     if (rafId !== null) cancelAnimationFrame(rafId)
     if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+    if (pointerDownHandler) document.removeEventListener('pointerdown', pointerDownHandler)
+    if (pointerMoveHandler) document.removeEventListener('pointermove', pointerMoveHandler)
+    if (pointerUpHandler) {
+      document.removeEventListener('pointerup', pointerUpHandler)
+      document.removeEventListener('pointercancel', pointerUpHandler)
+    }
+    document.body.classList.remove('canvas-petal-grabbing')
   })
 }

@@ -71,6 +71,69 @@ body {
   overflow-x: hidden;
 }
 
+.petal-code-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.petal-code-item {
+  --drift: 24px;
+  --size: 12px;
+  --opacity: 0.12;
+  position: absolute;
+  top: -12vh;
+  color: #5f8872;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: var(--size);
+  font-weight: 600;
+  opacity: var(--opacity);
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.7);
+  animation: petalCodeFall 24s linear infinite;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.petal-code-item.petal {
+  color: #c48b8d;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: calc(var(--size) * 1.45);
+}
+
+.canvas-petal-grabbing,
+.canvas-petal-grabbing * {
+  cursor: grabbing !important;
+}
+
+@keyframes petalCodeFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+  }
+  12% {
+    opacity: var(--opacity);
+  }
+  50% {
+    transform: translate3d(var(--drift), 52vh, 0) rotate(115deg);
+  }
+  88% {
+    opacity: var(--opacity);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--drift) * -0.55), 112vh, 0) rotate(240deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .petal-code-item {
+    animation: none;
+    top: 18vh;
+  }
+}
+
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
 
