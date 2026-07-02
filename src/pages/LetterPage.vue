@@ -528,7 +528,7 @@ function skipAnimation() {
       <!-- ── SCREEN 4 — The Letter ──────────────────────────────────────── -->
       <div
         v-if="currentScreen === 3"
-        class="letter-screen"
+        class="letter-screen letter-message-screen"
         :style="{ backgroundColor: screenBg('screen4') }"
       >
         <!-- Falling petals while typing -->
@@ -591,7 +591,7 @@ function skipAnimation() {
       <!-- ── SCREEN 5 — Memories ────────────────────────────────── -->
       <div
         v-if="currentScreen === 4"
-        class="letter-screen"
+        class="letter-screen memories-screen"
         :style="{ backgroundColor: screenBg('screen5') }"
       >
         <div class="screen-content center">
@@ -644,7 +644,7 @@ function skipAnimation() {
       <!-- ── SCREEN 6 — 360° View ───────────────────────────────── -->
       <div
         v-if="currentScreen === 5"
-        class="letter-screen"
+        class="letter-screen bouquet-screen"
         :style="{ backgroundColor: screenBg('screen6') }"
       >
         <div class="screen-content center">
@@ -834,6 +834,15 @@ function skipAnimation() {
   margin-top: 16px !important;
 }
 
+.letter-message-screen {
+  padding: clamp(22px, 4.5dvh, 44px) 0 clamp(70px, 10dvh, 88px);
+}
+
+.memories-screen,
+.bouquet-screen {
+  padding: clamp(22px, 4.5dvh, 44px) 0 clamp(70px, 10dvh, 88px);
+}
+
 /* ── Content ──────────────────────────────────────────────────────── */
 .screen-content {
   width: 100%;
@@ -852,6 +861,89 @@ function skipAnimation() {
   text-align: center;
   overflow: hidden;
   gap: clamp(8px, 1.4dvh, 14px);
+}
+
+.letter-message-screen .screen-content {
+  height: 100%;
+  max-height: none;
+}
+
+.letter-message-screen .letter-logo {
+  flex: 0 0 auto;
+  margin-bottom: clamp(8px, 2dvh, 22px);
+}
+
+.letter-message-screen .letter-reveal-wrap {
+  margin: auto 0;
+}
+
+.letter-message-screen .letter-reveal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.letter-message-screen .letter-heart {
+  flex: 0 0 auto;
+  margin-bottom: clamp(4px, 1.2dvh, 10px);
+}
+
+.letter-message-screen .letter-dear {
+  flex: 0 0 auto;
+  font-size: clamp(22px, 4.2dvh, 26px);
+  margin-bottom: clamp(2px, 0.8dvh, 8px);
+}
+
+.letter-message-screen .letter-reveal-content > .letter-divider {
+  flex: 0 0 auto;
+  margin: clamp(6px, 1.4dvh, 12px) auto;
+}
+
+.letter-message-screen .letter-message-box {
+  height: auto;
+  max-height: none;
+}
+
+.memories-screen .screen-content,
+.bouquet-screen .screen-content {
+  height: 100%;
+  max-height: none;
+  justify-content: flex-start;
+}
+
+.memories-screen .letter-logo,
+.bouquet-screen .letter-logo {
+  flex: 0 0 auto;
+  margin-bottom: clamp(8px, 1.8dvh, 18px);
+}
+
+.memories-screen .letter-title,
+.bouquet-screen .letter-title {
+  flex: 0 0 auto;
+  font-size: clamp(26px, 5.4dvh, 32px);
+  line-height: 1.16;
+  margin-bottom: clamp(4px, 1dvh, 10px);
+}
+
+.memories-screen .letter-divider,
+.bouquet-screen .letter-divider {
+  flex: 0 0 auto;
+  margin: clamp(8px, 1.6dvh, 14px) auto;
+}
+
+.memories-screen .memory-slideshow,
+.bouquet-screen .bouquet-preview {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.memories-screen > .screen-dots,
+.bouquet-screen > .screen-dots {
+  bottom: clamp(12px, 2.6dvh, 18px);
+}
+
+.memories-screen .screen-content > .letter-btn-outline,
+.bouquet-screen .screen-content > .letter-btn-outline {
+  margin-top: clamp(10px, 1.8dvh, 18px) !important;
 }
 
 /* ── Typography ───────────────────────────────────────────────────── */
@@ -1080,6 +1172,8 @@ function skipAnimation() {
 
 /* ── Letter Message ───────────────────────────────────────────────── */
 .letter-message-box {
+  flex: 1 1 auto;
+  min-height: 0;
   background-color: rgba(255, 255, 255, 0.7);
   background-image: repeating-linear-gradient(
     transparent,
@@ -1092,7 +1186,7 @@ function skipAnimation() {
   border-radius: 16px;
   padding: 26px 22px;
   width: 100%;
-  height: clamp(240px, 42dvh, 420px);
+  height: clamp(220px, 42dvh, 420px);
   max-height: 100%;
   overflow-y: auto;
   scrollbar-gutter: stable;
@@ -1155,10 +1249,21 @@ function skipAnimation() {
 /* ── Sender Footer Transition ─────────────────────────────────────── */
 .sender-footer {
   width: 100%;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.sender-footer .letter-divider {
+  margin: clamp(8px, 1.6dvh, 14px) auto;
+}
+
+.sender-footer .letter-from {
+  max-width: 100%;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .sender-reveal-enter-active {
@@ -1173,7 +1278,7 @@ function skipAnimation() {
 
 .sender-reveal-enter-to {
   opacity: 1;
-  max-height: 160px;
+  max-height: 220px;
   transform: translateY(0);
 }
 
@@ -1201,12 +1306,17 @@ function skipAnimation() {
 /* ── Memories ─────────────────────────────────────────────────────── */
 .memory-slideshow {
   width: 100%;
-  max-width: 360px;
+  max-width: min(360px, 100%, 44dvh);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .memory-frame {
   position: relative;
   width: 100%;
+  max-height: min(360px, 44dvh);
   border-radius: 16px;
   overflow: hidden;
   aspect-ratio: 1;
@@ -1284,7 +1394,7 @@ function skipAnimation() {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: min(360px, 100%, 46dvh);
+  max-width: min(360px, 100%, 42dvh);
   flex-shrink: 1;
   min-height: 0;
 }
@@ -1333,8 +1443,18 @@ function skipAnimation() {
 }
 
 .btn-360 {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 150px;
+  max-width: min(100%, 240px);
+  line-height: 1.2;
+  white-space: nowrap;
   margin-top: 8px;
-  padding: 10px 24px;
+  padding: 10px 22px;
   background: rgba(255, 255, 255, 0.82);
   color: #D4687A;
   border: 1.5px solid #E8B4C0;
@@ -1690,6 +1810,15 @@ function skipAnimation() {
     padding: 24px 0 60px;
   }
 
+  .letter-message-screen {
+    padding: 18px 0 56px;
+  }
+
+  .memories-screen,
+  .bouquet-screen {
+    padding: 18px 0 56px;
+  }
+
   .screen-content {
     max-height: calc(100dvh - 92px);
     padding: 0 24px;
@@ -1749,12 +1878,39 @@ function skipAnimation() {
     padding: 22px 18px;
   }
 
+  .letter-message-screen .letter-message-box {
+    height: auto;
+    padding: 18px 16px;
+  }
+
+  .letter-message-screen .sender-footer .letter-divider {
+    margin: 6px auto;
+  }
+
+  .letter-message-screen .letter-from {
+    font-size: 14px;
+  }
+
   .memory-slideshow {
-    max-width: min(360px, 100%, 46dvh);
+    max-width: min(340px, 100%, 38dvh);
+  }
+
+  .memory-frame {
+    max-height: min(340px, 38dvh);
   }
 
   .bouquet-preview {
-    max-width: min(310px, 100%, 38dvh);
+    max-width: min(300px, 100%, 34dvh);
+  }
+
+  .bouquet-screen .letter-title,
+  .memories-screen .letter-title {
+    font-size: clamp(24px, 5dvh, 30px);
+  }
+
+  .bouquet-screen .letter-divider,
+  .memories-screen .letter-divider {
+    margin: 6px auto;
   }
 
   .envelope-icon {
@@ -1773,8 +1929,11 @@ function skipAnimation() {
   }
 
   .btn-360 {
-    margin-top: 10px;
-    padding: 10px 24px;
+    min-height: 38px;
+    min-width: 142px;
+    margin-top: 8px;
+    padding: 9px 20px;
+    font-size: 13px;
   }
 
   .screen-dots {
@@ -1786,6 +1945,17 @@ function skipAnimation() {
   .letter-screen {
     padding-top: 18px;
     padding-bottom: 54px;
+  }
+
+  .letter-message-screen {
+    padding-top: 14px;
+    padding-bottom: 50px;
+  }
+
+  .memories-screen,
+  .bouquet-screen {
+    padding-top: 14px;
+    padding-bottom: 50px;
   }
 
   .screen-content {
@@ -1816,13 +1986,68 @@ function skipAnimation() {
     padding: 18px 16px;
   }
 
+  .letter-message-screen .letter-heart {
+    font-size: 24px;
+    margin-bottom: 2px;
+  }
+
+  .letter-message-screen .letter-dear {
+    font-size: 21px;
+  }
+
+  .letter-message-screen .letter-reveal-content > .letter-divider {
+    margin: 4px auto;
+  }
+
+  .letter-message-screen .letter-message-box {
+    height: auto;
+    padding: 14px 14px;
+  }
+
+  .letter-message-screen .letter-message-text {
+    font-size: 13px;
+    line-height: 25px;
+  }
+
+  .letter-message-screen .letter-from {
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+
+  .letter-message-screen .letter-btn-outline {
+    min-height: 38px;
+    padding: 9px 22px;
+  }
+
   .memory-slideshow {
-    max-width: min(320px, 100%, 40dvh);
+    max-width: min(300px, 100%, 32dvh);
+  }
+
+  .memory-frame {
+    max-height: min(300px, 32dvh);
   }
 
   .bouquet-preview {
-    max-width: min(280px, 100%, 34dvh);
+    max-width: min(260px, 100%, 30dvh);
   }
+
+  .bouquet-screen .letter-title,
+  .memories-screen .letter-title {
+    font-size: clamp(22px, 4.8dvh, 28px);
+  }
+
+  .bouquet-screen .letter-divider,
+  .memories-screen .letter-divider {
+    margin: 4px auto;
+  }
+
+  .btn-360 {
+    min-height: 36px;
+    min-width: 132px;
+    padding: 8px 18px;
+    font-size: 12px;
+  }
+}
 }
 
 @media (max-width: 360px) {
@@ -1832,6 +2057,82 @@ function skipAnimation() {
 
   .letter-message-box {
     padding: 22px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .letter-message-screen {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .letter-message-screen .screen-content {
+    padding: 0 clamp(16px, 5vw, 24px);
+  }
+
+  .letter-message-screen .letter-message-box {
+    border-radius: 14px;
+    padding: 20px 18px;
+  }
+
+  .letter-message-screen .letter-message-text {
+    font-size: clamp(13px, 3.7vw, 14px);
+  }
+
+  .letter-message-screen .letter-from {
+    font-size: clamp(13px, 3.6vw, 16px);
+  }
+
+  .letter-message-screen .letter-btn-outline {
+    max-width: min(100%, 260px);
+  }
+
+  .memories-screen .screen-content,
+  .bouquet-screen .screen-content {
+    padding: 0 clamp(16px, 5vw, 24px);
+  }
+
+  .memories-screen .letter-title,
+  .bouquet-screen .letter-title {
+    font-size: clamp(25px, 8vw, 32px);
+  }
+
+  .memory-slideshow {
+    max-width: min(100%, 42dvh);
+  }
+
+  .memory-frame {
+    max-height: 42dvh;
+  }
+
+  .bouquet-preview {
+    max-width: min(100%, 39dvh);
+  }
+
+  .btn-360 {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 480px) and (max-height: 620px) {
+  .letter-message-screen .letter-message-box {
+    padding: 14px;
+  }
+
+  .letter-message-screen .sender-footer .letter-divider {
+    margin: 4px auto;
+  }
+
+  .memory-slideshow {
+    max-width: min(100%, 30dvh);
+  }
+
+  .memory-frame {
+    max-height: 30dvh;
+  }
+
+  .bouquet-preview {
+    max-width: min(100%, 29dvh);
   }
 }
 
