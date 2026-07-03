@@ -1447,6 +1447,8 @@ function skipAnimation() {
   --letter-paper-row: 27px;
   --letter-paper-line: 1px;
   --letter-message-font-size: 14px;
+  --letter-message-pad-y: 26px;
+  --letter-message-pad-x: 22px;
   flex: 1 1 auto;
   min-height: 0;
   background-color: rgba(255, 255, 255, 0.7);
@@ -1458,9 +1460,11 @@ function skipAnimation() {
     rgba(232, 180, 192, 0.25) var(--letter-paper-row)
   );
   background-attachment: local;
+  background-origin: content-box;
+  background-clip: padding-box;
   border: 1px solid #F0C4CF;
   border-radius: 16px;
-  padding: 26px 22px;
+  padding: var(--letter-message-pad-y) var(--letter-message-pad-x);
   width: 100%;
   height: clamp(220px, 42dvh, 420px);
   max-height: 100%;
@@ -1506,6 +1510,8 @@ function skipAnimation() {
   font-size: var(--letter-message-font-size);
   color: #7A4A54;
   line-height: var(--letter-paper-row);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   text-align: left;
   margin: 0;
   white-space: pre-line; /* ← change from pre-wrap to pre-line */
@@ -2658,12 +2664,14 @@ function skipAnimation() {
 
   .letter-message-box {
     height: clamp(190px, 43dvh, 300px);
-    padding: 22px 18px;
+    --letter-message-pad-y: 22px;
+    --letter-message-pad-x: 18px;
   }
 
   .letter-message-screen .letter-message-box {
     height: auto;
-    padding: 18px 16px;
+    --letter-message-pad-y: 18px;
+    --letter-message-pad-x: 16px;
   }
 
   .letter-message-screen .sender-footer .letter-divider {
@@ -2770,7 +2778,8 @@ function skipAnimation() {
 
   .letter-message-box {
     height: clamp(170px, 40dvh, 250px);
-    padding: 18px 16px;
+    --letter-message-pad-y: 18px;
+    --letter-message-pad-x: 16px;
   }
 
   .letter-message-screen .letter-heart {
@@ -2788,7 +2797,8 @@ function skipAnimation() {
 
   .letter-message-screen .letter-message-box {
     height: auto;
-    padding: 14px 14px;
+    --letter-message-pad-y: 14px;
+    --letter-message-pad-x: 14px;
   }
 
   .letter-message-screen .letter-message-text {
@@ -2848,7 +2858,8 @@ function skipAnimation() {
   }
 
   .letter-message-box {
-    padding: 22px 16px;
+    --letter-message-pad-y: 22px;
+    --letter-message-pad-x: 16px;
   }
 }
 
@@ -2864,7 +2875,8 @@ function skipAnimation() {
 
   .letter-message-screen .letter-message-box {
     border-radius: 14px;
-    padding: 20px 18px;
+    --letter-message-pad-y: 20px;
+    --letter-message-pad-x: 18px;
   }
 
   .letter-message-screen .letter-message-text {
@@ -2954,7 +2966,8 @@ function skipAnimation() {
 
 @media (max-width: 480px) and (max-height: 620px) {
   .letter-message-screen .letter-message-box {
-    padding: 14px;
+    --letter-message-pad-y: 14px;
+    --letter-message-pad-x: 14px;
   }
 
   .letter-message-screen .sender-footer .letter-divider {
