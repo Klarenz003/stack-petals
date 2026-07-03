@@ -39,9 +39,7 @@ const bouquetImage = ref('/images/b5.png')
 const musicPlaying = ref(false)
 const envelopeOpening = ref(false)
 
-let audioContext: AudioContext | null = null
-let musicGain: GainNode | null = null
-let musicOscillators: OscillatorNode[] = []
+let letterMusic: HTMLAudioElement | null = null
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -104,52 +102,28 @@ function toggleMusic() {
 function startSoftMusic() {
   if (typeof window === 'undefined') return
 
-  const AudioContextCtor =
-    window.AudioContext ||
-    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-  if (!AudioContextCtor) return
+  letterMusic = letterMusic || new Audio('/music/lettermusic.mp3')
+  letterMusic.loop = true
+  letterMusic.volume = 0.28
 
-  audioContext = audioContext || new AudioContextCtor()
-  const now = audioContext.currentTime
-  musicGain = audioContext.createGain()
-  musicGain.gain.setValueAtTime(0, now)
-  musicGain.gain.linearRampToValueAtTime(0.028, now + 1.6)
-  musicGain.connect(audioContext.destination)
-
-  const frequencies = [261.63, 329.63, 392.0]
-  musicOscillators = frequencies.map((frequency, index) => {
-    const oscillator = audioContext!.createOscillator()
-    const toneGain = audioContext!.createGain()
-    oscillator.type = index === 1 ? 'triangle' : 'sine'
-    oscillator.frequency.setValueAtTime(frequency, now)
-    toneGain.gain.setValueAtTime(index === 2 ? 0.32 : 0.24, now)
-    oscillator.connect(toneGain)
-    toneGain.connect(musicGain!)
-    oscillator.start(now + index * 0.08)
-    return oscillator
-  })
-
-  musicPlaying.value = true
+  letterMusic.play()
+    .then(() => {
+      musicPlaying.value = true
+    })
+    .catch((error) => {
+      console.warn('Letter music could not be played:', error)
+      musicPlaying.value = false
+    })
 }
 
 function stopSoftMusic() {
-  if (!audioContext || !musicGain) {
+  if (!letterMusic) {
     musicPlaying.value = false
     return
   }
 
-  const now = audioContext.currentTime
-  musicGain.gain.cancelScheduledValues(now)
-  musicGain.gain.setValueAtTime(musicGain.gain.value, now)
-  musicGain.gain.linearRampToValueAtTime(0, now + 0.5)
-  musicOscillators.forEach((oscillator) => {
-    try {
-      oscillator.stop(now + 0.55)
-    } catch {
-      // Already stopped.
-    }
-  })
-  musicOscillators = []
+  letterMusic.pause()
+  letterMusic.currentTime = 0
   musicPlaying.value = false
 }
 
