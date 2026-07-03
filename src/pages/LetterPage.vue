@@ -1444,14 +1444,18 @@ function skipAnimation() {
 
 /* ── Letter Message ───────────────────────────────────────────────── */
 .letter-message-box {
+  --letter-paper-row: 27px;
+  --letter-paper-line: 1px;
+  --letter-message-font-size: 14px;
   flex: 1 1 auto;
   min-height: 0;
   background-color: rgba(255, 255, 255, 0.7);
   background-image: repeating-linear-gradient(
+    to bottom,
     transparent,
-    transparent 26px,
-    rgba(232, 180, 192, 0.25) 26px,
-    rgba(232, 180, 192, 0.25) 27px
+    transparent calc(var(--letter-paper-row) - var(--letter-paper-line)),
+    rgba(232, 180, 192, 0.25) calc(var(--letter-paper-row) - var(--letter-paper-line)),
+    rgba(232, 180, 192, 0.25) var(--letter-paper-row)
   );
   background-attachment: local;
   border: 1px solid #F0C4CF;
@@ -1499,9 +1503,9 @@ function skipAnimation() {
 
 .letter-message-text {
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: var(--letter-message-font-size);
   color: #7A4A54;
-  line-height: 27px;
+  line-height: var(--letter-paper-row);
   text-align: left;
   margin: 0;
   white-space: pre-line; /* ← change from pre-wrap to pre-line */
@@ -2788,8 +2792,8 @@ function skipAnimation() {
   }
 
   .letter-message-screen .letter-message-text {
-    font-size: 13px;
-    line-height: 25px;
+    font-size: var(--letter-message-font-size);
+    line-height: var(--letter-paper-row);
   }
 
   .letter-message-screen .letter-from {
@@ -2864,7 +2868,8 @@ function skipAnimation() {
   }
 
   .letter-message-screen .letter-message-text {
-    font-size: clamp(13px, 3.7vw, 14px);
+    font-size: var(--letter-message-font-size);
+    line-height: var(--letter-paper-row);
   }
 
   .letter-message-screen .letter-from {
