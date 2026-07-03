@@ -36,6 +36,12 @@ const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
 const memorySlideDirection = ref('memory-forward')
 const bouquetImage = ref('/images/b5.png')
+const musicPlaying = ref(false)
+const envelopeOpening = ref(false)
+
+let audioContext: AudioContext | null = null
+let musicGain: GainNode | null = null
+let musicOscillators: OscillatorNode[] = []
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
@@ -86,6 +92,67 @@ function normalizeImageSrc(src: string) {
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
+function toggleMusic() {
+  if (musicPlaying.value) {
+    stopSoftMusic()
+    return
+  }
+
+  startSoftMusic()
+}
+
+function startSoftMusic() {
+  if (typeof window === 'undefined') return
+
+  const AudioContextCtor =
+    window.AudioContext ||
+    (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioContextCtor) return
+
+  audioContext = audioContext || new AudioContextCtor()
+  const now = audioContext.currentTime
+  musicGain = audioContext.createGain()
+  musicGain.gain.setValueAtTime(0, now)
+  musicGain.gain.linearRampToValueAtTime(0.028, now + 1.6)
+  musicGain.connect(audioContext.destination)
+
+  const frequencies = [261.63, 329.63, 392.0]
+  musicOscillators = frequencies.map((frequency, index) => {
+    const oscillator = audioContext!.createOscillator()
+    const toneGain = audioContext!.createGain()
+    oscillator.type = index === 1 ? 'triangle' : 'sine'
+    oscillator.frequency.setValueAtTime(frequency, now)
+    toneGain.gain.setValueAtTime(index === 2 ? 0.32 : 0.24, now)
+    oscillator.connect(toneGain)
+    toneGain.connect(musicGain!)
+    oscillator.start(now + index * 0.08)
+    return oscillator
+  })
+
+  musicPlaying.value = true
+}
+
+function stopSoftMusic() {
+  if (!audioContext || !musicGain) {
+    musicPlaying.value = false
+    return
+  }
+
+  const now = audioContext.currentTime
+  musicGain.gain.cancelScheduledValues(now)
+  musicGain.gain.setValueAtTime(musicGain.gain.value, now)
+  musicGain.gain.linearRampToValueAtTime(0, now + 0.5)
+  musicOscillators.forEach((oscillator) => {
+    try {
+      oscillator.stop(now + 0.55)
+    } catch {
+      // Already stopped.
+    }
+  })
+  musicOscillators = []
+  musicPlaying.value = false
+}
+
 function nextScreen() {
   slideDirection.value = 'slide-forward'
   if (currentScreen.value < totalScreens - 1) currentScreen.value++
@@ -226,18 +293,58 @@ let lastX = 0
 let velocity = 0
 let animationFrame: number | null = null
 let accumulatedDelta = 0
-const SENSITIVITY = 0.3 // lower = slower, higher = faster
+let angleHoldTimer: number | null = null
+let angleHoldDirection = 0
+let lastMomentumTime = 0
+const ANGLE_FRAME_RATE = 30
+const ANGLE_FRAME_INTERVAL = 1000 / ANGLE_FRAME_RATE
 
-function on360Start(e: MouseEvent | TouchEvent) {
-  isDragging360 = true
-  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
-  lastX = x
-  velocity = 0
-  accumulatedDelta = 0
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function getAngleTotal() {
+  return letter.value?.angle_photos?.length || 0
+}
+
+function getRotationSensitivity() {
+  const total = getAngleTotal()
+  return clampNumber(total / 90, 0.16, 0.38)
+}
+
+function getHoldFrameRate() {
+  return ANGLE_FRAME_RATE
+}
+
+function getMomentumFriction() {
+  const total = getAngleTotal()
+  return clampNumber(0.8 + total / 450, 0.84, 0.93)
+}
+
+function stopAngleMomentum() {
   if (animationFrame) {
     cancelAnimationFrame(animationFrame)
     animationFrame = null
   }
+  lastMomentumTime = 0
+  velocity = 0
+  accumulatedDelta = 0
+}
+
+function stopAngleHold() {
+  if (angleHoldTimer) {
+    clearInterval(angleHoldTimer)
+    angleHoldTimer = null
+  }
+  angleHoldDirection = 0
+}
+
+function on360Start(e: MouseEvent | TouchEvent) {
+  stopAngleHold()
+  stopAngleMomentum()
+  isDragging360 = true
+  const x = 'touches' in e ? e.touches[0].clientX : e.clientX
+  lastX = x
 }
 
 function on360Move(e: MouseEvent | TouchEvent) {
@@ -246,10 +353,11 @@ function on360Move(e: MouseEvent | TouchEvent) {
   const x = 'touches' in e ? e.touches[0].clientX : e.clientX
   const diff = lastX - x
   velocity = diff
-  accumulatedDelta += diff * SENSITIVITY
+  accumulatedDelta += diff * getRotationSensitivity()
   lastX = x
 
-  const total = letter.value.angle_photos.length
+  const total = getAngleTotal()
+  if (!total) return
   const steps = Math.round(accumulatedDelta)
   if (Math.abs(steps) >= 1) {
     currentAngle.value = ((currentAngle.value + steps) % total + total) % total
@@ -258,25 +366,51 @@ function on360Move(e: MouseEvent | TouchEvent) {
 }
 
 function on360End() {
+  if (!isDragging360) return
   isDragging360 = false
-  // Momentum after release
+  lastMomentumTime = 0
   applyMomentum()
 }
 
-function applyMomentum() {
+function stepAngle(direction: number) {
+  const total = getAngleTotal()
+  if (!total) return
+  currentAngle.value = ((currentAngle.value + direction) % total + total) % total
+}
+
+function startAngleHold(direction: number) {
+  const total = getAngleTotal()
+  if (!total) return
+  stopAngleHold()
+  stopAngleMomentum()
+  angleHoldDirection = direction
+  stepAngle(direction)
+  angleHoldTimer = window.setInterval(() => {
+    stepAngle(angleHoldDirection)
+  }, 1000 / getHoldFrameRate())
+}
+
+function applyMomentum(timestamp = performance.now()) {
   if (!letter.value) return
   if (Math.abs(velocity) < 0.5) {
     velocity = 0
+    animationFrame = null
     return
   }
-  const total = letter.value.angle_photos.length
-  accumulatedDelta += velocity * SENSITIVITY
+  if (lastMomentumTime && timestamp - lastMomentumTime < ANGLE_FRAME_INTERVAL) {
+    animationFrame = requestAnimationFrame(applyMomentum)
+    return
+  }
+  lastMomentumTime = timestamp
+  const total = getAngleTotal()
+  if (!total) return
+  accumulatedDelta += velocity * getRotationSensitivity()
   const steps = Math.round(accumulatedDelta)
   if (Math.abs(steps) >= 1) {
     currentAngle.value = ((currentAngle.value + steps) % total + total) % total
     accumulatedDelta -= steps
   }
-  velocity *= 0.85 // friction — higher = slides longer
+  velocity *= getMomentumFriction()
   animationFrame = requestAnimationFrame(applyMomentum)
 }
 
@@ -306,15 +440,26 @@ onMounted(() => loadLetter())
 
 watch(() => letter.value?.angle_photos, (photos) => {
   if (!photos || photos.length === 0) return
+  currentAngle.value = currentAngle.value % photos.length
   photos.forEach(src => {
     const img = new Image()
     img.src = src
   })
 }, { immediate: true })
 
+watch(show360, (visible) => {
+  if (visible) return
+  isDragging360 = false
+  stopAngleHold()
+  stopAngleMomentum()
+})
+
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
-  if (animationFrame) cancelAnimationFrame(animationFrame)
+  stopAngleHold()
+  stopAngleMomentum()
+  if (envelopeTimer) clearTimeout(envelopeTimer)
+  stopSoftMusic()
 })
 
 // ── Letter Reveal ──────────────────────────────────────────────────
@@ -322,31 +467,39 @@ const letterRevealed = ref(false)
 const displayedText = ref('')
 const isTyping = ref(false)
 let typeInterval: number | null = null
+let envelopeTimer: number | null = null
 
 function startLetterReveal() {
-  letterRevealed.value = true
-  isTyping.value = true
-  displayedText.value = ''
-  senderVisible.value = false
+  if (envelopeOpening.value || letterRevealed.value) return
+  envelopeOpening.value = true
 
-  const fullText = letter.value?.message || ''
-  let i = 0
+  envelopeTimer = window.setTimeout(() => {
+    letterRevealed.value = true
+    envelopeOpening.value = false
+    isTyping.value = true
+    displayedText.value = ''
+    senderVisible.value = false
 
-  typeInterval = window.setInterval(() => {
-    if (i < fullText.length) {
-      displayedText.value += fullText[i]
-      i++
-    } else {
-      isTyping.value = false
-      if (typeInterval) {
-        clearInterval(typeInterval)
-        typeInterval = null
+    const fullText = letter.value?.message || ''
+    let i = 0
+
+    typeInterval = window.setInterval(() => {
+      if (i < fullText.length) {
+        displayedText.value += fullText[i]
+        i++
+      } else {
+        isTyping.value = false
+        if (typeInterval) {
+          clearInterval(typeInterval)
+          typeInterval = null
+        }
+        setTimeout(() => {
+          senderVisible.value = true
+        }, 600)
       }
-      setTimeout(() => {
-        senderVisible.value = true
-      }, 600)
-    }
-  }, 35)
+    }, 35)
+    envelopeTimer = null
+  }, 900)
 }
 
 watch(() => currentScreen.value, (screen) => {
@@ -355,6 +508,11 @@ watch(() => currentScreen.value, (screen) => {
     displayedText.value = ''
     isTyping.value = false
     senderVisible.value = false
+    envelopeOpening.value = false
+    if (envelopeTimer) {
+      clearTimeout(envelopeTimer)
+      envelopeTimer = null
+    }
     if (typeInterval) {
       clearInterval(typeInterval)
       typeInterval = null
@@ -399,6 +557,17 @@ function skipAnimation() {
 
     <!-- Letter Screens -->
     <div v-else-if="letter" class="letter-screens">
+      <button
+        class="music-toggle"
+        :class="{ playing: musicPlaying }"
+        :aria-label="musicPlaying ? 'Turn off soft music' : 'Turn on soft music'"
+        @click.stop="toggleMusic"
+        @mousedown.stop
+        @touchstart.stop
+      >
+        <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
+      </button>
+
       <Transition :name="slideDirection" mode="out-in">
         <div :key="currentScreen" class="letter-screen-wrapper">
 
@@ -543,7 +712,13 @@ function skipAnimation() {
           <div class="letter-logo">Stack Petals</div>
 
           <!-- Before reveal -->
-          <div v-if="!letterRevealed" class="letter-reveal-wrap">
+          <div v-if="!letterRevealed" class="letter-reveal-wrap" :class="{ opening: envelopeOpening }">
+            <div class="envelope-sparkles" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
             <div class="envelope-icon">💌</div>
             <div class="wax-seal">✦</div>
             <h2 class="letter-title">A letter<br><em>written just for you</em></h2>
@@ -602,6 +777,7 @@ function skipAnimation() {
           <div v-if="letter.memories && letter.memories.length > 0" class="memory-slideshow">
             <div
               class="memory-frame"
+              :data-label="`Memory ${currentMemory + 1}`"
               @touchstart.stop="onMemoryTouchStart"
               @touchend.stop="onMemoryTouchEnd"
               @touchcancel.stop="cancelMemorySwipe"
@@ -655,6 +831,13 @@ function skipAnimation() {
           <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
             <div class="bouquet-stage">
               <div class="bouquet-halo"></div>
+              <div class="bouquet-glass"></div>
+              <div class="bouquet-shine"></div>
+              <div class="bouquet-sparkles" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
               <img
                 :src="bouquetImage"
                 alt="Your bouquet"
@@ -662,8 +845,13 @@ function skipAnimation() {
               />
               <div class="bouquet-pedestal"></div>
             </div>
+            <div class="bouquet-plaque">
+              <span>Crafted for</span>
+              <strong>{{ letter.recipient }}</strong>
+            </div>
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" @click.stop="show360 = true">
-              ✦ View in 360°
+              <span class="rotate-mark">↻</span>
+              <span>View in 360°</span>
             </button>
             <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
           </div>
@@ -681,28 +869,62 @@ function skipAnimation() {
           <button class="viewer-close" @click="show360 = false">✕</button>
 
           <div class="viewer-header">
-            <p class="viewer-hint">← drag to rotate →</p>
+            <p class="viewer-kicker">Bouquet showcase</p>
+            <p class="viewer-hint">Drag or hold the arrows to rotate</p>
           </div>
 
-          <div
-            class="viewer-360-full"
-            @mousedown.stop="on360Start"
-            @mousemove.stop="on360Move"
-            @mouseup.stop="on360End"
-            @mouseleave="on360End"
-            @touchstart.stop.prevent="on360Start"
-            @touchmove.stop.prevent="on360Move"
-            @touchend.stop="on360End"
-          >
-            <img
-              :src="letter!.angle_photos[currentAngle]"
-              :alt="`Angle ${currentAngle + 1}`"
-              class="angle-photo-full"
-              draggable="false"
-            />
+          <div class="viewer-stage-wrap">
+            <button
+              class="viewer-nav prev"
+              aria-label="Previous bouquet angle"
+              @pointerdown.stop.prevent="startAngleHold(-1)"
+              @pointerup.stop.prevent="stopAngleHold"
+              @pointerleave.stop="stopAngleHold"
+              @pointercancel.stop="stopAngleHold"
+              @contextmenu.prevent
+            >‹</button>
+            <div
+              class="viewer-360-full"
+              @mousedown.stop="on360Start"
+              @mousemove.stop="on360Move"
+              @mouseup.stop="on360End"
+              @mouseleave="on360End"
+              @touchstart.stop.prevent="on360Start"
+              @touchmove.stop.prevent="on360Move"
+              @touchend.stop="on360End"
+            >
+              <div class="viewer-glow"></div>
+              <div class="viewer-glass-dome"></div>
+              <div class="viewer-shine"></div>
+              <div class="viewer-sparkles" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <img
+                :src="letter!.angle_photos[currentAngle]"
+                :alt="`Angle ${currentAngle + 1}`"
+                class="angle-photo-full"
+                draggable="false"
+              />
+            </div>
+            <button
+              class="viewer-nav next"
+              aria-label="Next bouquet angle"
+              @pointerdown.stop.prevent="startAngleHold(1)"
+              @pointerup.stop.prevent="stopAngleHold"
+              @pointerleave.stop="stopAngleHold"
+              @pointercancel.stop="stopAngleHold"
+              @contextmenu.prevent
+            >›</button>
           </div>
 
           <div class="viewer-footer">
+            <div class="viewer-caption">
+              <span>Crafted for</span>
+              <strong>{{ letter.recipient }}</strong>
+            </div>
+            <p class="viewer-hold-note">Press and hold for a silky bouquet turn</p>
           </div>
         </div>
       </Teleport>
@@ -796,15 +1018,84 @@ function skipAnimation() {
 }
 
 .letter-screens {
+  container: letter-frame / size;
   width: 100%;
   height: 100vh;
   height: 100dvh;
   max-width: 480px;
+  position: relative;
   margin: 0 auto;
   overflow: hidden;
 }
 
+.music-toggle {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  right: 14px;
+  z-index: 180;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 180, 192, 0.72);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.95), rgba(255,240,244,0.74));
+  color: #C35A70;
+  box-shadow: 0 10px 24px rgba(212, 104, 122, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.music-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(212, 104, 122, 0.24);
+}
+
+.music-toggle.playing {
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.98), rgba(255,226,235,0.92));
+}
+
+.music-toggle.playing::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(212, 104, 122, 0.24);
+  border-radius: inherit;
+  animation: musicPulse 1.8s ease-out infinite;
+}
+
+.music-icon {
+  font-family: 'Lora', serif;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@keyframes musicPulse {
+  from {
+    opacity: 0.75;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
 .letter-screen {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --screen-pad-top: clamp(24px, 6dvh, 48px);
+  --screen-pad-bottom-base: clamp(76px, 12dvh, 92px);
+  --screen-pad-bottom: calc(var(--screen-pad-bottom-base) + var(--safe-bottom));
+  --screen-inline-pad: clamp(18px, 6vw, 32px);
+  --screen-content-gap: clamp(8px, 1.4dvh, 14px);
+  --screen-reserved-y: calc(var(--screen-pad-top) + var(--screen-pad-bottom));
+  --title-size: clamp(26px, min(7vw, 5.4dvh), 32px);
+  --sub-size: clamp(13px, min(3.8vw, 2.4dvh), 15px);
+  --divider-space: clamp(8px, 1.6dvh, 16px);
+  --action-space: clamp(10px, 1.8dvh, 22px);
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -818,7 +1109,7 @@ function skipAnimation() {
   background-repeat: no-repeat;
   position: relative;
   overflow: hidden;
-  padding: clamp(28px, 6dvh, 48px) 0 clamp(78px, 12dvh, 92px);
+  padding: var(--screen-pad-top) 0 var(--screen-pad-bottom);
 }
 
 .letter-screen:has(.bouquet-preview) {
@@ -835,21 +1126,23 @@ function skipAnimation() {
 }
 
 .letter-message-screen {
-  padding: clamp(22px, 4.5dvh, 44px) 0 clamp(70px, 10dvh, 88px);
+  --screen-pad-top: clamp(22px, 4.5dvh, 44px);
+  --screen-pad-bottom-base: clamp(70px, 10dvh, 88px);
 }
 
 .memories-screen,
 .bouquet-screen {
-  padding: clamp(22px, 4.5dvh, 44px) 0 clamp(70px, 10dvh, 88px);
+  --screen-pad-top: clamp(22px, 4.5dvh, 44px);
+  --screen-pad-bottom-base: clamp(70px, 10dvh, 88px);
 }
 
 /* ── Content ──────────────────────────────────────────────────────── */
 .screen-content {
   width: 100%;
   max-width: 480px;
-  max-height: calc(100dvh - clamp(112px, 18dvh, 140px));
+  max-height: calc(100dvh - var(--screen-reserved-y));
   min-height: 0;
-  padding: 0 32px;
+  padding: 0 var(--screen-inline-pad);
   overflow: hidden;
 }
 
@@ -860,7 +1153,7 @@ function skipAnimation() {
   justify-content: center;
   text-align: center;
   overflow: hidden;
-  gap: clamp(8px, 1.4dvh, 14px);
+  gap: var(--screen-content-gap);
 }
 
 .letter-message-screen .screen-content {
@@ -905,9 +1198,14 @@ function skipAnimation() {
 
 .memories-screen .screen-content,
 .bouquet-screen .screen-content {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  justify-items: center;
+  align-content: stretch;
   height: 100%;
   max-height: none;
-  justify-content: flex-start;
+  justify-content: center;
+  gap: 0;
 }
 
 .memories-screen .letter-logo,
@@ -932,7 +1230,7 @@ function skipAnimation() {
 
 .memories-screen .memory-slideshow,
 .bouquet-screen .bouquet-preview {
-  flex: 1 1 auto;
+  align-self: stretch;
   min-height: 0;
 }
 
@@ -949,21 +1247,21 @@ function skipAnimation() {
 /* ── Typography ───────────────────────────────────────────────────── */
 .letter-logo {
   font-family: 'Lora', serif;
-  font-size: 13px;
+  font-size: clamp(11px, min(3vw, 2dvh), 13px);
   color: #C48090;
-  letter-spacing: 3px;
+  letter-spacing: clamp(2px, 0.7vw, 3px);
   text-transform: uppercase;
-  margin-bottom: 32px;
+  margin-bottom: clamp(10px, 3dvh, 32px);
 }
 
 .letter-headline {
   font-family: 'Lora', serif;
-  font-size: 40px;
+  font-size: clamp(32px, min(10vw, 7dvh), 40px);
   font-weight: 400;
   color: #7A3A4A;
   text-align: center;
-  line-height: 1.3;
-  margin: 0 0 20px;
+  line-height: 1.18;
+  margin: 0 0 clamp(8px, 2dvh, 20px);
 }
 
 .letter-headline em {
@@ -973,11 +1271,11 @@ function skipAnimation() {
 
 .letter-title {
   font-family: 'Lora', serif;
-  font-size: 28px;
+  font-size: var(--title-size);
   font-weight: 400;
   color: #7A3A4A;
-  line-height: 1.4;
-  margin: 0 0 12px;
+  line-height: 1.2;
+  margin: 0 0 clamp(4px, 1.2dvh, 12px);
 }
 
 .letter-title em {
@@ -987,10 +1285,10 @@ function skipAnimation() {
 
 .letter-sub {
   font-family: 'Lora', serif;
-  font-size: 15px;
+  font-size: var(--sub-size);
   color: #B08090;
   font-style: italic;
-  line-height: 1.7;
+  line-height: 1.55;
   margin: 0;
 }
 
@@ -1025,7 +1323,7 @@ function skipAnimation() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 16px auto;
+  margin: var(--divider-space) auto;
   width: 80%;
   color: #E8B4C0;
   font-size: 12px;
@@ -1044,19 +1342,19 @@ function skipAnimation() {
   justify-content: center;
   flex: 0 0 auto;
   max-width: min(100%, 300px);
-  min-height: 46px;
+  min-height: clamp(40px, 6dvh, 46px);
   background: #D4687A;
   color: white;
   border: none;
   border-radius: 28px;
-  padding: 14px 40px;
+  padding: clamp(10px, 1.8dvh, 14px) clamp(24px, 8vw, 40px);
   font-family: 'Lora', serif;
-  font-size: 15px;
+  font-size: clamp(13px, min(3.8vw, 2.4dvh), 15px);
   line-height: 1.2;
   text-align: center;
   white-space: normal;
   cursor: pointer;
-  margin-top: clamp(14px, 2.4dvh, 28px);
+  margin-top: var(--action-space);
   letter-spacing: 0.5px;
   transition: all 0.2s;
 }
@@ -1072,14 +1370,14 @@ function skipAnimation() {
   justify-content: center;
   flex: 0 0 auto;
   max-width: min(100%, 300px);
-  min-height: 44px;
+  min-height: clamp(38px, 5.6dvh, 44px);
   background: transparent;
   color: #D4687A;
   border: 1px solid #E8B4C0;
   border-radius: 28px;
-  padding: 12px 32px;
+  padding: clamp(9px, 1.6dvh, 12px) clamp(22px, 7vw, 32px);
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: clamp(12px, min(3.6vw, 2.2dvh), 14px);
   line-height: 1.2;
   text-align: center;
   white-space: normal;
@@ -1096,12 +1394,12 @@ function skipAnimation() {
 .screen-content.center > .letter-btn,
 .screen-content.center > .letter-btn-outline,
 .letter-reveal-content .letter-btn-outline {
-  margin-top: clamp(12px, 2dvh, 22px) !important;
+  margin-top: var(--action-space) !important;
 }
 
 .screen-dots {
   position: absolute;
-  bottom: clamp(14px, 3dvh, 22px);
+  bottom: calc(clamp(12px, 2.6dvh, 22px) + var(--safe-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -1126,8 +1424,8 @@ function skipAnimation() {
 
 /* ── Flower ───────────────────────────────────────────────────────── */
 .blooming-flower {
-  font-size: 96px;
-  margin-bottom: 28px;
+  font-size: clamp(64px, min(22vw, 15dvh), 96px);
+  margin-bottom: clamp(12px, 3dvh, 28px);
   animation: bloom 2s ease-in-out infinite alternate;
 }
 
@@ -1139,8 +1437,8 @@ function skipAnimation() {
 /* ── Petals ───────────────────────────────────────────────────────── */
 .petals-flower {
   position: relative;
-  width: 320px;
-  height: 320px;
+  width: min(320px, 78vw, 46dvh);
+  height: min(320px, 78vw, 46dvh);
   margin: 0 auto;
 }
 
@@ -1307,27 +1605,69 @@ function skipAnimation() {
 .memory-slideshow {
   width: 100%;
   max-width: min(360px, 100%, 44dvh);
+  height: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
 }
 
 .memory-frame {
   position: relative;
-  width: 100%;
-  max-height: min(360px, 44dvh);
-  border-radius: 16px;
-  overflow: hidden;
+  width: min(100%, 40dvh, 360px);
+  max-height: min(360px, 40dvh);
+  flex: 0 1 auto;
+  border: clamp(8px, 1.6dvh, 12px) solid rgba(255, 255, 255, 0.9);
+  border-bottom-width: clamp(30px, 5.2dvh, 44px);
+  border-radius: 8px;
+  overflow: visible;
   aspect-ratio: 1;
-  background: #F9E8EE;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 18px 34px rgba(122, 58, 74, 0.16),
+    0 2px 0 rgba(255, 255, 255, 0.7) inset;
   cursor: grab;
   touch-action: pan-y;
   user-select: none;
+  transform: rotate(-1.2deg);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.memory-frame::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 72px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(255, 238, 244, 0.74);
+  border: 1px solid rgba(232, 180, 192, 0.46);
+  box-shadow: 0 5px 12px rgba(122, 58, 74, 0.08);
+  transform: translateX(-50%) rotate(2deg);
+  z-index: 4;
+}
+
+.memory-frame::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(clamp(8px, 1.3dvh, 12px) * -1 - 8px);
+  color: #B08090;
+  font-family: 'Lora', serif;
+  font-size: clamp(11px, 2.4dvh, 13px);
+  font-style: italic;
+  letter-spacing: 0.4px;
+  text-align: center;
+  pointer-events: none;
 }
 
 .memory-frame:active {
   cursor: grabbing;
+  transform: rotate(0deg) scale(0.985);
+  box-shadow: 0 12px 24px rgba(122, 58, 74, 0.14);
 }
 
 .memory-slide {
@@ -1336,6 +1676,7 @@ function skipAnimation() {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  border-radius: 4px;
   pointer-events: none;
 }
 
@@ -1367,10 +1708,11 @@ function skipAnimation() {
 }
 
 .memory-dots {
+  flex: 0 0 auto;
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: 12px;
+  margin-top: clamp(6px, 1.2dvh, 12px);
 }
 
 .memory-dots span {
@@ -1390,11 +1732,15 @@ function skipAnimation() {
 
 /* ── Bouquet Preview ──────────────────────────────────────────────── */
 .bouquet-preview {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   align-items: center;
+  justify-items: center;
+  gap: clamp(6px, 1dvh, 10px);
   width: 100%;
-  max-width: min(360px, 100%, 42dvh);
+  height: 100%;
+  max-width: min(360px, 100%, 38dvh);
+  max-height: 100%;
   flex-shrink: 1;
   min-height: 0;
 }
@@ -1404,42 +1750,140 @@ function skipAnimation() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: min(100%, 35dvh, 330px);
+  max-width: 100%;
+  align-self: center;
   aspect-ratio: 1;
   isolation: isolate;
-  animation: bouquetReveal 0.7s ease both;
+  animation: bouquetReveal 0.7s ease both, bouquetFloat 5.2s ease-in-out infinite 0.7s;
 }
 
 .bouquet-halo {
   position: absolute;
-  width: 78%;
-  height: 78%;
+  width: 96%;
+  height: 96%;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.92) 0%, rgba(255, 238, 244, 0.68) 46%, rgba(255, 238, 244, 0) 72%);
-  box-shadow: 0 22px 60px rgba(212, 104, 122, 0.18);
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 238, 244, 0.76) 42%, rgba(255, 238, 244, 0) 72%);
+  box-shadow:
+    0 24px 64px rgba(212, 104, 122, 0.2),
+    inset 0 0 34px rgba(255, 255, 255, 0.66);
+  z-index: -4;
+}
+
+.bouquet-glass {
+  position: absolute;
+  inset: 7%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.04) 42%, rgba(255,226,235,0.2)),
+    radial-gradient(circle at 48% 45%, rgba(255,255,255,0.14), rgba(255,255,255,0) 66%);
+  box-shadow:
+    inset 10px 12px 26px rgba(255,255,255,0.42),
+    inset -14px -20px 30px rgba(212,104,122,0.08);
+  pointer-events: none;
   z-index: -2;
 }
 
-.bouquet-main-photo {
-  width: min(86%, 320px);
-  height: min(86%, 320px);
-  object-fit: contain;
-  border-radius: 20px;
+.bouquet-shine {
+  position: absolute;
+  top: 13%;
+  left: 20%;
+  width: 22%;
+  height: 58%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.62), rgba(255,255,255,0));
+  filter: blur(1px);
+  opacity: 0.7;
+  transform: rotate(28deg);
   pointer-events: none;
-  filter: drop-shadow(0 20px 20px rgba(122, 58, 74, 0.16));
-  transform: translateY(-2px);
+  z-index: 2;
+  animation: glassShine 4.4s ease-in-out infinite;
+}
+
+.bouquet-sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bouquet-sparkles span {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.96);
+  box-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 20px rgba(244,192,206,0.62);
+  animation: bouquetTwinkle 2.8s ease-in-out infinite;
+}
+
+.bouquet-sparkles span:nth-child(1) { top: 19%; right: 28%; animation-delay: 0s; }
+.bouquet-sparkles span:nth-child(2) { top: 48%; left: 12%; animation-delay: 0.7s; }
+.bouquet-sparkles span:nth-child(3) { right: 17%; bottom: 23%; animation-delay: 1.3s; }
+
+.bouquet-main-photo {
+  width: min(84%, 310px);
+  height: min(84%, 310px);
+  object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.22);
+  box-shadow:
+    0 18px 42px rgba(122, 58, 74, 0.13),
+    0 0 0 8px rgba(255,255,255,0.12);
+  pointer-events: none;
+  filter:
+    saturate(1.04)
+    drop-shadow(0 24px 24px rgba(122, 58, 74, 0.19));
+  transform: translateY(-3px);
+  z-index: 1;
 }
 
 .bouquet-pedestal {
   position: absolute;
-  bottom: 8%;
-  width: 58%;
-  height: 12%;
+  bottom: 6%;
+  width: 62%;
+  height: 13%;
   border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(122, 58, 74, 0.2) 0%, rgba(122, 58, 74, 0.08) 42%, rgba(122, 58, 74, 0) 72%);
-  filter: blur(2px);
-  z-index: -1;
+  background: radial-gradient(ellipse, rgba(122, 58, 74, 0.22) 0%, rgba(122, 58, 74, 0.09) 44%, rgba(122, 58, 74, 0) 72%);
+  filter: blur(3px);
+  z-index: -3;
+}
+
+.bouquet-plaque {
+  width: min(100%, 280px);
+  border: 1px solid rgba(232, 180, 192, 0.58);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 0 10px 24px rgba(212, 104, 122, 0.1);
+  backdrop-filter: blur(8px);
+  padding: clamp(7px, 1.1dvh, 9px) 18px;
+  color: #9A5C6B;
+  text-align: center;
+}
+
+.bouquet-plaque span {
+  display: block;
+  font-family: 'Lora', serif;
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #C48090;
+  line-height: 1.1;
+}
+
+.bouquet-plaque strong {
+  display: block;
+  margin-top: 2px;
+  font-family: 'Lora', serif;
+  font-size: clamp(13px, min(3.6vw, 2.1dvh), 15px);
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .btn-360 {
@@ -1448,14 +1892,16 @@ function skipAnimation() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 40px;
-  min-width: 150px;
+  min-width: 166px;
   max-width: min(100%, 240px);
   line-height: 1.2;
   white-space: nowrap;
-  margin-top: 8px;
-  padding: 10px 22px;
-  background: rgba(255, 255, 255, 0.82);
+  margin-top: 0;
+  padding: 10px 20px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,244,0.76));
   color: #D4687A;
   border: 1.5px solid #E8B4C0;
   border-radius: 28px;
@@ -1463,11 +1909,25 @@ function skipAnimation() {
   font-size: 14px;
   cursor: pointer;
   letter-spacing: 0.5px;
-  transition: all 0.2s;
+  box-shadow: 0 10px 22px rgba(212, 104, 122, 0.12);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.rotate-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(212, 104, 122, 0.1);
+  font-size: 14px;
+  line-height: 1;
 }
 
 .btn-360:hover {
-  background: #FFF0F3;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,226,235,0.86));
   border-color: #D4687A;
   transform: translateY(-1px);
 }
@@ -1496,21 +1956,49 @@ function skipAnimation() {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.58) 0%, rgba(255, 240, 244, 0.28) 42%, rgba(255, 240, 244, 0.08) 72%),
-    rgba(255, 245, 247, 0.72);
-  backdrop-filter: blur(10px);
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,0.82) 0%, rgba(255,236,243,0.42) 38%, rgba(255,236,243,0.08) 72%),
+    linear-gradient(160deg, rgba(255,247,249,0.88), rgba(255,226,236,0.72));
+  backdrop-filter: blur(14px);
   z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  place-items: center;
+  gap: clamp(12px, 2.5dvh, 22px);
+  padding: calc(24px + env(safe-area-inset-top, 0px)) clamp(18px, 5vw, 44px) calc(24px + env(safe-area-inset-bottom, 0px));
   touch-action: none;
+  overflow: hidden;
+}
+
+.viewer-fullscreen::before,
+.viewer-fullscreen::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.viewer-fullscreen::before {
+  width: min(72vw, 620px);
+  height: min(72vw, 620px);
+  background: radial-gradient(circle, rgba(255,255,255,0.44), rgba(255,238,244,0.12) 62%, transparent 72%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.viewer-fullscreen::after {
+  width: 38vw;
+  height: 38vw;
+  right: -12vw;
+  bottom: -14vw;
+  background: radial-gradient(circle, rgba(212,104,122,0.14), transparent 68%);
+  filter: blur(4px);
 }
 
 .viewer-close {
   position: absolute;
-  top: 20px;
-  right: 20px;
+  top: calc(18px + env(safe-area-inset-top, 0px));
+  right: clamp(16px, 4vw, 28px);
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -1533,10 +2021,21 @@ function skipAnimation() {
 }
 
 .viewer-header {
-  position: absolute;
-  top: 24px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.viewer-kicker {
+  margin: 0;
+  color: #C48090;
+  font-family: 'Lora', serif;
+  font-size: 11px;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
 }
 
 .viewer-hint {
@@ -1551,18 +2050,109 @@ function skipAnimation() {
   padding: 8px 14px;
 }
 
+.viewer-stage-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 780px);
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  justify-items: center;
+  gap: clamp(8px, 2vw, 18px);
+}
+
 .viewer-360-full {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(88vw, 70dvh);
+  width: min(76vw, 62dvh, 620px);
   max-width: 620px;
   aspect-ratio: 1;
   cursor: grab;
   touch-action: none;
   background: transparent;
+  isolation: isolate;
   animation: floatingBouquet 3.8s ease-in-out infinite;
+}
+
+.viewer-glow,
+.viewer-glass-dome,
+.viewer-shine,
+.viewer-sparkles {
+  position: absolute;
+  pointer-events: none;
+}
+
+.viewer-glow {
+  inset: 3%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255,255,255,0.96), rgba(255,238,244,0.52) 48%, transparent 73%);
+  box-shadow: 0 30px 90px rgba(212, 104, 122, 0.2);
+  z-index: -4;
+}
+
+.viewer-glass-dome {
+  inset: 8%;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.74);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.42), rgba(255,255,255,0.04) 42%, rgba(255,226,235,0.2)),
+    radial-gradient(circle at 48% 45%, rgba(255,255,255,0.14), transparent 66%);
+  box-shadow:
+    inset 12px 14px 28px rgba(255,255,255,0.44),
+    inset -16px -22px 34px rgba(212,104,122,0.08);
+  z-index: -2;
+}
+
+.viewer-shine {
+  top: 14%;
+  left: 22%;
+  width: 18%;
+  height: 58%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0));
+  transform: rotate(28deg);
+  filter: blur(1px);
+  z-index: 2;
+  animation: glassShine 4.6s ease-in-out infinite;
+}
+
+.viewer-sparkles {
+  inset: 0;
+  z-index: 3;
+}
+
+.viewer-sparkles span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 14px rgba(255,255,255,0.92), 0 0 22px rgba(244,192,206,0.62);
+  animation: bouquetTwinkle 2.8s ease-in-out infinite;
+}
+
+.viewer-sparkles span:nth-child(1) { top: 18%; right: 27%; animation-delay: 0.15s; }
+.viewer-sparkles span:nth-child(2) { top: 50%; left: 13%; animation-delay: 0.82s; }
+.viewer-sparkles span:nth-child(3) { bottom: 22%; right: 18%; animation-delay: 1.45s; }
+
+.viewer-360-full::before {
+  content: '';
+  position: absolute;
+  width: 84%;
+  height: 86%;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 24px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.62), rgba(255,240,244,0.14)),
+    rgba(255,255,255,0.2);
+  box-shadow:
+    0 20px 58px rgba(122, 58, 74, 0.14),
+    0 0 0 10px rgba(255,255,255,0.1);
+  z-index: 0;
 }
 
 .viewer-360-full::after {
@@ -1584,21 +2174,106 @@ function skipAnimation() {
 }
 
 .angle-photo-full {
-  width: 92%;
-  height: 92%;
+  width: 82%;
+  height: 84%;
   object-fit: contain;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.22);
+  box-shadow:
+    0 18px 42px rgba(122, 58, 74, 0.13),
+    0 0 0 8px rgba(255,255,255,0.12);
   pointer-events: none;
   user-select: none;
   will-change: contents;
   image-rendering: auto;
-  filter: drop-shadow(0 28px 24px rgba(122, 58, 74, 0.18));
+  filter:
+    saturate(1.04)
+    drop-shadow(0 30px 28px rgba(122, 58, 74, 0.2));
+  z-index: 1;
+}
+
+.viewer-nav {
+  width: clamp(42px, 7vw, 54px);
+  height: clamp(42px, 7vw, 54px);
+  border-radius: 50%;
+  border: 1px solid rgba(232, 180, 192, 0.64);
+  background: rgba(255,255,255,0.62);
+  color: #C35A70;
+  box-shadow: 0 12px 28px rgba(212, 104, 122, 0.14);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font-size: clamp(28px, 5vw, 38px);
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  z-index: 4;
+}
+
+.viewer-nav:hover {
+  transform: translateY(-1px);
+  background: rgba(255,240,244,0.78);
+  border-color: rgba(212,104,122,0.72);
+}
+
+.viewer-nav:active {
+  transform: translateY(0) scale(0.94);
+  background: rgba(255,226,233,0.9);
+  border-color: rgba(212,104,122,0.9);
 }
 
 .viewer-footer {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(100%, 420px);
+}
+
+.viewer-caption {
+  width: min(100%, 300px);
+  border: 1px solid rgba(232, 180, 192, 0.56);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.58);
+  box-shadow: 0 10px 24px rgba(212,104,122,0.1);
+  backdrop-filter: blur(8px);
+  padding: 8px 18px;
+  color: #9A5C6B;
+  text-align: center;
+}
+
+.viewer-caption span {
+  display: block;
+  color: #C48090;
+  font-family: 'Lora', serif;
+  font-size: 10px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+
+.viewer-caption strong {
+  display: block;
+  margin-top: 2px;
+  font-family: 'Lora', serif;
+  font-size: 15px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-hold-note {
+  margin: 0;
+  color: #B98090;
+  font-family: 'Lora', serif;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
 }
 
 @keyframes floatingBouquet {
@@ -1795,13 +2470,143 @@ function skipAnimation() {
   .letter-sub      { font-size: 16px; }
   .letter-quote    { font-size: 22px; }
   .petals-flower   { width: 380px; height: 380px; }
-  .memory-slideshow { max-width: 420px; }
-  .bouquet-preview  { max-width: min(420px, 100%, 48dvh); }
+  .memory-slideshow { max-width: min(420px, 100%, 44dvh); }
+  .memory-frame { width: min(100%, 40dvh, 420px); }
+  .bouquet-preview  { max-width: min(420px, 100%, 36dvh); }
+  .bouquet-stage { width: min(100%, 34dvh, 360px); }
   .viewer-360-full  { max-width: 700px; }
 
   .letter-screen-wrapper {
     height: 100%;
     overflow: hidden;
+  }
+}
+
+@keyframes bouquetFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes glassShine {
+  0%, 100% {
+    opacity: 0.46;
+    transform: translateX(-4px) rotate(28deg);
+  }
+  50% {
+    opacity: 0.78;
+    transform: translateX(5px) rotate(28deg);
+  }
+}
+
+@keyframes bouquetTwinkle {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(0.78);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.16);
+  }
+}
+
+@container letter-frame (max-height: 700px) {
+  .letter-screen {
+    --screen-pad-top: 18px;
+    --screen-pad-bottom-base: 56px;
+    --screen-content-gap: 8px;
+    --divider-space: 6px;
+    --action-space: 10px;
+    --title-size: clamp(23px, 5cqh, 30px);
+    --sub-size: clamp(12px, 2.6cqh, 14px);
+  }
+
+  .letter-logo {
+    margin-bottom: 8px;
+  }
+
+  .blooming-flower {
+    font-size: clamp(58px, 13cqh, 76px);
+  }
+
+  .bloom-wrapper {
+    width: min(150px, 24cqh);
+    height: min(150px, 24cqh);
+  }
+
+  .petals-flower {
+    width: min(300px, 72cqw, 42cqh);
+    height: min(300px, 72cqw, 42cqh);
+  }
+
+  .memory-frame {
+    width: min(100%, 36cqh, 340px);
+  }
+
+  .bouquet-stage {
+    width: min(100%, 32cqh, 300px);
+  }
+
+  .bouquet-plaque {
+    width: min(100%, 250px);
+    padding-top: 6px;
+    padding-bottom: 7px;
+  }
+}
+
+@container letter-frame (max-height: 600px) {
+  .letter-screen {
+    --screen-pad-top: 12px;
+    --screen-pad-bottom-base: 48px;
+    --screen-content-gap: 6px;
+    --divider-space: 4px;
+    --action-space: 8px;
+    --title-size: clamp(21px, 4.8cqh, 27px);
+  }
+
+  .screen-content {
+    --screen-inline-pad: clamp(16px, 5cqw, 24px);
+  }
+
+  .letter-btn,
+  .letter-btn-outline {
+    min-height: 38px;
+  }
+
+  .memory-frame {
+    width: min(100%, 30cqh, 290px);
+  }
+
+  .bouquet-stage {
+    width: min(100%, 28cqh, 260px);
+  }
+
+  .bouquet-plaque span {
+    font-size: 9px;
+  }
+
+  .bouquet-plaque strong {
+    font-size: 12px;
+  }
+}
+
+@container letter-frame (max-width: 420px) {
+  .letter-screen {
+    --screen-inline-pad: clamp(16px, 5cqw, 22px);
+    --title-size: clamp(24px, 8cqw, 30px);
+  }
+
+  .letter-divider {
+    width: min(78%, 320px);
+  }
+
+  .letter-btn,
+  .letter-btn-outline,
+  .btn-360 {
+    max-width: min(100%, 260px);
   }
 }
 
@@ -1930,10 +2735,14 @@ function skipAnimation() {
 
   .btn-360 {
     min-height: 38px;
-    min-width: 142px;
+    min-width: 150px;
     margin-top: 8px;
     padding: 9px 20px;
     font-size: 13px;
+  }
+
+  .bouquet-plaque {
+    width: min(100%, 250px);
   }
 
   .screen-dots {
@@ -2043,11 +2852,16 @@ function skipAnimation() {
 
   .btn-360 {
     min-height: 36px;
-    min-width: 132px;
-    padding: 8px 18px;
+    min-width: 142px;
+    padding: 8px 16px;
     font-size: 12px;
   }
-}
+
+  .rotate-mark {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 360px) {
@@ -2112,6 +2926,51 @@ function skipAnimation() {
   .btn-360 {
     max-width: 220px;
   }
+
+  .bouquet-plaque {
+    width: min(100%, 240px);
+  }
+
+  .viewer-fullscreen {
+    gap: 10px;
+    padding-inline: 14px;
+  }
+
+  .viewer-stage-wrap {
+    width: 100%;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .viewer-360-full {
+    width: min(88vw, 54dvh);
+  }
+
+  .viewer-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .viewer-nav.prev {
+    left: 0;
+  }
+
+  .viewer-nav.next {
+    right: 0;
+  }
+
+  .viewer-nav:hover {
+    transform: translateY(-50%);
+  }
+
+  .viewer-nav:active {
+    transform: translateY(-50%) scale(0.94);
+  }
+
+  .viewer-caption {
+    width: min(100%, 260px);
+  }
 }
 
 @media (max-width: 480px) and (max-height: 620px) {
@@ -2133,6 +2992,30 @@ function skipAnimation() {
 
   .bouquet-preview {
     max-width: min(100%, 29dvh);
+  }
+
+  .bouquet-plaque {
+    display: none;
+  }
+
+  .viewer-header {
+    gap: 3px;
+  }
+
+  .viewer-kicker {
+    display: none;
+  }
+
+  .viewer-360-full {
+    width: min(86vw, 48dvh);
+  }
+
+  .viewer-caption {
+    display: none;
+  }
+
+  .viewer-footer {
+    gap: 8px;
   }
 }
 
@@ -2182,11 +3065,47 @@ function skipAnimation() {
 
 /* ── Letter Reveal ────────────────────────────────────────────────── */
 .letter-reveal-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 }
+
+.letter-reveal-wrap.opening .envelope-icon {
+  animation: envelopeOpen 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.letter-reveal-wrap.opening .wax-seal {
+  animation: sealRelease 0.72s ease both;
+}
+
+.letter-reveal-wrap.opening .envelope-sparkles span {
+  animation-play-state: running;
+}
+
+.envelope-sparkles {
+  position: absolute;
+  inset: -16px 0 auto;
+  height: 120px;
+  pointer-events: none;
+}
+
+.envelope-sparkles span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.96), rgba(244, 192, 206, 0.7));
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  animation: envelopeSpark 0.9s ease-out paused;
+}
+
+.envelope-sparkles span:nth-child(1) { left: 28%; top: 54%; animation-delay: 0.05s; }
+.envelope-sparkles span:nth-child(2) { left: 42%; top: 24%; animation-delay: 0.14s; }
+.envelope-sparkles span:nth-child(3) { right: 32%; top: 42%; animation-delay: 0.2s; }
+.envelope-sparkles span:nth-child(4) { right: 22%; top: 64%; animation-delay: 0.28s; }
 
 .envelope-icon {
   font-size: 72px;
@@ -2197,6 +3116,49 @@ function skipAnimation() {
 @keyframes envelopePulse {
   0%, 100% { transform: scale(1) rotate(-3deg); }
   50%       { transform: scale(1.08) rotate(3deg); }
+}
+
+@keyframes envelopeOpen {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(-3deg);
+    filter: drop-shadow(0 0 0 rgba(255,255,255,0));
+  }
+  48% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.12) rotate(2deg);
+    filter: drop-shadow(0 12px 18px rgba(212, 104, 122, 0.24));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-34px) scale(1.22) rotate(8deg);
+    filter: drop-shadow(0 18px 24px rgba(255,255,255,0.74));
+  }
+}
+
+@keyframes sealRelease {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.55) rotate(18deg);
+  }
+}
+
+@keyframes envelopeSpark {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0) scale(0.6);
+  }
+  34% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, -42px, 0) scale(1.15);
+  }
 }
 
 .letter-reveal-content {
