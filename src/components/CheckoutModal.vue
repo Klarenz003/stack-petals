@@ -15,6 +15,8 @@ const letterPreviewPetals = ref([false, false, false, false, false, false])
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
+const MAIN_LETTER_WORD_LIMIT = 300
+const PETAL_MESSAGE_CHAR_LIMIT = 30
 
 // ── Functions ──────────────────────────────────────
 async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promise<File> {
@@ -96,6 +98,23 @@ function formatPhoneDisplay(value: string) {
   return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
 }
 
+function getWordCount(text: string) {
+  return text.trim().match(/\S+/g)?.length || 0
+}
+
+function limitWords(text: string, limit = MAIN_LETTER_WORD_LIMIT) {
+  const words = text.trim().match(/\S+/g) || []
+  return words.length > limit ? words.slice(0, limit).join(' ') : text
+}
+
+function handleMainMessageInput() {
+  cart.letterData.mainMessage = limitWords(cart.letterData.mainMessage)
+}
+
+function limitPetalMessage(index: number) {
+  cart.letterData.petalMessages[index] = cart.letterData.petalMessages[index].slice(0, PETAL_MESSAGE_CHAR_LIMIT)
+}
+
 function handleAddressInput() {
   cart.refreshShippingEstimate()
   const address = cart.shippingEstimateAddress.trim()
@@ -116,6 +135,12 @@ function handleDone() {
 }
 
 async function continueToPayment() {
+  if (cart.letterData.include) {
+    cart.letterData.mainMessage = limitWords(cart.letterData.mainMessage)
+    cart.letterData.petalMessages = cart.letterData.petalMessages.map(message =>
+      message.slice(0, PETAL_MESSAGE_CHAR_LIMIT)
+    )
+  }
   const reserved = await cart.reserveStockForPayment()
   if (reserved) cart.checkoutStep = 4
 }
@@ -230,6 +255,9 @@ const reservationExpiresAt = computed(() => {
     minute: '2-digit',
   })
 })
+
+const mainMessageWordCount = computed(() => getWordCount(cart.letterData.mainMessage))
+const mainMessageNearLimit = computed(() => mainMessageWordCount.value >= MAIN_LETTER_WORD_LIMIT - 30)
 
 async function handleMemoryUpload(e: Event) {
   const files = (e.target as HTMLInputElement).files
@@ -461,12 +489,12 @@ function toggleLetterPreviewPetal(i: number) {
             <label>Your Message</label>
             <textarea
               v-model="cart.letterData.mainMessage"
-              placeholder="Write something from your heart..."
+              placeholder="Write something from your heart... up to 300 words"
               class="letter-textarea"
-              maxlength="3000"
+              @input="handleMainMessageInput"
             ></textarea>
-            <span class="petal-char-count" :class="{ warning: cart.letterData.mainMessage.length >= 250 }">
-              {{ cart.letterData.mainMessage.length }}/3000
+            <span class="petal-char-count" :class="{ warning: mainMessageNearLimit }">
+              {{ mainMessageWordCount }}/{{ MAIN_LETTER_WORD_LIMIT }} words
             </span>
           </div>
 
@@ -484,10 +512,11 @@ function toggleLetterPreviewPetal(i: number) {
                     v-model="cart.letterData.petalMessages[i]"
                     :placeholder="`Petal ${i + 1}...`"
                     class="petal-input"
-                    maxlength="30"
+                    :maxlength="PETAL_MESSAGE_CHAR_LIMIT"
+                    @input="limitPetalMessage(i)"
                   />
-                  <span class="petal-char-count" :class="{ warning: cart.letterData.petalMessages[i].length >= 25 }">
-                    {{ cart.letterData.petalMessages[i].length }}/30
+                  <span class="petal-char-count" :class="{ warning: cart.letterData.petalMessages[i].length >= PETAL_MESSAGE_CHAR_LIMIT - 5 }">
+                    {{ cart.letterData.petalMessages[i].length }}/{{ PETAL_MESSAGE_CHAR_LIMIT }}
                   </span>
                 </div>
               </div>
