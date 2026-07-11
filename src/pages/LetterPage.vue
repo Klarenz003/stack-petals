@@ -36,13 +36,15 @@ const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
-const memorySlideDirection = ref('memory-forward')
 const bouquetImage = ref('/images/b5.png')
 const musicPlaying = ref(false)
 const envelopeOpening = ref(false)
 const loadingMessage = ref('Opening your letter...')
 const loadingLoaded = ref(0)
 const loadingTotal = ref(1)
+const angleAssetsReady = ref(false)
+const anglePreloadLoaded = ref(0)
+const anglePreloadTotal = ref(0)
 
 let letterMusic: HTMLAudioElement | null = null
 
@@ -75,9 +77,10 @@ async function loadLetter() {
   } else {
     await loadBouquetImage(data.order_id)
   }
-  await preloadLetterAssets(data)
+  await preloadInitialLetterAssets()
   loading.value = false
   startMemoryTimer()
+  void preloadLetterAssetsInBackground(data)
 }
 
 async function loadBouquetImage(orderId: string) {
@@ -106,7 +109,10 @@ function normalizeImageSrc(src: string) {
 
 function preloadImage(src: string, onLoaded?: () => void) {
   return new Promise<void>((resolve) => {
+    let settled = false
     const finish = () => {
+      if (settled) return
+      settled = true
       onLoaded?.()
       resolve()
     }
@@ -117,8 +123,16 @@ function preloadImage(src: string, onLoaded?: () => void) {
     }
 
     const img = new Image()
-    img.onload = finish
+    img.onload = async () => {
+      try {
+        await img.decode()
+      } catch {
+        // Some browsers resolve onload before decode is available. The image is still cached.
+      }
+      finish()
+    }
     img.onerror = finish
+    img.loading = 'eager'
     img.decoding = 'async'
     img.src = normalizeImageSrc(src)
   })
@@ -131,14 +145,11 @@ async function preloadInBatches(srcs: string[], batchSize = 6, onLoaded?: () => 
   }
 }
 
-async function preloadLetterAssets(activeLetter: Letter) {
+async function preloadInitialLetterAssets() {
   const bouquetAssets = [bouquetImage.value]
-  const memoryAssets = activeLetter.memories || []
-  const angleAssets = activeLetter.angle_photos || []
-  const totalAssets = [...new Set([...bouquetAssets, ...memoryAssets, ...angleAssets].filter(Boolean))]
 
   loadingLoaded.value = 0
-  loadingTotal.value = Math.max(totalAssets.length, 1)
+  loadingTotal.value = Math.max(bouquetAssets.filter(Boolean).length, 1)
 
   const markLoaded = () => {
     loadingLoaded.value = Math.min(loadingLoaded.value + 1, loadingTotal.value)
@@ -146,18 +157,27 @@ async function preloadLetterAssets(activeLetter: Letter) {
 
   loadingMessage.value = 'Loading bouquet picture...'
   await preloadInBatches(bouquetAssets, 1, markLoaded)
+  loadingMessage.value = 'Almost ready...'
+}
+
+async function preloadLetterAssetsInBackground(activeLetter: Letter) {
+  const memoryAssets = activeLetter.memories || []
+  const angleAssets = activeLetter.angle_photos || []
+
+  angleAssetsReady.value = angleAssets.length === 0
+  anglePreloadLoaded.value = 0
+  anglePreloadTotal.value = [...new Set(angleAssets.filter(Boolean))].length
 
   if (memoryAssets.length > 0) {
-    loadingMessage.value = 'Loading your memories...'
-    await preloadInBatches(memoryAssets, 4, markLoaded)
+    await preloadInBatches(memoryAssets, 4)
   }
 
   if (angleAssets.length > 0) {
-    loadingMessage.value = 'Loading 360 view bouquet to make a smoother experience...'
-    await preloadInBatches(angleAssets, 6, markLoaded)
+    await preloadInBatches(angleAssets, 8, () => {
+      anglePreloadLoaded.value = Math.min(anglePreloadLoaded.value + 1, anglePreloadTotal.value)
+    })
+    angleAssetsReady.value = true
   }
-
-  loadingMessage.value = 'Almost ready...'
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
@@ -280,18 +300,15 @@ function startMemoryTimer() {
 
 function nextMemory() {
   if (!letter.value || letter.value.memories.length <= 1) return
-  memorySlideDirection.value = 'memory-forward'
   currentMemory.value = (currentMemory.value + 1) % letter.value.memories.length
 }
 
 function prevMemory() {
   if (!letter.value || letter.value.memories.length <= 1) return
-  memorySlideDirection.value = 'memory-back'
   currentMemory.value = (currentMemory.value - 1 + letter.value.memories.length) % letter.value.memories.length
 }
 
 function goToMemory(index: number) {
-  memorySlideDirection.value = index > currentMemory.value ? 'memory-forward' : 'memory-back'
   currentMemory.value = index
   startMemoryTimer()
 }
@@ -425,6 +442,11 @@ function stepAngle(direction: number) {
   const total = getAngleTotal()
   if (!total) return
   currentAngle.value = ((currentAngle.value + direction) % total + total) % total
+}
+
+function open360Viewer() {
+  if (!angleAssetsReady.value) return
+  show360.value = true
 }
 
 function startAngleHold(direction: number) {
@@ -834,15 +856,17 @@ function skipAnimation() {
               @mouseup.stop="onMemoryMouseUp"
               @mouseleave="cancelMemorySwipe"
             >
-              <Transition :name="memorySlideDirection" mode="out-in">
-                <img
-                  :key="currentMemory"
-                  :src="letter.memories[currentMemory]"
-                  class="memory-slide"
-                  :alt="`Memory ${currentMemory + 1}`"
-                  draggable="false"
-                />
-              </Transition>
+              <img
+                v-for="(memory, index) in letter.memories"
+                :key="`${memory}-${index}`"
+                :src="memory"
+                :class="['memory-slide', { active: index === currentMemory }]"
+                :alt="index === currentMemory ? `Memory ${currentMemory + 1}` : ''"
+                :aria-hidden="index !== currentMemory"
+                draggable="false"
+                decoding="async"
+                loading="eager"
+              />
             </div>
             <div class="memory-dots">
               <span
@@ -898,9 +922,11 @@ function skipAnimation() {
               <span>Crafted for</span>
               <strong>{{ letter.recipient }}</strong>
             </div>
-            <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" @click.stop="show360 = true">
+            <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
-              <span>View in 360°</span>
+              <span v-if="angleAssetsReady">View 360</span>
+              <span v-else-if="anglePreloadTotal > 0">Preparing 360 {{ anglePreloadLoaded }}/{{ anglePreloadTotal }}</span>
+              <span v-else>Preparing 360</span>
             </button>
             <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
           </div>
@@ -950,12 +976,19 @@ function skipAnimation() {
                 <span></span>
                 <span></span>
               </div>
-              <img
-                :src="letter!.angle_photos[currentAngle]"
-                :alt="`Angle ${currentAngle + 1}`"
-                class="angle-photo-full"
-                draggable="false"
-              />
+              <div class="angle-frame-stack">
+                <img
+                  v-for="(photo, index) in letter.angle_photos"
+                  :key="`${photo}-${index}`"
+                  :src="photo"
+                  :class="['angle-photo-full', { active: index === currentAngle }]"
+                  :alt="index === currentAngle ? 'Bouquet 360 view' : ''"
+                  :aria-hidden="index !== currentAngle"
+                  draggable="false"
+                  decoding="async"
+                  loading="eager"
+                />
+              </div>
             </div>
             <button
               class="viewer-nav next"
@@ -1737,33 +1770,19 @@ function skipAnimation() {
   object-fit: cover;
   border-radius: 4px;
   pointer-events: none;
-}
-
-.memory-forward-enter-active,
-.memory-forward-leave-active,
-.memory-back-enter-active,
-.memory-back-leave-active {
-  transition: opacity 0.28s ease, transform 0.28s ease;
-}
-
-.memory-forward-enter-from,
-.memory-back-leave-to {
   opacity: 0;
-  transform: translateX(28px);
+  visibility: hidden;
+  transform: translateZ(0) scale(1.01);
+  backface-visibility: hidden;
+  will-change: opacity, transform;
+  transition: opacity 0.34s ease, transform 0.34s ease, visibility 0s linear 0.34s;
 }
 
-.memory-forward-leave-to,
-.memory-back-enter-from {
-  opacity: 0;
-  transform: translateX(-28px);
-}
-
-.memory-forward-enter-to,
-.memory-forward-leave-from,
-.memory-back-enter-to,
-.memory-back-leave-from {
+.memory-slide.active {
   opacity: 1;
-  transform: translateX(0);
+  visibility: visible;
+  transform: translateZ(0) scale(1);
+  transition-delay: 0s;
 }
 
 .memory-dots {
@@ -1858,14 +1877,11 @@ function skipAnimation() {
   transform: rotate(28deg);
   pointer-events: none;
   z-index: 2;
-  animation: glassShine 4.4s ease-in-out infinite;
+  animation: none;
 }
 
 .bouquet-sparkles {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
+  display: none;
 }
 
 .bouquet-sparkles span {
@@ -1989,6 +2005,32 @@ function skipAnimation() {
     linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,226,235,0.86));
   border-color: #D4687A;
   transform: translateY(-1px);
+}
+
+.btn-360:disabled,
+.btn-360.preparing {
+  cursor: wait;
+  color: #B08090;
+  border-color: rgba(232, 180, 192, 0.62);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,240,244,0.58));
+  box-shadow: 0 8px 18px rgba(212, 104, 122, 0.08);
+  transform: none;
+}
+
+.btn-360:disabled:hover,
+.btn-360.preparing:hover {
+  border-color: rgba(232, 180, 192, 0.62);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,240,244,0.58));
+  transform: none;
+}
+
+.btn-360:disabled .rotate-mark,
+.btn-360.preparing .rotate-mark {
+  animation: none;
+  opacity: 0.58;
+  background: rgba(180, 128, 144, 0.08);
 }
 
 .bouquet-note {
@@ -2134,6 +2176,8 @@ function skipAnimation() {
   background: transparent;
   isolation: isolate;
   animation: floatingBouquet 3.8s ease-in-out infinite;
+  contain: layout paint;
+  transform: translateZ(0);
 }
 
 .viewer-glow,
@@ -2176,12 +2220,12 @@ function skipAnimation() {
   transform: rotate(28deg);
   filter: blur(1px);
   z-index: 2;
-  animation: glassShine 4.6s ease-in-out infinite;
+  opacity: 0.42;
+  animation: none;
 }
 
 .viewer-sparkles {
-  inset: 0;
-  z-index: 3;
+  display: none;
 }
 
 .viewer-sparkles span {
@@ -2203,14 +2247,14 @@ function skipAnimation() {
   position: absolute;
   width: 84%;
   height: 86%;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.48);
   border-radius: 24px;
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.62), rgba(255,240,244,0.14)),
-    rgba(255,255,255,0.2);
+    linear-gradient(145deg, rgba(255,248,250,0.36), rgba(255,229,236,0.12)),
+    rgba(255,255,255,0.08);
   box-shadow:
     0 20px 58px rgba(122, 58, 74, 0.14),
-    0 0 0 10px rgba(255,255,255,0.1);
+    0 0 0 10px rgba(255,255,255,0.06);
   z-index: 0;
 }
 
@@ -2232,24 +2276,47 @@ function skipAnimation() {
   cursor: grabbing;
 }
 
+.angle-frame-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  contain: layout paint;
+  transform: translateZ(0);
+}
+
 .angle-photo-full {
+  position: absolute;
   width: 82%;
   height: 84%;
   object-fit: contain;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 18px;
-  background: rgba(255,255,255,0.22);
+  background: transparent;
   box-shadow:
     0 18px 42px rgba(122, 58, 74, 0.13),
-    0 0 0 8px rgba(255,255,255,0.12);
+    0 0 0 8px rgba(255,255,255,0.06);
   pointer-events: none;
   user-select: none;
-  will-change: contents;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: visibility;
   image-rendering: auto;
   filter:
     saturate(1.04)
     drop-shadow(0 30px 28px rgba(122, 58, 74, 0.2));
-  z-index: 1;
+  transition: none;
+}
+
+.angle-photo-full.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
 }
 
 .viewer-nav {
