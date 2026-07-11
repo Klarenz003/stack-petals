@@ -15,6 +15,8 @@ interface Letter {
   memories: string[]
   angle_photos: string[]
   backgrounds: Record<string, string | null>
+  music_url: string
+  bouquet_image_url: string
   published: boolean
   template: string
 }
@@ -38,6 +40,9 @@ const memorySlideDirection = ref('memory-forward')
 const bouquetImage = ref('/images/b5.png')
 const musicPlaying = ref(false)
 const envelopeOpening = ref(false)
+const loadingMessage = ref('Opening your letter...')
+const loadingLoaded = ref(0)
+const loadingTotal = ref(1)
 
 let letterMusic: HTMLAudioElement | null = null
 
@@ -46,6 +51,10 @@ const totalScreens = 9
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
+  loadingMessage.value = 'Finding your letter...'
+  loadingLoaded.value = 0
+  loadingTotal.value = 1
+
   const { data, error } = await supabase
     .from('letters')
     .select('*')
@@ -60,7 +69,13 @@ async function loadLetter() {
   }
 
   letter.value = data
-  await loadBouquetImage(data.order_id)
+  loadingMessage.value = 'Preparing your bouquet picture...'
+  if (data.bouquet_image_url?.trim()) {
+    bouquetImage.value = normalizeImageSrc(data.bouquet_image_url)
+  } else {
+    await loadBouquetImage(data.order_id)
+  }
+  await preloadLetterAssets(data)
   loading.value = false
   startMemoryTimer()
 }
@@ -89,6 +104,62 @@ function normalizeImageSrc(src: string) {
   return `/${src}`
 }
 
+function preloadImage(src: string, onLoaded?: () => void) {
+  return new Promise<void>((resolve) => {
+    const finish = () => {
+      onLoaded?.()
+      resolve()
+    }
+
+    if (!src) {
+      finish()
+      return
+    }
+
+    const img = new Image()
+    img.onload = finish
+    img.onerror = finish
+    img.decoding = 'async'
+    img.src = normalizeImageSrc(src)
+  })
+}
+
+async function preloadInBatches(srcs: string[], batchSize = 6, onLoaded?: () => void) {
+  const uniqueSrcs = [...new Set(srcs.filter(Boolean))]
+  for (let i = 0; i < uniqueSrcs.length; i += batchSize) {
+    await Promise.all(uniqueSrcs.slice(i, i + batchSize).map(src => preloadImage(src, onLoaded)))
+  }
+}
+
+async function preloadLetterAssets(activeLetter: Letter) {
+  const bouquetAssets = [bouquetImage.value]
+  const memoryAssets = activeLetter.memories || []
+  const angleAssets = activeLetter.angle_photos || []
+  const totalAssets = [...new Set([...bouquetAssets, ...memoryAssets, ...angleAssets].filter(Boolean))]
+
+  loadingLoaded.value = 0
+  loadingTotal.value = Math.max(totalAssets.length, 1)
+
+  const markLoaded = () => {
+    loadingLoaded.value = Math.min(loadingLoaded.value + 1, loadingTotal.value)
+  }
+
+  loadingMessage.value = 'Loading bouquet picture...'
+  await preloadInBatches(bouquetAssets, 1, markLoaded)
+
+  if (memoryAssets.length > 0) {
+    loadingMessage.value = 'Loading your memories...'
+    await preloadInBatches(memoryAssets, 4, markLoaded)
+  }
+
+  if (angleAssets.length > 0) {
+    loadingMessage.value = 'Loading 360 view bouquet to make a smoother experience...'
+    await preloadInBatches(angleAssets, 6, markLoaded)
+  }
+
+  loadingMessage.value = 'Almost ready...'
+}
+
 // ── Navigation ─────────────────────────────────────────────────────
 function toggleMusic() {
   if (musicPlaying.value) {
@@ -102,7 +173,11 @@ function toggleMusic() {
 function startSoftMusic() {
   if (typeof window === 'undefined') return
 
-  letterMusic = letterMusic || new Audio('/music/lettermusic.mp3')
+  const musicSrc = letter.value?.music_url?.trim() || '/music/lettermusic.mp3'
+  if (!letterMusic || letterMusic.src !== new URL(musicSrc, window.location.origin).href) {
+    stopSoftMusic()
+    letterMusic = new Audio(musicSrc)
+  }
   letterMusic.loop = true
   letterMusic.volume = 0.28
 
@@ -412,15 +487,6 @@ function applyMomentum(timestamp = performance.now()) {
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => loadLetter())
 
-watch(() => letter.value?.angle_photos, (photos) => {
-  if (!photos || photos.length === 0) return
-  currentAngle.value = currentAngle.value % photos.length
-  photos.forEach(src => {
-    const img = new Image()
-    img.src = src
-  })
-}, { immediate: true })
-
 watch(show360, (visible) => {
   if (visible) return
   isDragging360 = false
@@ -519,7 +585,16 @@ function skipAnimation() {
     <!-- Loading -->
     <div v-if="loading" class="letter-loading">
       <div class="loading-flower">🌸</div>
-      <p>Opening your letter...</p>
+      <p>{{ loadingMessage }}</p>
+      <div class="letter-loading-bar" aria-hidden="true">
+        <span :style="{ width: `${Math.round((loadingLoaded / loadingTotal) * 100)}%` }"></span>
+      </div>
+      <small>{{ loadingLoaded }} / {{ loadingTotal }} assets ready</small>
+      <div class="loading-dots" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
 
     <!-- Not Found -->
@@ -2355,6 +2430,67 @@ function skipAnimation() {
 .letter-not-found p {
   font-style: italic;
   color: #B08090;
+}
+
+.letter-loading small {
+  margin-top: 10px;
+  color: #C48090;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.letter-loading-bar {
+  width: min(240px, 68vw);
+  height: 8px;
+  margin-top: 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(232, 180, 192, 0.52);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(212, 104, 122, 0.08);
+}
+
+.letter-loading-bar span {
+  display: block;
+  height: 100%;
+  min-width: 8px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #F4C0CE, #D4687A);
+  transition: width 0.28s ease;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.loading-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #D4687A;
+  opacity: 0.35;
+  animation: loadingDotPulse 1.05s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes loadingDotPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
 }
 
 .angle-photo {
