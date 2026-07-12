@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -45,12 +45,13 @@ const loadingTotal = ref(1)
 const angleAssetsReady = ref(false)
 const anglePreloadLoaded = ref(0)
 const anglePreloadTotal = ref(0)
-const angleWarmupFrames = ref<string[]>([])
-const warmupAngleIndex = ref(0)
+const angleFrameSources = ref<string[]>([])
+const angleCanvas = ref<HTMLCanvasElement | null>(null)
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
-let angleWarmupTimer: number | null = null
+let angleFrameImages: Array<HTMLImageElement | null> = []
+let anglePreloadRun = 0
 
 const loadingMessages = [
   'Preparing your memories, unwrapping your letter...',
@@ -91,7 +92,6 @@ async function loadLetter() {
   } else {
     await loadBouquetImage(data.order_id)
   }
-  prepareAngleWarmupFrames(data)
   void preloadLetterAssetsInBackground(data)
   await preloadInitialLetterAssets()
   loading.value = false
@@ -196,50 +196,96 @@ async function preloadInitialLetterAssets() {
 
 async function preloadLetterAssetsInBackground(activeLetter: Letter) {
   const memoryAssets = activeLetter.memories || []
-  const angleAssets = activeLetter.angle_photos || []
+  await preloadAngleFrames(activeLetter)
+  if (memoryAssets.length > 0) await preloadInBatches(memoryAssets, 4)
+}
 
-  angleAssetsReady.value = angleAssets.length === 0
+function loadAngleFrame(src: string) {
+  return new Promise<HTMLImageElement | null>((resolve) => {
+    const img = new Image()
+    img.onload = async () => {
+      try {
+        await img.decode()
+      } catch {
+        // The image is already loaded; decode can fail on some browser/cache paths.
+      }
+      resolve(img)
+    }
+    img.onerror = () => resolve(null)
+    img.loading = 'eager'
+    img.decoding = 'async'
+    img.src = src
+  })
+}
+
+async function preloadAngleFrames(activeLetter: Letter) {
+  const run = ++anglePreloadRun
+  const sources = [...new Set((activeLetter.angle_photos || []).filter(Boolean).map(normalizeImageSrc))]
+
+  angleFrameSources.value = sources
+  angleFrameImages = new Array(sources.length).fill(null)
+  angleAssetsReady.value = sources.length === 0
   anglePreloadLoaded.value = 0
-  anglePreloadTotal.value = [...new Set(angleAssets.filter(Boolean))].length
+  anglePreloadTotal.value = sources.length
 
-  const memoryPreload = memoryAssets.length > 0
-    ? preloadInBatches(memoryAssets, 4)
-    : Promise.resolve()
+  if (sources.length === 0) return
 
-  if (angleAssets.length > 0) {
-    await preloadInBatches(angleAssets, 6, () => {
+  let nextIndex = 0
+  const workerCount = Math.min(3, sources.length)
+  const workers = Array.from({ length: workerCount }, async () => {
+    while (nextIndex < sources.length) {
+      const index = nextIndex
+      nextIndex += 1
+      const image = await loadAngleFrame(sources[index])
+      if (run !== anglePreloadRun) return
+      angleFrameImages[index] = image
       anglePreloadLoaded.value = Math.min(anglePreloadLoaded.value + 1, anglePreloadTotal.value)
-    })
-    angleAssetsReady.value = true
-    startAngleWarmupCycle()
+    }
+  })
+
+  await Promise.all(workers)
+  if (run !== anglePreloadRun) return
+  angleAssetsReady.value = true
+  renderAngleFrame()
+}
+
+function renderAngleFrame() {
+  const canvas = angleCanvas.value
+  const total = angleFrameImages.length
+  if (!canvas || !total) return
+
+  const image = angleFrameImages[((currentAngle.value % total) + total) % total]
+  if (!image) return
+
+  const rect = canvas.getBoundingClientRect()
+  const cssWidth = Math.max(rect.width || canvas.clientWidth || 600, 1)
+  const cssHeight = Math.max(rect.height || canvas.clientHeight || 600, 1)
+  const dpr = Math.min(window.devicePixelRatio || 1, 2)
+  const width = Math.round(cssWidth * dpr)
+  const height = Math.round(cssHeight * dpr)
+
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width
+    canvas.height = height
   }
 
-  await memoryPreload
-}
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
 
-function prepareAngleWarmupFrames(activeLetter: Letter) {
-  angleWarmupFrames.value = [...new Set((activeLetter.angle_photos || []).filter(Boolean).map(normalizeImageSrc))]
-  warmupAngleIndex.value = 0
-  if (angleWarmupFrames.value.length > 0) startAngleWarmupCycle()
-}
+  ctx.clearRect(0, 0, width, height)
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
-function startAngleWarmupCycle() {
-  const total = angleWarmupFrames.value.length
-  if (!total || angleWarmupTimer) return
+  const naturalWidth = image.naturalWidth || image.width
+  const naturalHeight = image.naturalHeight || image.height
+  if (!naturalWidth || !naturalHeight) return
+  const scale = Math.min(width / naturalWidth, height / naturalHeight)
+  const drawWidth = naturalWidth * scale
+  const drawHeight = naturalHeight * scale
+  const x = (width - drawWidth) / 2
+  const y = (height - drawHeight) / 2
 
-  let ticks = 0
-  const maxTicks = Math.max(total * 2, 30)
-  angleWarmupTimer = window.setInterval(() => {
-    warmupAngleIndex.value = (warmupAngleIndex.value + 1) % total
-    ticks += 1
-    if (angleAssetsReady.value && ticks >= maxTicks) stopAngleWarmupCycle()
-  }, 1000 / 30)
-}
-
-function stopAngleWarmupCycle() {
-  if (!angleWarmupTimer) return
-  clearInterval(angleWarmupTimer)
-  angleWarmupTimer = null
+  ctx.drawImage(image, x, y, drawWidth, drawHeight)
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
@@ -432,7 +478,7 @@ function clampNumber(value: number, min: number, max: number) {
 }
 
 function getAngleTotal() {
-  return letter.value?.angle_photos?.length || 0
+  return angleFrameSources.value.length || letter.value?.angle_photos?.length || 0
 }
 
 function getRotationSensitivity() {
@@ -508,7 +554,6 @@ function stepAngle(direction: number) {
 
 function open360Viewer() {
   if (!angleAssetsReady.value) return
-  stopAngleWarmupCycle()
   show360.value = true
 }
 
@@ -570,19 +615,30 @@ function applyMomentum(timestamp = performance.now()) {
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────
-onMounted(() => loadLetter())
+onMounted(() => {
+  loadLetter()
+  window.addEventListener('resize', renderAngleFrame)
+})
 
-watch(show360, (visible) => {
-  if (visible) return
+watch(show360, async (visible) => {
+  if (visible) {
+    await nextTick()
+    renderAngleFrame()
+    return
+  }
   isDragging360 = false
   stopAngleHold()
   stopAngleMomentum()
 })
 
+watch(currentAngle, () => {
+  if (show360.value) renderAngleFrame()
+})
+
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
-  stopAngleWarmupCycle()
+  window.removeEventListener('resize', renderAngleFrame)
   stopAngleHold()
   stopAngleMomentum()
   if (envelopeTimer) clearTimeout(envelopeTimer)
@@ -706,18 +762,6 @@ function skipAnimation() {
       >
         <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
       </button>
-
-      <div v-if="angleWarmupFrames.length > 0" class="angle-prewarm" aria-hidden="true">
-        <img
-          v-for="(photo, index) in angleWarmupFrames"
-          :key="`prewarm-${photo}-${index}`"
-          :src="photo"
-          :class="{ active: index === warmupAngleIndex }"
-          alt=""
-          decoding="async"
-          loading="eager"
-        />
-      </div>
 
       <Transition :name="slideDirection" mode="out-in">
         <div :key="currentScreen" class="letter-screen-wrapper">
@@ -1056,19 +1100,11 @@ function skipAnimation() {
                 <span></span>
                 <span></span>
               </div>
-              <div class="angle-frame-stack">
-                <img
-                  v-for="(photo, index) in letter.angle_photos"
-                  :key="`${photo}-${index}`"
-                  :src="normalizeImageSrc(photo)"
-                  :class="['angle-photo-full', { active: index === currentAngle }]"
-                  :alt="index === currentAngle ? 'Bouquet 360 view' : ''"
-                  :aria-hidden="index !== currentAngle"
-                  draggable="false"
-                  decoding="async"
-                  loading="eager"
-                />
-              </div>
+              <canvas
+                ref="angleCanvas"
+                class="angle-canvas-full"
+                aria-label="Bouquet 360 view"
+              ></canvas>
             </div>
             <button
               class="viewer-nav next"
@@ -2356,23 +2392,10 @@ function skipAnimation() {
   cursor: grabbing;
 }
 
-.angle-frame-stack {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  contain: layout paint;
-  transform: translateZ(0);
-}
-
-.angle-photo-full {
+.angle-canvas-full {
   position: absolute;
   width: 82%;
   height: 84%;
-  object-fit: contain;
   border: 1px solid rgba(255, 255, 255, 0.58);
   border-radius: 18px;
   background: transparent;
@@ -2381,21 +2404,13 @@ function skipAnimation() {
     0 0 0 8px rgba(255,255,255,0.06);
   pointer-events: none;
   user-select: none;
-  opacity: 0;
-  visibility: hidden;
+  display: block;
   transform: translateZ(0);
   backface-visibility: hidden;
-  will-change: visibility;
-  image-rendering: auto;
+  will-change: contents;
   filter:
     saturate(1.04)
     drop-shadow(0 30px 28px rgba(122, 58, 74, 0.2));
-  transition: none;
-}
-
-.angle-photo-full.active {
-  opacity: 1;
-  visibility: visible;
   z-index: 2;
 }
 
@@ -2696,31 +2711,6 @@ function skipAnimation() {
   50% {
     transform: translateY(-8px) rotate(2deg);
   }
-}
-
-.angle-prewarm {
-  position: fixed;
-  left: -12px;
-  top: -12px;
-  width: 1px;
-  height: 1px;
-  opacity: 0.01;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-
-.angle-prewarm img {
-  position: absolute;
-  inset: 0;
-  width: 1px;
-  height: 1px;
-  object-fit: cover;
-  opacity: 0;
-}
-
-.angle-prewarm img.active {
-  opacity: 1;
 }
 
 .angle-photo {
