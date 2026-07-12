@@ -45,15 +45,29 @@ const loadingTotal = ref(1)
 const angleAssetsReady = ref(false)
 const anglePreloadLoaded = ref(0)
 const anglePreloadTotal = ref(0)
+const angleWarmupFrames = ref<string[]>([])
+const warmupAngleIndex = ref(0)
 
 let letterMusic: HTMLAudioElement | null = null
+let loadingTextTimer: number | null = null
+let angleWarmupTimer: number | null = null
+
+const loadingMessages = [
+  'Preparing your memories, unwrapping your letter...',
+  'Teaching petals where to fall...',
+  'Polishing the bouquet pixels...',
+  'Folding a little romance into the page...',
+  'Warming up the 360 bouquet magic...',
+  'Tucking your message between soft petals...',
+  'Checking every bloom before the reveal...',
+]
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
-  loadingMessage.value = 'Finding your letter...'
+  startLoadingTextShuffle()
   loadingLoaded.value = 0
   loadingTotal.value = 1
 
@@ -67,20 +81,42 @@ async function loadLetter() {
   if (error || !data) {
     notFound.value = true
     loading.value = false
+    stopLoadingTextShuffle()
     return
   }
 
   letter.value = data
-  loadingMessage.value = 'Preparing your bouquet picture...'
   if (data.bouquet_image_url?.trim()) {
     bouquetImage.value = normalizeImageSrc(data.bouquet_image_url)
   } else {
     await loadBouquetImage(data.order_id)
   }
+  prepareAngleWarmupFrames(data)
+  void preloadLetterAssetsInBackground(data)
   await preloadInitialLetterAssets()
   loading.value = false
+  stopLoadingTextShuffle()
   startMemoryTimer()
-  void preloadLetterAssetsInBackground(data)
+}
+
+function randomLoadingMessage() {
+  return loadingMessages[Math.floor(Math.random() * loadingMessages.length)]
+}
+
+function startLoadingTextShuffle() {
+  loadingMessage.value = randomLoadingMessage()
+  if (loadingTextTimer) clearInterval(loadingTextTimer)
+  loadingTextTimer = window.setInterval(() => {
+    let nextMessage = randomLoadingMessage()
+    if (nextMessage === loadingMessage.value) nextMessage = randomLoadingMessage()
+    loadingMessage.value = nextMessage
+  }, 1800)
+}
+
+function stopLoadingTextShuffle() {
+  if (!loadingTextTimer) return
+  clearInterval(loadingTextTimer)
+  loadingTextTimer = null
 }
 
 async function loadBouquetImage(orderId: string) {
@@ -155,9 +191,7 @@ async function preloadInitialLetterAssets() {
     loadingLoaded.value = Math.min(loadingLoaded.value + 1, loadingTotal.value)
   }
 
-  loadingMessage.value = 'Loading bouquet picture...'
   await preloadInBatches(bouquetAssets, 1, markLoaded)
-  loadingMessage.value = 'Almost ready...'
 }
 
 async function preloadLetterAssetsInBackground(activeLetter: Letter) {
@@ -168,16 +202,44 @@ async function preloadLetterAssetsInBackground(activeLetter: Letter) {
   anglePreloadLoaded.value = 0
   anglePreloadTotal.value = [...new Set(angleAssets.filter(Boolean))].length
 
-  if (memoryAssets.length > 0) {
-    await preloadInBatches(memoryAssets, 4)
-  }
+  const memoryPreload = memoryAssets.length > 0
+    ? preloadInBatches(memoryAssets, 4)
+    : Promise.resolve()
 
   if (angleAssets.length > 0) {
-    await preloadInBatches(angleAssets, 8, () => {
+    await preloadInBatches(angleAssets, 6, () => {
       anglePreloadLoaded.value = Math.min(anglePreloadLoaded.value + 1, anglePreloadTotal.value)
     })
     angleAssetsReady.value = true
+    startAngleWarmupCycle()
   }
+
+  await memoryPreload
+}
+
+function prepareAngleWarmupFrames(activeLetter: Letter) {
+  angleWarmupFrames.value = [...new Set((activeLetter.angle_photos || []).filter(Boolean).map(normalizeImageSrc))]
+  warmupAngleIndex.value = 0
+  if (angleWarmupFrames.value.length > 0) startAngleWarmupCycle()
+}
+
+function startAngleWarmupCycle() {
+  const total = angleWarmupFrames.value.length
+  if (!total || angleWarmupTimer) return
+
+  let ticks = 0
+  const maxTicks = Math.max(total * 2, 30)
+  angleWarmupTimer = window.setInterval(() => {
+    warmupAngleIndex.value = (warmupAngleIndex.value + 1) % total
+    ticks += 1
+    if (angleAssetsReady.value && ticks >= maxTicks) stopAngleWarmupCycle()
+  }, 1000 / 30)
+}
+
+function stopAngleWarmupCycle() {
+  if (!angleWarmupTimer) return
+  clearInterval(angleWarmupTimer)
+  angleWarmupTimer = null
 }
 
 // ── Navigation ─────────────────────────────────────────────────────
@@ -446,6 +508,7 @@ function stepAngle(direction: number) {
 
 function open360Viewer() {
   if (!angleAssetsReady.value) return
+  stopAngleWarmupCycle()
   show360.value = true
 }
 
@@ -518,6 +581,8 @@ watch(show360, (visible) => {
 
 onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
+  stopLoadingTextShuffle()
+  stopAngleWarmupCycle()
   stopAngleHold()
   stopAngleMomentum()
   if (envelopeTimer) clearTimeout(envelopeTimer)
@@ -606,17 +671,20 @@ function skipAnimation() {
 
     <!-- Loading -->
     <div v-if="loading" class="letter-loading">
-      <div class="loading-flower">🌸</div>
-      <p>{{ loadingMessage }}</p>
+      <div class="loading-bloom" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <i></i>
+      </div>
+      <p class="loading-message">{{ loadingMessage }}</p>
       <div class="letter-loading-bar" aria-hidden="true">
         <span :style="{ width: `${Math.round((loadingLoaded / loadingTotal) * 100)}%` }"></span>
       </div>
       <small>{{ loadingLoaded }} / {{ loadingTotal }} assets ready</small>
-      <div class="loading-dots" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
     </div>
 
     <!-- Not Found -->
@@ -638,6 +706,18 @@ function skipAnimation() {
       >
         <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
       </button>
+
+      <div v-if="angleWarmupFrames.length > 0" class="angle-prewarm" aria-hidden="true">
+        <img
+          v-for="(photo, index) in angleWarmupFrames"
+          :key="`prewarm-${photo}-${index}`"
+          :src="photo"
+          :class="{ active: index === warmupAngleIndex }"
+          alt=""
+          decoding="async"
+          loading="eager"
+        />
+      </div>
 
       <Transition :name="slideDirection" mode="out-in">
         <div :key="currentScreen" class="letter-screen-wrapper">
@@ -859,7 +939,7 @@ function skipAnimation() {
               <img
                 v-for="(memory, index) in letter.memories"
                 :key="`${memory}-${index}`"
-                :src="memory"
+                :src="normalizeImageSrc(memory)"
                 :class="['memory-slide', { active: index === currentMemory }]"
                 :alt="index === currentMemory ? `Memory ${currentMemory + 1}` : ''"
                 :aria-hidden="index !== currentMemory"
@@ -980,7 +1060,7 @@ function skipAnimation() {
                 <img
                   v-for="(photo, index) in letter.angle_photos"
                   :key="`${photo}-${index}`"
-                  :src="photo"
+                  :src="normalizeImageSrc(photo)"
                   :class="['angle-photo-full', { active: index === currentAngle }]"
                   :alt="index === currentAngle ? 'Bouquet 360 view' : ''"
                   :aria-hidden="index !== currentAngle"
@@ -2493,10 +2573,59 @@ function skipAnimation() {
   animation: bloom 2s ease-in-out infinite alternate;
 }
 
+.loading-bloom {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 16px 22px rgba(212, 104, 122, 0.16));
+  animation: loadingBloomFloat 2.8s ease-in-out infinite;
+}
+
+.loading-bloom span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 30px;
+  height: 48px;
+  border-radius: 999px 999px 14px 14px;
+  background:
+    radial-gradient(circle at 48% 24%, rgba(255,255,255,0.82), transparent 30%),
+    linear-gradient(160deg, #FFD7E0, #D4687A);
+  transform-origin: 50% 78%;
+  opacity: 0.9;
+}
+
+.loading-bloom span:nth-child(1) { transform: translate(-50%, -82%) rotate(0deg); }
+.loading-bloom span:nth-child(2) { transform: translate(-50%, -82%) rotate(60deg); }
+.loading-bloom span:nth-child(3) { transform: translate(-50%, -82%) rotate(120deg); }
+.loading-bloom span:nth-child(4) { transform: translate(-50%, -82%) rotate(180deg); }
+.loading-bloom span:nth-child(5) { transform: translate(-50%, -82%) rotate(240deg); }
+.loading-bloom span:nth-child(6) { transform: translate(-50%, -82%) rotate(300deg); }
+
+.loading-bloom i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  border: 4px solid rgba(255,255,255,0.78);
+  border-radius: 50%;
+  background: #F8B8C4;
+  transform: translate(-50%, -50%);
+  box-shadow: inset 0 1px 4px rgba(122,58,74,0.12);
+}
+
 .letter-loading p,
 .letter-not-found p {
   font-style: italic;
   color: #B08090;
+}
+
+.loading-message {
+  width: min(320px, 82vw);
+  min-height: 44px;
+  line-height: 1.55;
 }
 
 .letter-loading small {
@@ -2558,6 +2687,40 @@ function skipAnimation() {
     opacity: 1;
     transform: translateY(-4px);
   }
+}
+
+@keyframes loadingBloomFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+.angle-prewarm {
+  position: fixed;
+  left: -12px;
+  top: -12px;
+  width: 1px;
+  height: 1px;
+  opacity: 0.01;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.angle-prewarm img {
+  position: absolute;
+  inset: 0;
+  width: 1px;
+  height: 1px;
+  object-fit: cover;
+  opacity: 0;
+}
+
+.angle-prewarm img.active {
+  opacity: 1;
 }
 
 .angle-photo {
