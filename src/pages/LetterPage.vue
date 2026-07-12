@@ -1048,7 +1048,7 @@ function skipAnimation() {
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
               <span v-if="angleAssetsReady">View 360</span>
-              <span v-else>Preparing </span>
+              <span v-else>Preparing 360° View</span>
             </button>
             <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
           </div>
