@@ -740,7 +740,6 @@ function skipAnimation() {
       <div class="letter-loading-bar" aria-hidden="true">
         <span :style="{ width: `${Math.round((loadingLoaded / loadingTotal) * 100)}%` }"></span>
       </div>
-      <small>{{ loadingLoaded }} / {{ loadingTotal }} assets ready</small>
     </div>
 
     <!-- Not Found -->
@@ -1049,8 +1048,7 @@ function skipAnimation() {
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
               <span v-if="angleAssetsReady">View 360</span>
-              <span v-else-if="anglePreloadTotal > 0">Preparing 360 {{ anglePreloadLoaded }}/{{ anglePreloadTotal }}</span>
-              <span v-else>Preparing 360</span>
+              <span v-else>Preparing </span>
             </button>
             <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
           </div>
@@ -2641,13 +2639,6 @@ function skipAnimation() {
   width: min(320px, 82vw);
   min-height: 44px;
   line-height: 1.55;
-}
-
-.letter-loading small {
-  margin-top: 10px;
-  color: #C48090;
-  font-size: 12px;
-  letter-spacing: 0.04em;
 }
 
 .letter-loading-bar {
