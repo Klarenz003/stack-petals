@@ -43,8 +43,6 @@ const loadingMessage = ref('Opening your letter...')
 const loadingLoaded = ref(0)
 const loadingTotal = ref(1)
 const angleAssetsReady = ref(false)
-const anglePreloadLoaded = ref(0)
-const anglePreloadTotal = ref(0)
 const angleFrameSources = ref<string[]>([])
 const angleCanvas = ref<HTMLCanvasElement | null>(null)
 
@@ -225,8 +223,6 @@ async function preloadAngleFrames(activeLetter: Letter) {
   angleFrameSources.value = sources
   angleFrameImages = new Array(sources.length).fill(null)
   angleAssetsReady.value = sources.length === 0
-  anglePreloadLoaded.value = 0
-  anglePreloadTotal.value = sources.length
 
   if (sources.length === 0) return
 
@@ -239,7 +235,6 @@ async function preloadAngleFrames(activeLetter: Letter) {
       const image = await loadAngleFrame(sources[index])
       if (run !== anglePreloadRun) return
       angleFrameImages[index] = image
-      anglePreloadLoaded.value = Math.min(anglePreloadLoaded.value + 1, anglePreloadTotal.value)
     }
   })
 

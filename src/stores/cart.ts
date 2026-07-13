@@ -658,48 +658,36 @@ export const useCartStore = defineStore('cart', () => {
     }).select('id')
       .single()
     if (error) throw error
-    confirmedOrderReference.value = insertedOrder?.id ? `SP-${insertedOrder.id}` : ''
+    if (!insertedOrder?.id) throw new Error('Order was created but no order reference was returned.')
+    confirmedOrderReference.value = `SP-${insertedOrder.id}`
 
-    if (insertedOrder?.id) {
-      const { error: historyError } = await supabase.rpc('record_order_status_history', {
-        p_order_id: insertedOrder.id,
-        p_status: hasPreOrderItems.value ? 'preorder' : 'pending',
-        p_label: hasPreOrderItems.value ? 'Pre-order received' : 'Order received',
-        p_note: 'Order was submitted by the customer.',
-      })
-      if (historyError) console.warn('Order history was not recorded:', historyError)
-    }
+    const { error: historyError } = await supabase.rpc('record_order_status_history', {
+      p_order_id: insertedOrder.id,
+      p_status: hasPreOrderItems.value ? 'preorder' : 'pending',
+      p_label: hasPreOrderItems.value ? 'Pre-order received' : 'Order received',
+      p_note: 'Order was submitted by the customer.',
+    })
+    if (historyError) console.warn('Order history was not recorded:', historyError)
 
     // 3. Consume the reserved stock. The stock was already decremented at payment step.
     await commitStockReservation()
 
     // 4. Save letter draft if included
     if (letterData.value.include) {
-      // Get the order we just created
-        const { data: orderData } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('email', customer.value.email)
-          .eq('proof_url', uploadData.path)
-          .single()
+      const { error: letterError } = await supabase.from('letters').insert({
+        order_id:       insertedOrder.id,
+        recipient:      letterData.value.recipientName,
+        sender:         customer.value.name,
+        message:        letterData.value.mainMessage,
+        petal_messages: letterData.value.petalMessages,
+        memories:       letterData.value.memories,
+        angle_photos:   [],
+        published:      false,
+        template:       'love',
+      })
 
-        console.log('Order data:', orderData)
-
-        if (orderData) {
-          const { error: letterError } = await supabase.from('letters').insert({
-            order_id:       orderData.id,
-            recipient:      letterData.value.recipientName,
-            sender:         customer.value.name,
-            message:        letterData.value.mainMessage,
-            petal_messages: letterData.value.petalMessages,
-            memories:       letterData.value.memories,
-            angle_photos:   [],
-            published:      false,
-            template:       'love',
-          })
-          console.log('Letter error:', letterError)
-        }
-      }
+      if (letterError) console.warn('Letter draft was not created:', letterError)
+    }
 
     // 5. Send email notifications if the edge function is available.
     try {
@@ -726,7 +714,9 @@ export const useCartStore = defineStore('cart', () => {
           },
         }),
       })
-      console.log('Edge function response:', emailRes.status, await emailRes.text())
+      if (!emailRes.ok) {
+        console.warn('Order email notification failed:', emailRes.status, await emailRes.text())
+      }
     } catch (emailError) {
       console.warn('Order email notification skipped:', emailError)
     }
