@@ -1619,6 +1619,20 @@ input, textarea, [contenteditable="true"] {
   resize: none;
 }
 
+.main-message-count {
+  display: block;
+  margin-top: 6px;
+  text-align: right;
+  color: #C48090;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.main-message-count.warning {
+  color: #D4687A;
+  font-weight: 600;
+}
+
 .petals-section {
   margin: 28px 0;
   padding: 20px;

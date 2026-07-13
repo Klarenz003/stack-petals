@@ -493,7 +493,7 @@ function toggleLetterPreviewPetal(i: number) {
               class="letter-textarea"
               @input="handleMainMessageInput"
             ></textarea>
-            <span class="petal-char-count" :class="{ warning: mainMessageNearLimit }">
+            <span class="main-message-count" :class="{ warning: mainMessageNearLimit }">
               {{ mainMessageWordCount }}/{{ MAIN_LETTER_WORD_LIMIT }} words
             </span>
           </div>
