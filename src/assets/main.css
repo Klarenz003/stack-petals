@@ -1350,6 +1350,14 @@ nav a.router-link-active::after {
   column-gap: 16px;
 }
 
+.gallery-loading {
+  margin: 0 auto;
+  padding: 28px 5%;
+  color: #8a6f73;
+  font-size: 14px;
+  text-align: center;
+}
+
 .gallery-item {
   break-inside: avoid;
   margin-bottom: 16px;
@@ -1357,6 +1365,8 @@ nav a.router-link-active::after {
   overflow: hidden;
   mask-image: radial-gradient(white, black);
   -webkit-mask-image: -webkit-radial-gradient(white, black);
+  position: relative;
+  background: #fff;
 }
 
 .gallery-item img {
@@ -1369,6 +1379,28 @@ nav a.router-link-active::after {
 
 .gallery-item:hover img {
   transform: scale(1.03);
+}
+
+.gallery-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 34px 16px 14px;
+  color: #fff;
+  background: linear-gradient(to top, rgba(46, 30, 36, 0.7), rgba(46, 30, 36, 0));
+}
+
+.gallery-caption strong {
+  font-size: 14px;
+}
+
+.gallery-caption span {
+  font-size: 12px;
+  opacity: 0.9;
 }
 
 
