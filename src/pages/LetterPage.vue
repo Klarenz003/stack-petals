@@ -48,6 +48,7 @@ const angleCanvas = ref<HTMLCanvasElement | null>(null)
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
+let musicUnlockHandler: (() => void) | null = null
 let angleFrameImages: Array<HTMLImageElement | null> = []
 let anglePreloadRun = 0
 
@@ -95,6 +96,7 @@ async function loadLetter() {
   loading.value = false
   stopLoadingTextShuffle()
   startMemoryTimer()
+  void startDefaultMusic()
 }
 
 function randomLoadingMessage() {
@@ -290,11 +292,35 @@ function toggleMusic() {
     return
   }
 
-  startSoftMusic()
+  void startSoftMusic()
 }
 
-function startSoftMusic() {
-  if (typeof window === 'undefined') return
+async function startDefaultMusic() {
+  const started = await startSoftMusic()
+  if (!started) attachMusicUnlockListener()
+}
+
+function attachMusicUnlockListener() {
+  if (typeof window === 'undefined' || musicUnlockHandler) return
+
+  musicUnlockHandler = () => {
+    removeMusicUnlockListener()
+    void startSoftMusic()
+  }
+
+  window.addEventListener('pointerdown', musicUnlockHandler, { once: true })
+  window.addEventListener('keydown', musicUnlockHandler, { once: true })
+}
+
+function removeMusicUnlockListener() {
+  if (!musicUnlockHandler || typeof window === 'undefined') return
+  window.removeEventListener('pointerdown', musicUnlockHandler)
+  window.removeEventListener('keydown', musicUnlockHandler)
+  musicUnlockHandler = null
+}
+
+async function startSoftMusic() {
+  if (typeof window === 'undefined') return false
 
   const musicSrc = letter.value?.music_url?.trim() || '/music/lettermusic.mp3'
   if (!letterMusic || letterMusic.src !== new URL(musicSrc, window.location.origin).href) {
@@ -304,17 +330,19 @@ function startSoftMusic() {
   letterMusic.loop = true
   letterMusic.volume = 0.28
 
-  letterMusic.play()
-    .then(() => {
-      musicPlaying.value = true
-    })
-    .catch((error) => {
-      console.warn('Letter music could not be played:', error)
-      musicPlaying.value = false
-    })
+  try {
+    await letterMusic.play()
+    musicPlaying.value = true
+    return true
+  } catch (error) {
+    console.warn('Letter music could not be played yet:', error)
+    musicPlaying.value = false
+    return false
+  }
 }
 
 function stopSoftMusic() {
+  removeMusicUnlockListener()
   if (!letterMusic) {
     musicPlaying.value = false
     return
@@ -634,6 +662,7 @@ onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
   window.removeEventListener('resize', renderAngleFrame)
+  removeMusicUnlockListener()
   stopAngleHold()
   stopAngleMomentum()
   if (envelopeTimer) clearTimeout(envelopeTimer)
@@ -751,6 +780,7 @@ function skipAnimation() {
         :class="{ playing: musicPlaying }"
         :aria-label="musicPlaying ? 'Turn off soft music' : 'Turn on soft music'"
         @click.stop="toggleMusic"
+        @pointerdown.stop
         @mousedown.stop
         @touchstart.stop
       >
