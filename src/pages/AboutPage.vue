@@ -24,7 +24,7 @@ const team: TeamMember[] = [
 
     <div class="about-grid">
       <div class="about-img">
-        <img src="/images/bouquet-main.png" alt="About Stack Petals" />
+        <img src="/images/owner.png" alt="Owner of Stack Petals" />
       </div>
       <div class="about-text">
         <h2>Our Story</h2>
