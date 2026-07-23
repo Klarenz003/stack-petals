@@ -19,15 +19,21 @@ function handleAddToCart(product: Product, event: MouseEvent) {
 
 <template>
   <div class="card">
-    <img
-      :src="product.image"
-      :alt="product.name"
-      @click="preview.open(product)"
-    />
-    <div v-if="product.badge" class="card-badge">{{ product.badge }}</div>
-    <h3>{{ product.name }}</h3>
-    <p v-if="product.category" class="card-category">{{ product.category }}</p>
-    <p>{{ product.price }}</p>
+    <div class="card-image-wrap" @click="preview.open(product)">
+      <img
+        :src="product.image"
+        :alt="product.name"
+      />
+      <div v-if="product.badge" class="card-badge">{{ product.badge }}</div>
+    </div>
+    <div class="card-body">
+      <h3>{{ product.name }}</h3>
+      <p class="card-category">{{ product.category || 'Featured' }}</p>
+      <div class="product-price" :class="{ sale: product.salePrice }">
+        <span v-if="product.salePrice" class="sale-price">{{ product.salePrice }}</span>
+        <span :class="{ 'original-price': product.salePrice }">{{ product.salePrice ? product.originalPrice : product.price }}</span>
+      </div>
+    </div>
     <div v-if="cart.isProductPreOrder(product)" class="preorder-note">
       <strong>Available for Pre-order</strong>
       <span>Estimated prep time: {{ product.prepDays ?? 5 }} day{{ (product.prepDays ?? 5) === 1 ? '' : 's' }}</span>

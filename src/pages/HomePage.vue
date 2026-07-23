@@ -24,14 +24,14 @@ const features: Feature[] = [
     <section class="hero">
       <div class="hero-left">
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
-        <p>Engineered with Precision, Crafted with Love.</p>
+        <p>Engineered with Precision and Crafted with Love.</p>
         <div class="buttons">
-          <button class="primary" @click="router.push('/bouquets')">Shop Bouquets</button>
+          <button class="primary" @click="router.push('/products')">Shop Products</button>
           <button class="secondary" @click="router.push('/about')">Our Story</button>
         </div>
       </div>
       <div class="hero-right">
-        <img src="/images/bouquet-main.png" alt="Bouquet" />
+        <img src="/images/bouquet-main.png" alt="Stack Petals gift" />
       </div>
     </section>
 
@@ -46,7 +46,7 @@ const features: Feature[] = [
     </div>
 
     <section class="products" id="products">
-      <h2>Featured Bouquets</h2>
+      <h2>Featured Products</h2>
       <div class="grid wide-grid featured-grid">
         <ProductCard v-for="product in products.featuredProducts" :key="product.name" :product="product" />
       </div>

@@ -8,7 +8,7 @@ const symbols = ['</>', '{}', '()', 'const', '</>', '[]', 'let', '{}', '❤️']
 
 const density = computed(() => {
   if (['track', 'receipt', 'contact'].includes(String(route.name))) return 10
-  if (route.name === 'bouquets') return 14
+  if (route.name === 'products') return 14
   return 18
 })
 

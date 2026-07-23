@@ -16,7 +16,10 @@ const cart = useCartStore()
     <div class="cart-item-info">
       <div class="cart-item-name">{{ item.name }}</div>
       <div v-if="item.preOrder" class="cart-preorder-label">Pre-order • 3-5 days prep</div>
-      <div class="cart-item-price">{{ item.price }}</div>
+      <div class="cart-item-price" :class="{ sale: item.salePrice }">
+        <span v-if="item.salePrice" class="sale-price">{{ item.salePrice }}</span>
+        <span :class="{ 'original-price': item.salePrice }">{{ item.salePrice ? item.originalPrice : item.price }}</span>
+      </div>
       <div class="qty-controls">
         <button @click="cart.updateQuantity(index, -1)">−</button>
         <span>{{ item.quantity }}</span>

@@ -14,7 +14,7 @@ const ReceiptPage = () => import('@/pages/ReceiptPage.vue')
 // Used in App.vue to determine slide direction
 export const routeOrder: Record<string, number> = {
   home:     0,
-  bouquets: 1,
+  products: 1,
   about:    2,
   process:  3,
   gallery:  4,
@@ -28,7 +28,8 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/',         name: 'home',      component: HomePage     },
-    { path: '/bouquets', name: 'bouquets',  component: BouquetsPage },
+    { path: '/products', name: 'products',  component: BouquetsPage },
+    { path: '/bouquets', redirect: '/products' },
     { path: '/about',    name: 'about',     component: AboutPage    },
     { path: '/process',  name: 'process',   component: ProcessPage  },
     { path: '/gallery',  name: 'gallery',   component: GalleryPage  },

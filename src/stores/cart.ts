@@ -145,7 +145,9 @@ export const useCartStore = defineStore('cart', () => {
   // ── Computed ───────────────────────────────────────────────────
   const itemSubtotalAmount = computed(() => {
     return cartItems.value.reduce((acc, item) => {
-      const numeric = parseFloat(item.price.replace(/[^\d.]/g, ''))
+      const numeric = item.salePriceAmount && item.salePriceAmount > 0
+        ? item.salePriceAmount
+        : item.priceAmount ?? parseFloat(item.price.replace(/[^\d.]/g, ''))
       return acc + (isNaN(numeric) ? 0 : numeric) * item.quantity
     }, 0)
   })
@@ -255,7 +257,7 @@ export const useCartStore = defineStore('cart', () => {
   })
   const preOrderDateMessage = computed(() =>
     hasPreOrderItems.value && !preOrderDateValid.value
-      ? `Pre-order bouquet(s) need a delivery date at least ${preOrderPrepDays.value} days from today.`
+      ? `Pre-order item(s) need a delivery date at least ${preOrderPrepDays.value} days from today.`
       : ''
   )
 
@@ -515,13 +517,13 @@ export const useCartStore = defineStore('cart', () => {
   function addToCart(item: Product) {
     const isPreOrder = isProductPreOrder(item)
     if ((item.stock ?? 0) <= 0 && !isPreOrder) {
-      showNotification('This bouquet is currently out of stock')
+      showNotification('This item is currently out of stock')
       return false
     }
     const existing = cartItems.value.find(i => isSameProduct(i, item))
     if (existing) {
       if (existing.preOrder) {
-        showNotification('This pre-order bouquet is already in your cart')
+        showNotification('This pre-order item is already in your cart')
         return false
       }
       if (existing.quantity >= (item.stock ?? 0)) {
@@ -531,7 +533,7 @@ export const useCartStore = defineStore('cart', () => {
       existing.quantity++
     } else {
       cartItems.value.push({ ...item, quantity: 1, preOrder: isPreOrder })
-      if (isPreOrder) showNotification('Pre-order bouquet added to cart')
+      if (isPreOrder) showNotification('Pre-order item added to cart')
     }
     return true
   }
@@ -545,7 +547,7 @@ export const useCartStore = defineStore('cart', () => {
       return
     }
     if (item.preOrder && newQty > 1) {
-      showNotification('Pre-order bouquets are limited to 1 per checkout')
+      showNotification('Pre-order items are limited to 1 per checkout')
       return
     }
     if (newQty > (item.stock ?? 0)) {

@@ -26,7 +26,10 @@ function addAndClose(event: MouseEvent) {
         <div class="preview-content" @click.stop>
           <img :src="bouquet.image" :alt="bouquet.name" />
           <h2>{{ bouquet.name }}</h2>
-          <p>{{ bouquet.price }}</p>
+          <div class="product-price preview-price" :class="{ sale: bouquet.salePrice }">
+            <span v-if="bouquet.salePrice" class="sale-price">{{ bouquet.salePrice }}</span>
+            <span :class="{ 'original-price': bouquet.salePrice }">{{ bouquet.salePrice ? bouquet.originalPrice : bouquet.price }}</span>
+          </div>
           <div v-if="cart.isProductPreOrder(bouquet)" class="preorder-note preview-preorder-note">
             <strong>Available for Pre-order</strong>
             <span>Estimated prep time: {{ bouquet.prepDays ?? 5 }} day{{ (bouquet.prepDays ?? 5) === 1 ? '' : 's' }}</span>

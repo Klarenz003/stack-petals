@@ -10,7 +10,7 @@ const router = useRouter()
     </div>
     <nav>
       <RouterLink to="/">Home</RouterLink>
-      <RouterLink to="/bouquets">Bouquets</RouterLink>
+      <RouterLink to="/products">Shop</RouterLink>
       <RouterLink to="/about">About</RouterLink>
       <RouterLink to="/process">Process</RouterLink>
       <RouterLink to="/gallery">Gallery</RouterLink>

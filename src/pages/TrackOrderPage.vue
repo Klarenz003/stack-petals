@@ -44,7 +44,7 @@ const statusLabel = computed(() => {
   const labels: Record<string, string> = {
     pending: 'Payment under review',
     confirmed: 'Payment confirmed',
-    preparing: 'Preparing bouquet',
+    preparing: 'Preparing order',
     ready: 'Ready for delivery',
     out_for_delivery: 'Out for delivery',
     delivered: 'Delivered',
@@ -61,7 +61,7 @@ const timeline = computed(() => {
   const steps = [
     { key: 'pending', label: 'Order received' },
     { key: 'confirmed', label: 'Payment confirmed' },
-    { key: 'preparing', label: 'Preparing bouquet' },
+    { key: 'preparing', label: 'Preparing order' },
     { key: 'out_for_delivery', label: 'Out for delivery' },
     { key: 'delivered', label: 'Delivered' },
   ]
@@ -132,7 +132,7 @@ async function trackOrder() {
   <div class="page-section track-page">
     <div class="page-hero">
       <h1>Track <span>Order</span></h1>
-      <p>Use your order reference and phone number to check your bouquet status.</p>
+      <p>Use your order reference and phone number to check your order status.</p>
     </div>
 
     <div class="track-shell">

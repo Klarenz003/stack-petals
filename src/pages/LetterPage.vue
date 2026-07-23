@@ -55,11 +55,11 @@ let anglePreloadRun = 0
 const loadingMessages = [
   'Preparing your memories, unwrapping your letter...',
   'Teaching petals where to fall...',
-  'Polishing the bouquet pixels...',
+  'Polishing the gift pixels...',
   'Folding a little romance into the page...',
-  'Warming up the 360 bouquet magic...',
+  'Warming up the 360 gift magic...',
   'Tucking your message between soft petals...',
-  'Checking every bloom before the reveal...',
+  'Checking every detail before the reveal...',
 ]
 
 // ── Screens ────────────────────────────────────────────────────────
@@ -836,7 +836,7 @@ function skipAnimation() {
             </div>
           </div>
 
-          <h2 class="letter-title" style="margin-top: 32px;">Something special<br><em>is blooming for you...</em></h2>
+          <h2 class="letter-title" style="margin-top: 32px;">Something special<br><em>is waiting for you...</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
           <p class="letter-sub">Please wait a moment</p>
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -1031,7 +1031,7 @@ function skipAnimation() {
             <p class="letter-sub">No memories attached</p>
           </div>
 
-          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">View your bouquet →</button>
+          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">View your gift →</button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1046,7 +1046,7 @@ function skipAnimation() {
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <h2 class="letter-title">Your bouquet<br><em>up close</em></h2>
+          <h2 class="letter-title">Your gift<br><em>up close</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
           <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
@@ -1061,7 +1061,7 @@ function skipAnimation() {
               </div>
               <img
                 :src="bouquetImage"
-                alt="Your bouquet"
+                alt="Your gift"
                 class="bouquet-main-photo"
               />
               <div class="bouquet-pedestal"></div>
@@ -1075,7 +1075,7 @@ function skipAnimation() {
               <span v-if="angleAssetsReady">View 360</span>
               <span v-else>Preparing 360° View</span>
             </button>
-            <p v-else class="letter-sub bouquet-note">Your bouquet is shown above. 360° view may be added soon.</p>
+            <p v-else class="letter-sub bouquet-note">Your gift is shown above. 360° view may be added soon.</p>
           </div>
 
           <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
@@ -1091,14 +1091,14 @@ function skipAnimation() {
           <button class="viewer-close" @click="show360 = false">✕</button>
 
           <div class="viewer-header">
-            <p class="viewer-kicker">Bouquet showcase</p>
+            <p class="viewer-kicker">Gift showcase</p>
             <p class="viewer-hint">Drag or hold the arrows to rotate</p>
           </div>
 
           <div class="viewer-stage-wrap">
             <button
               class="viewer-nav prev"
-              aria-label="Previous bouquet angle"
+              aria-label="Previous gift angle"
               @pointerdown.stop.prevent="startAngleHold(-1)"
               @pointerup.stop.prevent="stopAngleHold"
               @pointerleave.stop="stopAngleHold"
@@ -1126,12 +1126,12 @@ function skipAnimation() {
               <canvas
                 ref="angleCanvas"
                 class="angle-canvas-full"
-                aria-label="Bouquet 360 view"
+                aria-label="Gift 360 view"
               ></canvas>
             </div>
             <button
               class="viewer-nav next"
-              aria-label="Next bouquet angle"
+              aria-label="Next gift angle"
               @pointerdown.stop.prevent="startAngleHold(1)"
               @pointerup.stop.prevent="stopAngleHold"
               @pointerleave.stop="stopAngleHold"
@@ -1145,7 +1145,7 @@ function skipAnimation() {
               <span>Crafted for</span>
               <strong>{{ letter.recipient }}</strong>
             </div>
-            <p class="viewer-hold-note">Press and hold for a silky bouquet turn</p>
+            <p class="viewer-hold-note">Press and hold for a smooth 360 view</p>
           </div>
         </div>
       </Teleport>
@@ -1161,7 +1161,7 @@ function skipAnimation() {
           <div class="quote-flower">🌸</div>
           <div class="letter-divider"><span></span>✦<span></span></div>
           <blockquote class="letter-quote">
-            "You are loved more than you know, more than words can say, more than flowers can hold."
+            "You are loved more than you know, more than words can say, more than any gift can hold."
           </blockquote>
           <div class="letter-divider"><span></span>✦<span></span></div>
           <button class="letter-btn-outline" @click="nextScreen">Continue →</button>
@@ -1182,7 +1182,7 @@ function skipAnimation() {
           <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
           <h2 class="letter-title" style="margin-top: 20px;">From <em>{{ letter.sender }}</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
-          <p class="letter-sub">This bouquet was crafted with love<br>and sent to you with all their heart</p>
+          <p class="letter-sub">This gift was crafted with love<br>and sent to you with all their heart</p>
           <button class="letter-btn" style="margin-top: 28px;" @click="nextScreen">Finish →</button>
         </div>
         <div class="screen-dots">

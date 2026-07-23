@@ -472,7 +472,7 @@ function toggleLetterPreviewPetal(i: number) {
       <!-- STEP 3 — Love Letter -->
       <div v-if="cart.checkoutStep === 3" class="checkout-body letter-step">
         <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter 💌</h2>
-        <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this bouquet even more special</p>
+        <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this gift even more special</p>
 
         <label class="letter-toggle">
           <input v-model="cart.letterData.include" type="checkbox" />
@@ -729,7 +729,7 @@ function toggleLetterPreviewPetal(i: number) {
         <h2>Payment</h2>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
           <strong>Pre-order payment</strong>
-          <span>These bouquet(s) will be prepared for your selected delivery date. Estimated prep time is {{ cart.preOrderPrepDays }} day{{ cart.preOrderPrepDays === 1 ? '' : 's' }}.</span>
+          <span>These item(s) will be prepared for your selected delivery date. Estimated prep time is {{ cart.preOrderPrepDays }} day{{ cart.preOrderPrepDays === 1 ? '' : 's' }}.</span>
         </div>
         <div v-if="cart.stockReservationExpiresAt" class="reservation-notice">
           <strong>Stock reserved</strong>
@@ -818,7 +818,7 @@ function toggleLetterPreviewPetal(i: number) {
           <div><span>Order Total</span><strong>{{ cart.confirmedTotal }}</strong></div>
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
           <div v-if="cart.hasPreOrderItems"><span>Order Type</span><strong>Pre-order</strong></div>
-          <div><span>Items</span><strong>{{ cart.cartItems.length }} bouquet{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
+          <div><span>Items</span><strong>{{ cart.cartItems.length }} item{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
           <div><span>Delivery to</span><strong>{{ cart.fullDeliveryAddress }}</strong></div>
           <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>

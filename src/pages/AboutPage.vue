@@ -3,8 +3,8 @@ import type { TeamMember } from '@/types'
 
 const values = [
   { icon: '🌸', title: 'Precision',      desc: 'Every stem placed with purpose, like a function with a clear return value.' },
-  { icon: '✨', title: 'Lasting Beauty', desc: 'Handcrafted bouquets designed to stay beautiful for years, not days.'        },
-  { icon: '💛', title: 'Heart',          desc: 'Each bouquet carries the warmth of genuine human craftsmanship.'             },
+  { icon: '✨', title: 'Lasting Beauty', desc: 'Handcrafted gifts designed to stay meaningful for years, not days.'        },
+  { icon: '💛', title: 'Heart',          desc: 'Each piece carries the warmth of genuine human craftsmanship.'             },
 ]
 
 const team: TeamMember[] = [
@@ -36,17 +36,17 @@ const team: TeamMember[] = [
           from the ground up to redefine how we express affection.
         </p>
         <p>
-          Our products are entirely unique because they aren't just about the flowers. 
-          Each handcrafted arrangement acts as a gateway to a digital experience. 
-          Embedded with a custom QR code, our bouquets allow recipients to scan and 
+          Our products are entirely unique because they are not just about the item itself. 
+          Each handcrafted piece acts as a gateway to a digital experience. 
+          Embedded with a custom QR code, our gifts allow recipients to scan and 
           instantly unlock a heartfelt virtual message alongside an interactive 360-degree 
-          view of their bouquet. Every piece is thoughtfully structured, elegantly composed, 
+          view of their gift. Every piece is thoughtfully structured, elegantly composed, 
           and engineered to connect people in a modern world.
         </p>
         <h2 style="margin-top:32px">Our Mission</h2>
         <p>
           To revolutionize traditional gifting by embedding interactive technology into 
-          artisan floral design, creating seamless, memorable, and high-tech expressions of love.
+          artisan-made products, creating seamless, memorable, and high-tech expressions of love.
         </p>
       </div>
     </div>

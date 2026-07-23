@@ -4,6 +4,10 @@ export interface Product {
   id?: string
   name: string
   price: string
+  originalPrice?: string
+  salePrice?: string
+  priceAmount?: number
+  salePriceAmount?: number | null
   image: string
   category?: string
   badge?: string | null
@@ -91,6 +95,10 @@ export interface CartItem {
   id?: string
   name: string
   price: string
+  originalPrice?: string
+  salePrice?: string
+  priceAmount?: number
+  salePriceAmount?: number | null
   image: string
   category?: string
   badge?: string | null

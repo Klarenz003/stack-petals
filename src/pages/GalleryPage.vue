@@ -42,10 +42,10 @@ onMounted(loadGalleryImages)
   <div class="page-section">
     <div class="page-hero">
       <h1>Our <span>Gallery</span></h1>
-      <p>A bloom for every moment.</p>
+      <p>A handcrafted moment worth remembering.</p>
     </div>
 
-    <div v-if="loading" class="gallery-loading">Arranging the gallery...</div>
+    <div v-if="loading" class="gallery-loading">Preparing the gallery...</div>
 
     <div v-else class="gallery-grid">
       <div v-for="image in galleryImages" :key="image.id" class="gallery-item">

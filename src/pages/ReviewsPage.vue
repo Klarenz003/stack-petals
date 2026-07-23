@@ -2,12 +2,12 @@
 import type { Review } from '@/types'
 
 const reviews: Review[] = [
-  { name: 'Maria S.',  text: 'Absolutely stunning bouquet! The flowers were so fresh and the delivery was right on time. Will definitely order again.' },
+  { name: 'Maria S.',  text: 'Absolutely stunning gift! It felt personal, polished, and the delivery was right on time. Will definitely order again.' },
   { name: 'Carlo B.',  text: "Ordered for my girlfriend's birthday. She cried happy tears. Stack Petals never disappoints." },
   { name: 'Jessa R.',  text: 'The GCash payment was so easy and the team confirmed my order super fast. Love the whole experience!' },
-  { name: 'Miguel T.', text: 'Unique concept — flowers + tech vibes. The packaging was gorgeous and everything arrived perfect.' },
-  { name: 'Ana G.',    text: "I've ordered three times already. Every bouquet is more beautiful than the last." },
-  { name: 'Paolo M.',  text: 'Fast delivery, fresh flowers, and great customer service. Highly recommend Stack Petals!' },
+  { name: 'Miguel T.', text: 'Unique concept with a techy personal touch. The packaging was gorgeous and everything arrived perfect.' },
+  { name: 'Ana G.',    text: "I've ordered three times already. Every product feels thoughtful and beautifully made." },
+  { name: 'Paolo M.',  text: 'Fast delivery, lovely presentation, and great customer service. Highly recommend Stack Petals!' },
 ]
 </script>
 
