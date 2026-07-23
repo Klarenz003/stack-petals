@@ -52,7 +52,7 @@ img {
   input,
   textarea,
   [contenteditable='true'] {
-    cursor: text;
+    cursor: var(--cursor-text);
   }
 
   .loading,
@@ -2058,9 +2058,10 @@ input[type="date"] {
    Place SVG files in /public/cursors/ */
 
 :root {
-  --cursor-default: url("data:image/svg+xml,%3Csvg width='46' height='46' viewBox='0 0 46 46' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 4 L31 28 L19 30 L14 42 L7 4Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M10 10 L26 27 L18 28 L14 35 L10 10Z' fill='%23eef3eb' opacity='.38'/%3E%3Ctext x='11' y='22' font-family='monospace' font-size='6.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3Cpath d='M19 33 C22 33 24 35 23 38 C20 38 18 36 19 33Z M16 35 C18 37 18 40 15 41 C13 38 13 36 16 35Z' fill='%235f745b'/%3E%3C/svg%3E") 7 4, auto;
+  --cursor-default: url("data:image/svg+xml,%3Csvg width='46' height='46' viewBox='0 0 46 46' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 4 L31 28 L19 30 L14 42 L7 4Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M10 10 L26 27 L18 28 L14 35 L10 10Z' fill='%23eef3eb' opacity='.38'/%3E%3Ctext x='11' y='22' font-family='monospace' font-size='6.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3Cpath d='M19 33 C22 33 24 35 23 38 C20 38 18 36 19 33Z M16 35 C18 37 18 40 15 41 C13 38 13 36 16 35Z' fill='%235f745b'/%3E%3C/svg%3E") 7 4, default;
   --cursor-pointer: url("data:image/svg+xml,%3Csvg width='50' height='50' viewBox='0 0 50 50' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 4 L31 28 L19 30 L14 42 L7 4Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M10 10 L26 27 L18 28 L14 35 L10 10Z' fill='%23eef3eb' opacity='.38'/%3E%3Ctext x='11' y='22' font-family='monospace' font-size='6.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3Cpath d='M19 33 C22 33 24 35 23 38 C20 38 18 36 19 33Z M16 35 C18 37 18 40 15 41 C13 38 13 36 16 35Z' fill='%235f745b'/%3E%3Ccircle cx='34' cy='25' r='4.3' fill='%23f3c0c6' stroke='%23bf7d82' stroke-width='.8'/%3E%3Ccircle cx='29.5' cy='29' r='4.3' fill='%23f3c0c6' stroke='%23bf7d82' stroke-width='.8'/%3E%3Ccircle cx='34.5' cy='33.5' r='4.3' fill='%23f3c0c6' stroke='%23bf7d82' stroke-width='.8'/%3E%3Ccircle cx='39' cy='29' r='4.3' fill='%23f3c0c6' stroke='%23bf7d82' stroke-width='.8'/%3E%3Ccircle cx='34.5' cy='29.5' r='2.8' fill='%23f7d99b'/%3E%3C/svg%3E") 7 4, pointer;
   --cursor-active: url("data:image/svg+xml,%3Csvg width='54' height='54' viewBox='0 0 54 54' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='32' cy='22' r='15' fill='rgba(238,243,235,0.38)' stroke='%23cbd5c8' stroke-width='3'/%3E%3Ccircle cx='32' cy='22' r='10' fill='none' stroke='%23d9dfd7' stroke-width='2'/%3E%3Cpath d='M8 5 L32 29 L20 31 L15 43 L8 5Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M11 11 L27 28 L19 29 L15 36 L11 11Z' fill='%23eef3eb' opacity='.42'/%3E%3Ctext x='12' y='23' font-family='monospace' font-size='6.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3Cpath d='M21 34 C24 34 26 36 25 39 C22 39 20 37 21 34Z M18 36 C20 38 20 41 17 42 C15 39 15 37 18 36Z' fill='%235f745b'/%3E%3C/svg%3E") 32 22, pointer;
+  --cursor-text: url("data:image/svg+xml,%3Csvg width='42' height='42' viewBox='0 0 42 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 5 L30 24 L20 26 L16 37 L11 5Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M14 11 L26 24 L19 25 L16 32 L14 11Z' fill='%23eef3eb' opacity='.36'/%3E%3Cpath d='M29 9 V31 M25 9 H33 M25 31 H33' stroke='%235f745b' stroke-width='2.2' stroke-linecap='round'/%3E%3Ctext x='13' y='21' font-family='monospace' font-size='5.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E") 29 20, text;
   --cursor-loading: url("data:image/svg+xml,%3Csvg width='44' height='44' viewBox='0 0 44 44' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='22' cy='7' r='3' fill='%237d9276'/%3E%3Ccircle cx='31.5' cy='10.5' r='3' fill='%23c28d86'/%3E%3Ccircle cx='37' cy='20' r='3' fill='%23d6bbb0'/%3E%3Ccircle cx='34' cy='30' r='3' fill='%237d9276' opacity='.82'/%3E%3Ccircle cx='24' cy='37' r='3' fill='%23c28d86' opacity='.72'/%3E%3Ccircle cx='13' cy='34' r='3' fill='%23a8b8a3' opacity='.62'/%3E%3Ccircle cx='7' cy='24' r='3' fill='%237d9276' opacity='.48'/%3E%3Ccircle cx='10' cy='13' r='3' fill='%23c28d86' opacity='.38'/%3E%3C/svg%3E") 22 22, wait;
 }
 
@@ -2077,7 +2078,7 @@ label[for], select, summary {
 
 /* ── Love Letter Step ──────────────────────────────────────────────── */
 input, textarea, [contenteditable="true"] {
-  cursor: text;
+  cursor: var(--cursor-text);
 }
 
 .letter-step {
@@ -3193,7 +3194,7 @@ input, textarea, [contenteditable="true"] {
   input,
   textarea,
   [contenteditable="true"] {
-    cursor: url("data:image/svg+xml,%3Csvg width='42' height='42' viewBox='0 0 42 42' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 5 L30 24 L20 26 L16 37 L11 5Z' fill='%23899b83' stroke='%235f745b' stroke-width='1.6' stroke-linejoin='round'/%3E%3Cpath d='M14 11 L26 24 L19 25 L16 32 L14 11Z' fill='%23eef3eb' opacity='.36'/%3E%3Cpath d='M29 9 V31 M25 9 H33 M25 31 H33' stroke='%235f745b' stroke-width='2.2' stroke-linecap='round'/%3E%3Ctext x='13' y='21' font-family='monospace' font-size='5.5' font-weight='700' fill='%23f7f4ee'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E") 29 20, text;
+    cursor: var(--cursor-text) !important;
   }
 
   a,
