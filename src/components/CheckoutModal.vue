@@ -15,8 +15,10 @@ const letterPreviewPetals = ref([false, false, false, false, false, false])
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
+const showPickupAddress = ref(false)
 const MAIN_LETTER_WORD_LIMIT = 300
 const PETAL_MESSAGE_CHAR_LIMIT = 30
+const PICKUP_ADDRESS = 'Evasco Family, Santa Ana, Taytay Rizal'
 
 // ── Functions ──────────────────────────────────────
 async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promise<File> {
@@ -117,9 +119,21 @@ function limitPetalMessage(index: number) {
 
 function handleAddressInput() {
   cart.refreshShippingEstimate()
+  if (cart.customer.deliveryMethod === 'pickup') {
+    addressStatus.value = 'Pick up selected. No shipping fee will be added.'
+    return
+  }
   const address = cart.shippingEstimateAddress.trim()
   addressStatus.value = address.length >= 8
     ? 'Shipping is estimated from the barangay, city/municipality, and province fields.'
+    : 'Fill in barangay, city/municipality, and province so we can estimate the shipping area.'
+}
+
+function handleDeliveryMethodChange(method: 'delivery' | 'pickup') {
+  cart.setDeliveryMethod(method)
+  showPickupAddress.value = false
+  addressStatus.value = method === 'pickup'
+    ? 'Pick up selected. No shipping fee will be added.'
     : 'Fill in barangay, city/municipality, and province so we can estimate the shipping area.'
 }
 
@@ -168,8 +182,9 @@ function buildReceiptText() {
     '',
     'Delivery',
     '--------',
+    `Method: ${cart.customer.deliveryMethod === 'pickup' ? 'Pick up' : 'Delivery'}`,
     `Date: ${cart.customer.date}`,
-    `Address: ${cart.fullDeliveryAddress}`,
+    `Address: ${cart.customer.deliveryMethod === 'pickup' ? 'Pick up at Stack Petals' : cart.fullDeliveryAddress}`,
     `Shipping Area: ${cart.shippingLabel}`,
     '',
     'Items',
@@ -247,6 +262,10 @@ const googleMapsSearchUrl = computed(() => {
   const query = address || 'Taytay Rizal Philippines'
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 })
+
+const pickupGoogleMapsUrl = computed(() =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(PICKUP_ADDRESS)}`
+)
 
 const reservationExpiresAt = computed(() => {
   if (!cart.stockReservationExpiresAt) return ''
@@ -351,7 +370,7 @@ function toggleLetterPreviewPetal(i: number) {
         </div>
         <div class="co-total order-total-breakdown">
           <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
-          <div><span>Shipping</span><strong>{{ cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Add address' }}</strong></div>
+          <div><span>Shipping</span><strong>{{ cart.customer.deliveryMethod === 'pickup' ? 'Free pick up' : (cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Add address') }}</strong></div>
           <div><span>Total</span><strong>{{ cart.cartTotal }}</strong></div>
         </div>
         <div class="co-actions">
@@ -384,58 +403,96 @@ function toggleLetterPreviewPetal(i: number) {
             <small class="field-error" v-if="cart.customer.phone.length > 0 && cart.customer.phone.length < 11">Phone number must be 11 digits</small>
             <small class="field-error" v-else-if="cart.customer.phone.length === 11 && !cart.customer.phone.startsWith('09')">Use a valid PH mobile number starting with 09</small>
           </label>
-          <label class="full-field">Delivery Address
-            <input
-              v-model="cart.customer.address"
-              type="text"
-              placeholder="House/unit/building and street"
-              @input="handleAddressInput"
-            />
-          </label>
-          <label class="full-field">Nearest Landmark (optional)
-            <input
-              v-model="cart.customer.landmark"
-              type="text"
-              placeholder="Near church, school, mall, subdivision gate, etc."
-              @input="handleAddressInput"
-            />
-          </label>
-          <div class="address-grid">
-            <label>Barangay
+          <div class="full-field fulfillment-method">
+            <span class="method-label">Receiving Method</span>
+            <div class="method-options">
+              <button
+                type="button"
+                :class="['method-option', { active: cart.customer.deliveryMethod === 'delivery' }]"
+                @click="handleDeliveryMethodChange('delivery')"
+              >
+                <strong>Delivery</strong>
+                <small>Shipping fee applies based on location.</small>
+              </button>
+              <button
+                type="button"
+                :class="['method-option', { active: cart.customer.deliveryMethod === 'pickup' }]"
+                @click="handleDeliveryMethodChange('pickup')"
+              >
+                <strong>Pick up</strong>
+                <small>No shipping fee will be added.</small>
+              </button>
+            </div>
+          </div>
+          <div v-if="cart.customer.deliveryMethod === 'delivery'" class="full-field delivery-fields">
+            <label class="full-field">Delivery Address
               <input
-                v-model="cart.customer.barangay"
+                v-model="cart.customer.address"
                 type="text"
-                placeholder="Barangay"
+                placeholder="House/unit/building and street"
                 @input="handleAddressInput"
               />
             </label>
-            <label>City / Municipality
+            <label class="full-field">Nearest Landmark (optional)
               <input
-                v-model="cart.customer.city"
+                v-model="cart.customer.landmark"
                 type="text"
-                placeholder="Taytay"
+                placeholder="Near church, school, mall, subdivision gate, etc."
                 @input="handleAddressInput"
               />
             </label>
-            <label>Province
-              <input
-                v-model="cart.customer.province"
-                type="text"
-                placeholder="Rizal"
-                @input="handleAddressInput"
-              />
-            </label>
+            <div class="address-grid">
+              <label>Barangay
+                <input
+                  v-model="cart.customer.barangay"
+                  type="text"
+                  placeholder="Barangay"
+                  @input="handleAddressInput"
+                />
+              </label>
+              <label>City / Municipality
+                <input
+                  v-model="cart.customer.city"
+                  type="text"
+                  placeholder="Taytay"
+                  @input="handleAddressInput"
+                />
+              </label>
+              <label>Province
+                <input
+                  v-model="cart.customer.province"
+                  type="text"
+                  placeholder="Rizal"
+                  @input="handleAddressInput"
+                />
+              </label>
+            </div>
           </div>
           <div class="address-detect-card">
             <p class="map-status">{{ addressStatus }}</p>
-            <p v-if="cart.fullDeliveryAddress" class="address-preview">
+            <p v-if="cart.customer.deliveryMethod === 'pickup'" class="address-preview">
+              Pick up at Stack Petals. We will contact you when your order is ready.
+            </p>
+            <div v-if="cart.customer.deliveryMethod === 'pickup'" class="pickup-location">
+              <button type="button" class="pickup-address-toggle" @click="showPickupAddress = !showPickupAddress">
+                {{ showPickupAddress ? 'Hide Stack Petals address' : 'View Stack Petals address' }}
+              </button>
+              <div v-if="showPickupAddress" class="pickup-address-panel">
+                <span>Google Map</span>
+                <strong>{{ PICKUP_ADDRESS }}</strong>
+                <a :href="pickupGoogleMapsUrl" target="_blank" rel="noopener noreferrer">
+                  Open in Google Maps
+                </a>
+              </div>
+            </div>
+            <p v-else-if="cart.fullDeliveryAddress" class="address-preview">
               {{ cart.fullDeliveryAddress }}
             </p>
             <div class="shipping-estimate">
               <span>{{ cart.shippingLabel }}</span>
-              <strong>{{ cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Pending' }}</strong>
+              <strong>{{ cart.customer.deliveryMethod === 'pickup' ? 'Free' : (cart.shippingFee ? `₱${cart.shippingFee.toFixed(2)}` : 'Pending') }}</strong>
             </div>
-            <a class="map-adjust-btn" :href="googleMapsSearchUrl" target="_blank" rel="noopener noreferrer">
+            <a v-if="cart.customer.deliveryMethod === 'delivery'" class="map-adjust-btn" :href="googleMapsSearchUrl" target="_blank" rel="noopener noreferrer">
               Check address in Google Maps
             </a>
           </div>
@@ -737,7 +794,7 @@ function toggleLetterPreviewPetal(i: number) {
         </div>
         <div class="payment-total-card">
           <div><span>Subtotal</span><strong>{{ cart.cartSubtotal }}</strong></div>
-          <div><span>Shipping</span><strong>₱{{ cart.shippingFee.toFixed(2) }}</strong></div>
+          <div><span>Shipping</span><strong>{{ cart.customer.deliveryMethod === 'pickup' ? 'Free pick up' : `₱${cart.shippingFee.toFixed(2)}` }}</strong></div>
           <div><span>Total to pay</span><strong>{{ cart.cartTotal }}</strong></div>
         </div>
 
@@ -819,7 +876,8 @@ function toggleLetterPreviewPetal(i: number) {
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
           <div v-if="cart.hasPreOrderItems"><span>Order Type</span><strong>Pre-order</strong></div>
           <div><span>Items</span><strong>{{ cart.cartItems.length }} item{{ cart.cartItems.length === 1 ? '' : 's' }}</strong></div>
-          <div><span>Delivery to</span><strong>{{ cart.fullDeliveryAddress }}</strong></div>
+          <div><span>Method</span><strong>{{ cart.customer.deliveryMethod === 'pickup' ? 'Pick up' : 'Delivery' }}</strong></div>
+          <div><span>{{ cart.customer.deliveryMethod === 'pickup' ? 'Pick up' : 'Delivery to' }}</span><strong>{{ cart.customer.deliveryMethod === 'pickup' ? 'Stack Petals' : cart.fullDeliveryAddress }}</strong></div>
           <div><span>Shipping area</span><strong>{{ cart.shippingLabel }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>

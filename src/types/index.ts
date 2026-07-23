@@ -23,6 +23,7 @@ export interface CartItem extends Product {
 }
 
 export interface Customer {
+  deliveryMethod: 'delivery' | 'pickup'
   name: string
   email: string
   phone: string

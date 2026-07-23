@@ -35,6 +35,7 @@ export const useCartStore = defineStore('cart', () => {
   let stockReservationToken = ''
 
   const customer = ref<Customer>({
+    deliveryMethod: 'delivery',
     name: '',
     email: '',
     phone: '',
@@ -201,6 +202,7 @@ export const useCartStore = defineStore('cart', () => {
 
   function buildDeliveryAddress() {
     const c = customer.value
+    if (c.deliveryMethod === 'pickup') return 'Pick up at Stack Petals'
     return [
       c.address.trim(),
       c.landmark.trim() ? `Landmark: ${c.landmark.trim()}` : '',
@@ -224,6 +226,7 @@ export const useCartStore = defineStore('cart', () => {
   const shippingEstimateAddress = computed(() => buildShippingAddress())
 
   const shippingFee = computed(() => {
+    if (customer.value.deliveryMethod === 'pickup') return 0
     const zone = customer.value.shippingZone.toLowerCase()
     if (zone === 'metro-near') return 150
     if (zone === 'outside-luzon') return 350
@@ -232,6 +235,7 @@ export const useCartStore = defineStore('cart', () => {
   })
 
   const shippingLabel = computed(() => {
+    if (customer.value.deliveryMethod === 'pickup') return 'Pick up - no shipping fee'
     if (!shippingEstimateAddress.value.trim()) return 'Add barangay, city, and province'
     if (customer.value.shippingZone === 'metro-near') return 'Metro Manila / near Taytay'
     if (customer.value.shippingZone === 'outside-luzon') return 'Outside Luzon'
@@ -269,18 +273,21 @@ export const useCartStore = defineStore('cart', () => {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const minDate = tomorrow.toISOString().split('T')[0]
   const dateOk = !!c.date && c.date >= minDate
+  const addressOk = c.deliveryMethod === 'pickup' || !!(
+    c.address &&
+    c.barangay &&
+    c.city &&
+    c.province
+  )
+  const scheduleOk = c.deliveryMethod === 'pickup' || (!deliveryDateFull.value && !isCheckingDeliveryDate.value)
   return !!(
     c.name &&
     emailOk &&
     phoneOk &&
-    c.address &&
-    c.barangay &&
-    c.city &&
-    c.province &&
+    addressOk &&
     dateOk &&
     preOrderDateValid.value &&
-    !deliveryDateFull.value &&
-    !isCheckingDeliveryDate.value
+    scheduleOk
   )
 })
 
@@ -580,11 +587,20 @@ export const useCartStore = defineStore('cart', () => {
     customer.value.shippingZone = estimateShippingZone(shippingEstimateAddress.value, customer.value.addressLat, customer.value.addressLng)
   }
 
+  function setDeliveryMethod(method: Customer['deliveryMethod']) {
+    customer.value.deliveryMethod = method
+    customer.value.shippingZone = method === 'pickup'
+      ? ''
+      : estimateShippingZone(shippingEstimateAddress.value, customer.value.addressLat, customer.value.addressLng)
+  }
+
   function refreshShippingEstimate() {
     customer.value.addressLat = null
     customer.value.addressLng = null
     customer.value.addressPlaceId = ''
-    customer.value.shippingZone = estimateShippingZone(shippingEstimateAddress.value)
+    customer.value.shippingZone = customer.value.deliveryMethod === 'pickup'
+      ? ''
+      : estimateShippingZone(shippingEstimateAddress.value)
   }
 
   async function goToPayment() {
@@ -626,6 +642,7 @@ export const useCartStore = defineStore('cart', () => {
     const orderNote = [
       customer.value.note,
       hasPreOrderItems.value ? `Order type: Pre-order (estimated prep time: ${preOrderPrepDays.value} day${preOrderPrepDays.value === 1 ? '' : 's'})` : '',
+      `Fulfillment: ${customer.value.deliveryMethod === 'pickup' ? 'Pick up' : 'Delivery'}`,
       `Shipping: ${shippingLabel.value} (${formatPeso(shippingFee.value)})`,
       customer.value.landmark ? `Landmark: ${customer.value.landmark}` : '',
       customer.value.barangay ? `Barangay: ${customer.value.barangay}` : '',
@@ -759,6 +776,7 @@ export const useCartStore = defineStore('cart', () => {
     isSubmittingOrder.value = false
     orderSubmissionPromise = null
     customer.value = {
+      deliveryMethod: 'delivery',
       name: '',
       email: '',
       phone: '',
@@ -809,6 +827,7 @@ export const useCartStore = defineStore('cart', () => {
       reserveStockForPayment, releaseStockReservation,
       updateDeliveryAddress, refreshShippingEstimate,
       checkDeliveryDateCapacity,
+      setDeliveryMethod,
       handleProofUpload, clearProof,
       submitOrder, finishCheckout, notification
     }
