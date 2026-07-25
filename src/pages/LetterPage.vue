@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -64,9 +64,6 @@ const loadingMessages = [
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
-const showNextNav = computed(() =>
-  currentScreen.value < totalScreens - 1 && !(currentScreen.value === 3 && !senderVisible.value)
-)
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
@@ -790,33 +787,6 @@ function skipAnimation() {
         <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
       </button>
 
-      <div class="letter-nav-controls" aria-label="Letter navigation">
-        <button
-          v-if="currentScreen > 0"
-          type="button"
-          class="letter-nav-arrow prev"
-          aria-label="Previous page"
-          @click.stop="prevScreen"
-          @pointerdown.stop
-          @mousedown.stop
-          @touchstart.stop
-        >
-          ‹
-        </button>
-        <button
-          v-if="showNextNav"
-          type="button"
-          class="letter-nav-arrow next"
-          aria-label="Next page"
-          @click.stop="nextScreen"
-          @pointerdown.stop
-          @mousedown.stop
-          @touchstart.stop
-        >
-          ›
-        </button>
-      </div>
-
       <Transition :name="slideDirection" mode="out-in">
         <div :key="currentScreen" class="letter-screen-wrapper">
 
@@ -1330,51 +1300,6 @@ function skipAnimation() {
   font-family: 'Lora', serif;
   font-size: 18px;
   line-height: 1;
-}
-
-.letter-nav-controls {
-  inset: 0;
-  pointer-events: none;
-  position: absolute;
-  z-index: 170;
-}
-
-.letter-nav-arrow {
-  align-items: center;
-  background:
-    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.96), rgba(255,240,244,0.74));
-  border: 1px solid rgba(232, 180, 192, 0.64);
-  border-radius: 999px;
-  box-shadow: 0 12px 28px rgba(163, 90, 105, 0.12);
-  color: #9f5364;
-  cursor: pointer;
-  display: inline-flex;
-  font-family: 'Lora', serif;
-  font-size: 27px;
-  height: 42px;
-  justify-content: center;
-  line-height: 1;
-  pointer-events: auto;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-  width: 42px;
-}
-
-.letter-nav-arrow.prev {
-  left: clamp(10px, 3vw, 18px);
-}
-
-.letter-nav-arrow.next {
-  right: clamp(10px, 3vw, 18px);
-}
-
-.letter-nav-arrow:hover {
-  background:
-    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.98), rgba(255,226,235,0.9));
-  box-shadow: 0 15px 34px rgba(163, 90, 105, 0.18);
-  transform: translateY(-50%) scale(1.04);
 }
 
 @keyframes musicPulse {
@@ -3465,26 +3390,6 @@ function skipAnimation() {
 }
 
 @media (max-width: 480px) {
-  .letter-nav-arrow {
-    height: 38px;
-    top: auto;
-    transform: none;
-    width: 38px;
-    bottom: calc(22px + var(--safe-bottom));
-  }
-
-  .letter-nav-arrow.prev {
-    left: clamp(18px, 8vw, 34px);
-  }
-
-  .letter-nav-arrow.next {
-    right: clamp(18px, 8vw, 34px);
-  }
-
-  .letter-nav-arrow:hover {
-    transform: scale(1.03);
-  }
-
   .letter-message-screen {
     padding-left: 0;
     padding-right: 0;
