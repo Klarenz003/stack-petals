@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { supabase } from '@/supabaseClient'
 
 interface GalleryImage {
@@ -18,6 +18,7 @@ const fallbackImages: GalleryImage[] = Array.from({ length: 4 }, (_, index) => (
 
 const galleryImages = ref<GalleryImage[]>(fallbackImages)
 const loading = ref(true)
+const featuredPreview = computed(() => galleryImages.value.slice(0, 3))
 
 async function loadGalleryImages() {
   loading.value = true
@@ -42,10 +43,33 @@ onMounted(loadGalleryImages)
   <div class="page-section">
     <div class="page-hero">
       <h1>Our <span>Gallery</span></h1>
-      <p>A handcrafted moment worth remembering.</p>
+      <p>Real handcrafted pieces, sweet details, and little moments made to be remembered.</p>
     </div>
 
-    <div v-if="loading" class="gallery-loading">Preparing the gallery...</div>
+    <section v-if="!loading && featuredPreview.length" class="gallery-featured">
+      <div class="gallery-featured-copy">
+        <span>Featured Moments</span>
+        <h2>Crafted flowers, kept as memories.</h2>
+        <p>
+          A soft look at the pieces, textures, and details that make every Stack Petals gift feel personal.
+        </p>
+      </div>
+      <div class="gallery-featured-stack" aria-hidden="true">
+        <img
+          v-for="image in featuredPreview"
+          :key="`featured-${image.id}`"
+          :src="image.image_url"
+          :alt="image.title || 'Featured Stack Petals gallery image'"
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+    </section>
+
+    <div v-if="loading" class="gallery-loading">
+      <span></span>
+      Preparing the gallery...
+    </div>
 
     <div v-else class="gallery-grid">
       <div v-for="image in galleryImages" :key="image.id" class="gallery-item">
@@ -55,6 +79,11 @@ onMounted(loadGalleryImages)
           <span v-if="image.caption">{{ image.caption }}</span>
         </div>
       </div>
+    </div>
+
+    <div v-if="!loading && !galleryImages.length" class="gallery-empty-state">
+      <h2>No featured photos yet</h2>
+      <p>Once gallery photos are featured from admin, they will appear here.</p>
     </div>
   </div>
 </template>

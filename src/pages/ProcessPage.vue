@@ -29,37 +29,37 @@ const steps = [
 const experienceFeatures = [
   {
     title: 'Handcrafted Artistry',
-    icon: '🌸',
+    icon: '01',
     image: '/images/craftedflowers.jpg',
     imageAlt: 'Handcrafted Stack Petals flower arrangement',
-    desc: 'Every single flower is meticulously crafted by hand to ensure a stunning, long-lasting physical arrangement.',
+    desc: 'Every flower is carefully made by hand, giving the gift a lasting physical piece they can keep.',
   },
   {
     title: 'The Virtual Message',
-    icon: '💌',
+    icon: '02',
     video: '/videos/letter.MP4',
     videoLabel: 'Preview of the virtual message experience',
-    desc: 'Tucked inside the arrangement is a unique, custom QR code. When scanned by the recipient, it instantly unlocks a personalized virtual message from you.',
+    desc: 'A private QR code opens a personalized message made for the recipient.',
   },
   {
     title: 'Photo Memories',
-    icon: '▣',
+    icon: '03',
     video: '/videos/photo_memories.mp4',
     videoLabel: 'Preview of loved one photo memories inside the letter experience',
-    desc: 'Customers can add photos of their loved ones that appear inside the letter experience, turning the QR page into a sweet personal memory gallery.',
+    desc: 'Add meaningful photos of loved ones so the letter page feels personal, familiar, and sweet.',
   },
   {
     title: 'Background Music',
-    icon: '♫',
+    icon: '04',
     visualClass: 'process-music-photo',
-    desc: 'The letter experience can play a soft custom song while they browse the message, memories, and 360° flower view.',
+    desc: 'Choose soft background music to make the message, memories, and 360 view feel cinematic.',
   },
   {
-    title: 'Interactive 360° View',
-    icon: '✨',
+    title: 'Interactive 360 View',
+    icon: '05',
     video: '/videos/360view.mp4',
     videoLabel: 'Preview of the interactive 360 flower view',
-    desc: 'Along with your message, the QR code grants them access to an immersive digital experience, allowing them to appreciate your crafted flowers and read your heartfelt letter.',
+    desc: 'Let them revisit the crafted flowers from every angle after receiving the gift.',
   },
 ]
 </script>
@@ -70,15 +70,16 @@ const experienceFeatures = [
     <!-- Hero -->
     <div class="page-hero">
       <h1>How it <span>Works</span></h1>
+      <p>From handcrafted flowers to a private QR experience, every order is designed to feel personal from the first scan.</p>
     </div>
 
     <!-- Section 1 — The Experience -->
-    <div class="process-section">
+    <div class="process-section process-showcase-section">
       <div class="process-section-header">
         <span class="process-section-num">1</span>
         <h2>The Stack Petals Experience</h2>
       </div>
-      <p class="process-section-sub">More than just a product because it is a high-tech keepsake.</p>
+      <p class="process-section-sub">More than a product. It is a handcrafted keepsake with a digital heart.</p>
       <p class="process-section-desc">
         Every crafted flower piece we create is a fusion of physical craftsmanship and digital innovation.
         When you send a Stack Petals arrangement, your loved one receives an interactive experience
@@ -108,7 +109,7 @@ const experienceFeatures = [
             aria-hidden="true"
           >
             <div class="music-visual">
-              <span class="music-note">♪</span>
+              <span class="music-note">music</span>
               <span class="music-wave"></span>
               <span class="music-wave"></span>
               <span class="music-wave"></span>
@@ -118,7 +119,7 @@ const experienceFeatures = [
             <img :src="feature.image" :alt="feature.imageAlt" loading="lazy" decoding="async" />
           </div>
           <span class="feature-dot">{{ feature.icon }}</span>
-          <div>
+          <div class="process-feature-copy">
             <strong>{{ feature.title }}</strong>
             <p>{{ feature.desc }}</p>
           </div>
