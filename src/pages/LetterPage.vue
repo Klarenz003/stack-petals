@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -64,6 +64,9 @@ const loadingMessages = [
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 9
+const showNextNav = computed(() =>
+  currentScreen.value < totalScreens - 1 && !(currentScreen.value === 3 && !senderVisible.value)
+)
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
@@ -787,6 +790,33 @@ function skipAnimation() {
         <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
       </button>
 
+      <div class="letter-nav-controls" aria-label="Letter navigation">
+        <button
+          v-if="currentScreen > 0"
+          type="button"
+          class="letter-nav-arrow prev"
+          aria-label="Previous page"
+          @click.stop="prevScreen"
+          @pointerdown.stop
+          @mousedown.stop
+          @touchstart.stop
+        >
+          ‹
+        </button>
+        <button
+          v-if="showNextNav"
+          type="button"
+          class="letter-nav-arrow next"
+          aria-label="Next page"
+          @click.stop="nextScreen"
+          @pointerdown.stop
+          @mousedown.stop
+          @touchstart.stop
+        >
+          ›
+        </button>
+      </div>
+
       <Transition :name="slideDirection" mode="out-in">
         <div :key="currentScreen" class="letter-screen-wrapper">
 
@@ -798,6 +828,14 @@ function skipAnimation() {
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
+          <div class="letter-invitation-card" aria-hidden="true">
+            <div class="letter-invite-paper">
+              <span></span>
+              <span></span>
+              <i></i>
+            </div>
+            <div class="letter-invite-seal">✦</div>
+          </div>
           <div class="blooming-flower">🌸</div>
           <h1 class="letter-headline">A message<br><em>just for you</em></h1>
           <div class="letter-divider"><span></span>✦<span></span></div>
@@ -1294,6 +1332,51 @@ function skipAnimation() {
   line-height: 1;
 }
 
+.letter-nav-controls {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 170;
+}
+
+.letter-nav-arrow {
+  align-items: center;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.96), rgba(255,240,244,0.74));
+  border: 1px solid rgba(232, 180, 192, 0.64);
+  border-radius: 999px;
+  box-shadow: 0 12px 28px rgba(163, 90, 105, 0.12);
+  color: #9f5364;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: 'Lora', serif;
+  font-size: 27px;
+  height: 42px;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: auto;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  width: 42px;
+}
+
+.letter-nav-arrow.prev {
+  left: clamp(10px, 3vw, 18px);
+}
+
+.letter-nav-arrow.next {
+  right: clamp(10px, 3vw, 18px);
+}
+
+.letter-nav-arrow:hover {
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,0.98), rgba(255,226,235,0.9));
+  box-shadow: 0 15px 34px rgba(163, 90, 105, 0.18);
+  transform: translateY(-50%) scale(1.04);
+}
+
 @keyframes musicPulse {
   from {
     opacity: 0.75;
@@ -1308,8 +1391,9 @@ function skipAnimation() {
 .letter-screen {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --screen-pad-top: clamp(24px, 6dvh, 48px);
-  --screen-pad-bottom-base: clamp(76px, 12dvh, 92px);
+  --screen-pad-bottom-base: clamp(88px, 13dvh, 104px);
   --screen-pad-bottom: calc(var(--screen-pad-bottom-base) + var(--safe-bottom));
+  --screen-dot-bottom: calc(clamp(14px, 2.6dvh, 22px) + var(--safe-bottom));
   --screen-inline-pad: clamp(18px, 6vw, 32px);
   --screen-content-gap: clamp(8px, 1.4dvh, 14px);
   --screen-reserved-y: calc(var(--screen-pad-top) + var(--screen-pad-bottom));
@@ -1333,8 +1417,50 @@ function skipAnimation() {
   padding: var(--screen-pad-top) 0 var(--screen-pad-bottom);
 }
 
+.letter-screen::before {
+  content: '';
+  position: absolute;
+  inset: clamp(10px, 2.6vw, 18px);
+  border-radius: clamp(22px, 5vw, 34px);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 248, 0.42), rgba(255, 236, 240, 0.2)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.5), transparent 44%);
+  border: 1px solid rgba(232, 180, 192, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 24px 60px rgba(163, 90, 105, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.letter-screen::after {
+  content: '';
+  position: absolute;
+  inset: clamp(18px, 4vw, 30px);
+  border-radius: clamp(18px, 4vw, 28px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(212, 104, 122, 0.05);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.letter-screen > * {
+  position: relative;
+  z-index: 2;
+}
+
 .letter-screen:has(.bouquet-preview) {
   overflow: hidden;
+}
+
+@supports (height: 100svh) {
+  .letter-page {
+    height: 100svh;
+  }
+
+  .letter-screens {
+    height: 100svh;
+  }
 }
 
 .letter-screen:has(.bouquet-preview) .letter-divider {
@@ -1348,19 +1474,19 @@ function skipAnimation() {
 
 .letter-message-screen {
   --screen-pad-top: clamp(22px, 4.5dvh, 44px);
-  --screen-pad-bottom-base: clamp(70px, 10dvh, 88px);
+  --screen-pad-bottom-base: clamp(82px, 11dvh, 98px);
 }
 
 .memories-screen,
 .bouquet-screen {
   --screen-pad-top: clamp(22px, 4.5dvh, 44px);
-  --screen-pad-bottom-base: clamp(70px, 10dvh, 88px);
+  --screen-pad-bottom-base: clamp(82px, 11dvh, 98px);
 }
 
 /* ── Content ──────────────────────────────────────────────────────── */
 .screen-content {
   width: 100%;
-  max-width: 480px;
+  max-width: min(500px, 100%);
   max-height: calc(100dvh - var(--screen-reserved-y));
   min-height: 0;
   padding: 0 var(--screen-inline-pad);
@@ -1620,12 +1746,13 @@ function skipAnimation() {
 
 .screen-dots {
   position: absolute;
-  bottom: calc(clamp(12px, 2.6dvh, 22px) + var(--safe-bottom));
+  bottom: var(--screen-dot-bottom);
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 6px;
+  gap: 7px;
   z-index: 100;
+  pointer-events: none;
 }
 
 .screen-dots span {
@@ -1633,18 +1760,22 @@ function skipAnimation() {
   height: 6px;
   border-radius: 50%;
   background: #E8B4C0;
-  cursor: pointer;
-  transition: all 0.2s;
+  cursor: default;
+  opacity: 0.64;
+  transition: all 0.24s ease;
 }
 
 .screen-dots span.active {
   background: #D4687A;
-  width: 18px;
-  border-radius: 4px;
+  box-shadow: 0 0 0 4px rgba(212, 104, 122, 0.1);
+  opacity: 1;
+  width: 20px;
+  border-radius: 999px;
 }
 
 /* ── Flower ───────────────────────────────────────────────────────── */
 .blooming-flower {
+  display: none;
   font-size: clamp(64px, min(22vw, 15dvh), 96px);
   margin-bottom: clamp(12px, 3dvh, 28px);
   animation: bloom 2s ease-in-out infinite alternate;
@@ -1656,6 +1787,94 @@ function skipAnimation() {
 }
 
 /* ── Petals ───────────────────────────────────────────────────────── */
+.letter-invitation-card {
+  width: clamp(92px, min(26vw, 16dvh), 124px);
+  height: clamp(76px, min(22vw, 13dvh), 100px);
+  margin-bottom: clamp(14px, 3dvh, 26px);
+  position: relative;
+  display: grid;
+  place-items: center;
+  animation: invitationFloat 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 14px 26px rgba(163, 90, 105, 0.16));
+}
+
+.letter-invite-paper {
+  width: 100%;
+  height: 76%;
+  border: 1px solid rgba(232, 180, 192, 0.58);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 239, 243, 0.9)),
+    repeating-linear-gradient(0deg, transparent 0 16px, rgba(212, 104, 122, 0.08) 17px 18px);
+  overflow: hidden;
+  position: relative;
+}
+
+.letter-invite-paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(140deg, transparent 0 44%, rgba(212, 104, 122, 0.12) 45% 46%, transparent 47%),
+    linear-gradient(220deg, transparent 0 44%, rgba(212, 104, 122, 0.1) 45% 46%, transparent 47%);
+}
+
+.letter-invite-paper span {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: rgba(196, 128, 144, 0.28);
+  border-radius: 999px;
+}
+
+.letter-invite-paper span:nth-child(1) {
+  top: 34%;
+}
+
+.letter-invite-paper span:nth-child(2) {
+  top: 50%;
+}
+
+.letter-invite-paper i {
+  position: absolute;
+  top: 0;
+  left: -45%;
+  width: 36%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  transform: skewX(-18deg);
+  animation: invitationShine 2.8s ease-in-out infinite;
+}
+
+.letter-invite-seal {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: clamp(34px, 9vw, 42px);
+  height: clamp(34px, 9vw, 42px);
+  border: 1px solid rgba(212, 104, 122, 0.24);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 34% 30%, #fff8fa, #f2b6c4);
+  color: #c35a70;
+  font-size: 16px;
+  box-shadow: 0 10px 18px rgba(212, 104, 122, 0.18);
+  transform: translateX(-50%);
+}
+
+@keyframes invitationFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-7px) rotate(1deg); }
+}
+
+@keyframes invitationShine {
+  0%, 30% { left: -45%; opacity: 0; }
+  45% { opacity: 1; }
+  70%, 100% { left: 108%; opacity: 0; }
+}
+
 .petals-flower {
   position: relative;
   width: min(320px, 78vw, 46dvh);
@@ -2872,7 +3091,7 @@ function skipAnimation() {
 @container letter-frame (max-height: 700px) {
   .letter-screen {
     --screen-pad-top: 18px;
-    --screen-pad-bottom-base: 56px;
+    --screen-pad-bottom-base: 70px;
     --screen-content-gap: 8px;
     --divider-space: 6px;
     --action-space: 10px;
@@ -2916,7 +3135,7 @@ function skipAnimation() {
 @container letter-frame (max-height: 600px) {
   .letter-screen {
     --screen-pad-top: 12px;
-    --screen-pad-bottom-base: 48px;
+    --screen-pad-bottom-base: 64px;
     --screen-content-gap: 6px;
     --divider-space: 4px;
     --action-space: 8px;
@@ -2953,6 +3172,16 @@ function skipAnimation() {
   .letter-screen {
     --screen-inline-pad: clamp(16px, 5cqw, 22px);
     --title-size: clamp(24px, 8cqw, 30px);
+  }
+
+  .letter-screen::before {
+    inset: 8px;
+    border-radius: 24px;
+  }
+
+  .letter-screen::after {
+    inset: 15px;
+    border-radius: 20px;
   }
 
   .letter-divider {
@@ -3104,25 +3333,25 @@ function skipAnimation() {
   }
 
   .screen-dots {
-    bottom: 14px;
+    bottom: calc(16px + var(--safe-bottom));
   }
 }
 
 @media (max-height: 620px) {
   .letter-screen {
     padding-top: 18px;
-    padding-bottom: 54px;
+    padding-bottom: calc(66px + var(--safe-bottom));
   }
 
   .letter-message-screen {
     padding-top: 14px;
-    padding-bottom: 50px;
+    padding-bottom: calc(62px + var(--safe-bottom));
   }
 
   .memories-screen,
   .bouquet-screen {
     padding-top: 14px;
-    padding-bottom: 50px;
+    padding-bottom: calc(62px + var(--safe-bottom));
   }
 
   .screen-content {
@@ -3236,6 +3465,26 @@ function skipAnimation() {
 }
 
 @media (max-width: 480px) {
+  .letter-nav-arrow {
+    height: 38px;
+    top: auto;
+    transform: none;
+    width: 38px;
+    bottom: calc(22px + var(--safe-bottom));
+  }
+
+  .letter-nav-arrow.prev {
+    left: clamp(18px, 8vw, 34px);
+  }
+
+  .letter-nav-arrow.next {
+    right: clamp(18px, 8vw, 34px);
+  }
+
+  .letter-nav-arrow:hover {
+    transform: scale(1.03);
+  }
+
   .letter-message-screen {
     padding-left: 0;
     padding-right: 0;
@@ -3262,6 +3511,13 @@ function skipAnimation() {
 
   .letter-message-screen .letter-btn-outline {
     max-width: min(100%, 260px);
+    margin-bottom: 10px;
+  }
+
+  .screen-content.center > .letter-btn,
+  .screen-content.center > .letter-btn-outline,
+  .letter-reveal-content .letter-btn-outline {
+    margin-bottom: 8px;
   }
 
   .memories-screen .screen-content,
