@@ -24,6 +24,7 @@ const extraFilters = [
   'Custom Gifts',
 ]
 const activeFilter = ref('All')
+const isMoreOpen = ref(false)
 const productsStore = useProductsStore()
 
 onMounted(() => {
@@ -51,6 +52,15 @@ const moreFilterValue = computed({
     if (value) activeFilter.value = value
   },
 })
+
+function selectFilter(filter: string) {
+  activeFilter.value = filter
+  isMoreOpen.value = false
+}
+
+function syncMoreOpen(event: Event) {
+  isMoreOpen.value = (event.target as HTMLDetailsElement).open
+}
 </script>
 
 <template>
@@ -65,11 +75,16 @@ const moreFilterValue = computed({
         v-for="f in visibleFilters"
         :key="f"
         :class="['filter-btn', { active: activeFilter === f }]"
-        @click="activeFilter = f"
+        @click="selectFilter(f)"
       >
         {{ f }}
       </button>
-      <details v-if="overflowFilters.length" class="filter-more">
+      <details
+        v-if="overflowFilters.length"
+        class="filter-more"
+        :open="isMoreOpen"
+        @toggle="syncMoreOpen"
+      >
         <summary :class="['filter-btn more-filter-btn', { active: moreFilterValue }]">
           {{ moreFilterValue || 'More categories' }}
         </summary>
@@ -79,13 +94,18 @@ const moreFilterValue = computed({
             :key="f"
             type="button"
             :class="{ active: activeFilter === f }"
-            @click="activeFilter = f"
+            @click="selectFilter(f)"
           >
             {{ f }}
           </button>
         </div>
       </details>
     </div>
+
+    <p class="product-result-line">
+      {{ filteredProducts.length }} {{ filteredProducts.length === 1 ? 'item' : 'items' }}
+      <span v-if="activeFilter !== 'All'">in {{ activeFilter }}</span>
+    </p>
 
     <!-- TransitionGroup animates cards in/out when filter changes -->
     <TransitionGroup
@@ -95,5 +115,10 @@ const moreFilterValue = computed({
     >
       <ProductCard v-for="product in filteredProducts" :key="product.id || product.name" :product="product" />
     </TransitionGroup>
+
+    <div v-if="!filteredProducts.length" class="product-empty-state">
+      <h2>No products here yet</h2>
+      <p>Try another category or check back soon for new handcrafted pieces.</p>
+    </div>
   </div>
 </template>

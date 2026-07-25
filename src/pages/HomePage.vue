@@ -17,6 +17,31 @@ const features: Feature[] = [
   { label: 'Crafted',    sub: 'with Love',      icon: '/images/crafted-icon.png'    },
   { label: 'Delivered',  sub: 'with Care',      icon: '/images/delivered-icon.png'  },
 ]
+
+const experienceCards = [
+  {
+    label: 'Virtual Message',
+    text: 'A private QR letter opens with your words, photos, and soft romantic motion.',
+    icon: '01',
+  },
+  {
+    label: 'Photo Memories',
+    text: 'Add meaningful photos of loved ones so the gift feels personal, not generic.',
+    icon: '02',
+  },
+  {
+    label: '360 View',
+    text: 'Let them revisit the crafted flowers from every angle after delivery.',
+    icon: '03',
+  },
+  {
+    label: 'Music Touch',
+    text: 'Pair the letter with a song to make the moment feel more cinematic.',
+    icon: '04',
+  },
+]
+
+const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or delivery', 'Pre-order ready']
 </script>
 
 <template>
@@ -45,8 +70,38 @@ const features: Feature[] = [
       </div>
     </div>
 
+    <section class="home-experience">
+      <div class="home-section-heading">
+        <span>Signature Experience</span>
+        <h2>A crafted gift with a digital heart.</h2>
+        <p>
+          Each Stack Petals piece can unlock a private QR experience made for the person receiving it.
+        </p>
+      </div>
+
+      <div class="experience-grid">
+        <article v-for="item in experienceCards" :key="item.label" class="experience-card">
+          <span>{{ item.icon }}</span>
+          <h3>{{ item.label }}</h3>
+          <p>{{ item.text }}</p>
+        </article>
+      </div>
+
+      <div class="experience-actions">
+        <button class="primary compact-primary" @click="router.push('/process')">See How It Works</button>
+        <button class="secondary compact-secondary" @click="router.push('/gallery')">View Gallery</button>
+      </div>
+    </section>
+
+    <section class="home-trust-strip" aria-label="Stack Petals benefits">
+      <span v-for="item in trustItems" :key="item">{{ item }}</span>
+    </section>
+
     <section class="products" id="products">
-      <h2>Featured Products</h2>
+      <div class="home-section-heading product-heading">
+        <span>Shop Favorites</span>
+        <h2>Featured Products</h2>
+      </div>
       <div class="grid wide-grid featured-grid">
         <ProductCard v-for="product in products.featuredProducts" :key="product.name" :product="product" />
       </div>
