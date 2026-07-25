@@ -5,13 +5,14 @@ import { supabase } from '@/supabaseClient'
 
 const submitted = ref(false)
 const form = ref({ name: '', email: '', subject: '', message: '' })
+const submitError = ref('')
 const pickupMapUrl = 'https://www.google.com/maps/search/?api=1&query=Evasco%20Family%2C%20Santa%20Ana%2C%20Taytay%20Rizal'
 
 const info: ContactInfo[] = [
-  { icon: '01', label: 'Pickup Area', value: 'Santa Ana, Taytay, Rizal' },
-  { icon: '02', label: 'Email', value: 'stack.petals@gmail.com' },
-  { icon: '03', label: 'Phone', value: '+63 962 270 3704' },
-  { icon: '04', label: 'Business Hours', value: 'Mon-Sat, 8:00 AM - 7:00 PM' },
+  { icon: '📍', label: 'Pickup Area', value: 'Santa Ana, Taytay, Rizal' },
+  { icon: '📧', label: 'Email', value: 'stack.petals@gmail.com' },
+  { icon: '📱', label: 'Phone', value: '+63 962 270 3704' },
+  { icon: '🕐', label: 'Business Hours', value: 'Mon-Sat, 8:00 AM - 7:00 PM' },
 ]
 
 const supportCards = [
@@ -35,6 +36,7 @@ const formValid = computed(() =>
 
 async function sendMessage() {
   if (!formValid.value) return
+  submitError.value = ''
 
   const { error } = await supabase.from('messages').insert({
     name:    form.value.name,
@@ -45,6 +47,7 @@ async function sendMessage() {
 
   if (error) {
     console.error('Failed to send message:', error.message)
+    submitError.value = 'We could not send your message right now. Please try again or contact us on Facebook.'
     return
   }
 
@@ -111,6 +114,7 @@ function validateEmail() {
       <div class="contact-form">
         <div v-if="!submitted">
           <h2>Send a Message</h2>
+          <p class="contact-form-hint">For order concerns, include your order reference so we can help faster.</p>
           <div class="co-form">
             <label>Name
               <input v-model="form.name" type="text" placeholder="Your name" />
@@ -126,6 +130,7 @@ function validateEmail() {
               <textarea v-model="form.message" rows="5" placeholder="Write your message here..."></textarea>
             </label>
           </div>
+          <p v-if="submitError" class="field-error contact-submit-error">{{ submitError }}</p>
           <button
             class="co-btn-primary"
             style="width:100%;margin-top:16px"

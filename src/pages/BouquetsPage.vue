@@ -107,8 +107,20 @@ function syncMoreOpen(event: Event) {
       <span v-if="activeFilter !== 'All'">in {{ activeFilter }}</span>
     </p>
 
+    <div v-if="productsStore.loading" class="grid wide-grid product-skeleton-grid" aria-busy="true">
+      <div v-for="index in 6" :key="index" class="product-skeleton-card">
+        <span></span>
+        <div>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
     <!-- TransitionGroup animates cards in/out when filter changes -->
     <TransitionGroup
+      v-else
       name="cards"
       tag="div"
       class="grid wide-grid"
@@ -116,9 +128,14 @@ function syncMoreOpen(event: Event) {
       <ProductCard v-for="product in filteredProducts" :key="product.id || product.name" :product="product" />
     </TransitionGroup>
 
-    <div v-if="!filteredProducts.length" class="product-empty-state">
+    <div v-if="!productsStore.loading && !filteredProducts.length" class="product-empty-state">
+      <span>Category empty</span>
       <h2>No products here yet</h2>
       <p>Try another category or check back soon for new handcrafted pieces.</p>
+      <div class="product-empty-actions">
+        <button type="button" class="co-btn-primary" @click="selectFilter('All')">Show All Products</button>
+        <RouterLink class="co-btn-outline" to="/contact">Request Custom Piece</RouterLink>
+      </div>
     </div>
   </div>
 </template>

@@ -349,7 +349,7 @@ function toggleLetterPreviewPetal(i: number) {
         </div>
         <div class="step-line" :class="{ done: cart.checkoutStep > 4 }"></div>
         <div class="step" :class="{ active: cart.checkoutStep >= 5 }">
-          <span>✓</span><small>Done</small>
+          <span>5</span><small>Done</small>
         </div>
       </div>
 
@@ -870,8 +870,14 @@ function toggleLetterPreviewPetal(i: number) {
         <div class="confirm-icon">🌸</div>
         <h2>Order Received!</h2>
         <p>Thank you, <strong>{{ cart.customer.name }}</strong>! Your order has been submitted successfully.</p>
+        <div class="confirm-reference-card">
+          <span>Your order reference</span>
+          <strong>{{ cart.confirmedOrderReference }}</strong>
+          <button type="button" @click="copyOrderReference">
+            {{ referenceCopied ? 'Copied' : 'Copy ID' }}
+          </button>
+        </div>
         <div class="confirm-details">
-          <div><span>Order Reference</span><strong>{{ cart.confirmedOrderReference }}</strong></div>
           <div><span>Order Total</span><strong>{{ cart.confirmedTotal }}</strong></div>
           <div><span>Payment via</span><strong>{{ cart.paymentMethod === 'gcash' ? 'GCash' : 'Maya' }}</strong></div>
           <div v-if="cart.hasPreOrderItems"><span>Order Type</span><strong>Pre-order</strong></div>

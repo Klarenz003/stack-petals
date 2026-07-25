@@ -79,6 +79,12 @@ function trackOrder() {
 
     <div class="receipt-shell">
       <form class="track-form" @submit.prevent="findReceipt">
+        <div class="track-form-intro">
+          <span>Receipt Lookup</span>
+          <h2>Open your proof of order</h2>
+          <p>Use your order ID and checkout phone number to view or save your receipt.</p>
+        </div>
+
         <label>Order Reference
           <input v-model="reference" type="text" placeholder="SP-..." autocomplete="off" />
         </label>
@@ -100,6 +106,11 @@ function trackOrder() {
           <strong>SP-{{ order.id }}</strong>
         </div>
 
+        <div class="receipt-official-note">
+          <span>Official order proof</span>
+          <p>Please save this receipt and keep your order reference for tracking or customer support.</p>
+        </div>
+
         <div class="receipt-lines">
           <div><span>Customer</span><strong>{{ order.customer_name }}</strong></div>
           <div><span>Email</span><strong>{{ order.email }}</strong></div>
@@ -119,6 +130,15 @@ function trackOrder() {
         <div class="receipt-total">
           <span>Total</span>
           <strong>{{ order.total }}</strong>
+        </div>
+
+        <div class="receipt-next-steps">
+          <h3>What happens next?</h3>
+          <ul>
+            <li>Payment proof is reviewed within 24 hours.</li>
+            <li>Your order status will update once payment is confirmed.</li>
+            <li>Keep this receipt for tracking or support questions.</li>
+          </ul>
         </div>
 
         <div class="receipt-actions">

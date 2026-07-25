@@ -18,10 +18,12 @@ const fallbackImages: GalleryImage[] = Array.from({ length: 4 }, (_, index) => (
 
 const galleryImages = ref<GalleryImage[]>(fallbackImages)
 const loading = ref(true)
+const galleryError = ref('')
 const featuredPreview = computed(() => galleryImages.value.slice(0, 3))
 
 async function loadGalleryImages() {
   loading.value = true
+  galleryError.value = ''
   const { data, error } = await supabase
     .from('gallery_images')
     .select('id, image_url, title, caption')
@@ -29,7 +31,9 @@ async function loadGalleryImages() {
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
 
-  if (!error && data?.length) {
+  if (error) {
+    galleryError.value = 'We are showing sample gallery pieces while the featured gallery refreshes.'
+  } else if (data?.length) {
     galleryImages.value = data
   }
 
@@ -71,7 +75,12 @@ onMounted(loadGalleryImages)
       Preparing the gallery...
     </div>
 
-    <div v-else class="gallery-grid">
+    <div v-if="!loading && galleryError" class="gallery-notice">
+      <p>{{ galleryError }}</p>
+      <button type="button" @click="loadGalleryImages">Try Again</button>
+    </div>
+
+    <div v-if="!loading" class="gallery-grid">
       <div v-for="image in galleryImages" :key="image.id" class="gallery-item">
         <img :src="image.image_url" :alt="image.title || 'Stack Petals gallery image'" loading="lazy" decoding="async" />
         <div v-if="image.title || image.caption" class="gallery-caption">

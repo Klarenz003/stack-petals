@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
 type TrackedOrder = {
@@ -26,6 +26,7 @@ type StatusHistory = {
 }
 
 const route = useRoute()
+const router = useRouter()
 const initialReference = typeof route.query.ref === 'string' ? route.query.ref : ''
 const reference = ref(initialReference)
 const phone = ref('')
@@ -38,9 +39,16 @@ const normalizedPhone = computed(() => phone.value.replace(/\D/g, '').slice(0, 1
 const normalizedReference = computed(() =>
   reference.value.trim().replace(/^SP-/i, '').toLowerCase()
 )
+const normalizedStatus = computed(() => order.value?.status?.toLowerCase() || 'pending')
+const timelineStatus = computed(() => {
+  const status = normalizedStatus.value
+  if (status === 'preorder' || status === 'pre_order') return 'confirmed'
+  if (status === 'issue' || status === 'rejected') return 'pending'
+  return status
+})
+const needsSupport = computed(() => ['issue', 'rejected'].includes(normalizedStatus.value))
 
 const statusLabel = computed(() => {
-  const status = order.value?.status?.toLowerCase() || 'pending'
   const labels: Record<string, string> = {
     pending: 'Payment under review',
     confirmed: 'Payment confirmed',
@@ -53,11 +61,10 @@ const statusLabel = computed(() => {
     issue: 'Please contact us',
     rejected: 'Payment issue',
   }
-  return labels[status] || status.replace(/_/g, ' ')
+  return labels[normalizedStatus.value] || normalizedStatus.value.replace(/_/g, ' ')
 })
 
 const statusHelpText = computed(() => {
-  const status = order.value?.status?.toLowerCase() || 'pending'
   const messages: Record<string, string> = {
     pending: 'We received your order and are reviewing your payment proof.',
     confirmed: 'Your payment has been confirmed. Your order is now in our queue.',
@@ -70,19 +77,19 @@ const statusHelpText = computed(() => {
     issue: 'We need your help to resolve something with this order. Please contact us.',
     rejected: 'There may be an issue with the payment proof. Please contact us for help.',
   }
-  return messages[status] || 'We will update this page as your order moves forward.'
+  return messages[normalizedStatus.value] || 'We will update this page as your order moves forward.'
 })
 
 const timeline = computed(() => {
-  const status = order.value?.status?.toLowerCase() || 'pending'
   const steps = [
     { key: 'pending', label: 'Order received' },
     { key: 'confirmed', label: 'Payment confirmed' },
     { key: 'preparing', label: 'Preparing order' },
+    { key: 'ready', label: 'Ready' },
     { key: 'out_for_delivery', label: 'Out for delivery' },
     { key: 'delivered', label: 'Delivered' },
   ]
-  const currentIndex = steps.findIndex(step => step.key === status)
+  const currentIndex = steps.findIndex(step => step.key === timelineStatus.value)
   return steps.map((step, index) => ({
     ...step,
     active: currentIndex === -1 ? index === 0 : index <= currentIndex,
@@ -142,6 +149,11 @@ async function trackOrder() {
     .order('created_at', { ascending: true })
 
   history.value = historyData || []
+}
+
+function viewReceipt() {
+  if (!order.value) return
+  router.push({ path: '/receipt', query: { ref: `SP-${order.value.id}` } })
 }
 </script>
 
@@ -207,6 +219,21 @@ async function trackOrder() {
               <p v-if="item.note">{{ item.note }}</p>
               <small>{{ item.created_at ? new Date(item.created_at).toLocaleString('en-PH') : '' }}</small>
             </div>
+          </div>
+        </div>
+
+        <div :class="['track-support-card', { alert: needsSupport }]">
+          <div>
+            <span>{{ needsSupport ? 'Needs attention' : 'Keep your proof safe' }}</span>
+            <p>
+              {{ needsSupport
+                ? 'If your payment proof needs review, contact Stack Petals with your order reference.'
+                : 'You can save your receipt anytime and use this page to check future updates.' }}
+            </p>
+          </div>
+          <div class="track-result-actions">
+            <button class="co-btn-outline" @click="viewReceipt">View Receipt</button>
+            <RouterLink class="co-btn-primary" to="/contact">Contact Us</RouterLink>
           </div>
         </div>
 
