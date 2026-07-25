@@ -1813,6 +1813,8 @@ nav a.router-link-active::after {
   max-width: 860px;
   margin: 0 auto 12px;
   padding: 0 5%;
+  position: relative;
+  z-index: 120;
 }
 
 .filter-btn,
@@ -1856,7 +1858,11 @@ nav a.router-link-active::after {
 
 .filter-more {
   position: relative;
-  z-index: 5;
+  z-index: 130;
+}
+
+.filter-more[open] {
+  z-index: 5000;
 }
 
 .filter-more summary {
@@ -1901,6 +1907,7 @@ nav a.router-link-active::after {
   box-shadow: 0 18px 42px rgba(95, 72, 65, 0.16);
   backdrop-filter: blur(18px);
   transform: translateX(-50%);
+  z-index: 5001;
 }
 
 .filter-menu button {
@@ -2060,6 +2067,8 @@ nav a.router-link-active::after {
 .page-section .grid.wide-grid {
   align-items: stretch;
   grid-template-columns: repeat(auto-fit, minmax(min(252px, 100%), 292px));
+  position: relative;
+  z-index: 1;
 }
 
 /* Bouquets Page Transition */
@@ -4041,12 +4050,12 @@ input, textarea, [contenteditable="true"] {
 
 @media (max-width: 860px) {
   .filter-bar {
-    flex-wrap: nowrap;
-    justify-content: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
     margin-bottom: 12px;
     max-width: none;
-    overflow-x: auto;
-    padding-bottom: 10px;
+    overflow: visible;
+    padding-bottom: 0;
     scrollbar-width: none;
   }
 
@@ -4065,9 +4074,9 @@ input, textarea, [contenteditable="true"] {
   }
 
   .filter-menu {
-    left: auto;
-    right: 0;
-    transform: none;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
     width: min(230px, 84vw);
   }
 }
