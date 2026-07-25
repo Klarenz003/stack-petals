@@ -5,12 +5,28 @@ import { supabase } from '@/supabaseClient'
 
 const submitted = ref(false)
 const form = ref({ name: '', email: '', subject: '', message: '' })
+const pickupMapUrl = 'https://www.google.com/maps/search/?api=1&query=Evasco%20Family%2C%20Santa%20Ana%2C%20Taytay%20Rizal'
 
 const info: ContactInfo[] = [
-  { icon: '📍', label: 'Address',       value: 'Taytay, Rizal, Philippines' },
-  { icon: '📧', label: 'Email',          value: 'stack.petals@gmail.com'                 },
-  { icon: '📱', label: 'Phone',  value: '+63 962 270 3704'                      },
-  { icon: '🕐', label: 'Business Hours', value: 'Mon–Sat, 8:00 AM – 7:00 PM'            },
+  { icon: '01', label: 'Pickup Area', value: 'Santa Ana, Taytay, Rizal' },
+  { icon: '02', label: 'Email', value: 'stack.petals@gmail.com' },
+  { icon: '03', label: 'Phone', value: '+63 962 270 3704' },
+  { icon: '04', label: 'Business Hours', value: 'Mon-Sat, 8:00 AM - 7:00 PM' },
+]
+
+const supportCards = [
+  {
+    title: 'Order Concerns',
+    text: 'For payment proof, delivery date, pre-order, or receipt questions.',
+  },
+  {
+    title: 'Pickup Guidance',
+    text: 'Choose pickup during checkout and use our location link when you are ready to visit.',
+  },
+  {
+    title: 'Custom Requests',
+    text: 'Tell us your preferred color, occasion, or message idea before placing an order.',
+  },
 ]
 
 const formValid = computed(() =>
@@ -54,13 +70,20 @@ function validateEmail() {
   <div class="page-section">
     <div class="page-hero">
       <h1>Get in <span>Touch</span></h1>
-      <p>We'd love to hear from you. Send us a message and we'll get back to you soon.</p>
+      <p>Questions about orders, pickup, custom designs, or the QR letter experience? We are here to help.</p>
+    </div>
+
+    <div class="contact-support-row">
+      <article v-for="card in supportCards" :key="card.title" class="contact-support-card">
+        <h2>{{ card.title }}</h2>
+        <p>{{ card.text }}</p>
+      </article>
     </div>
 
     <div class="contact-grid">
       <!-- Contact info -->
       <div class="contact-info">
-        <h2>Contact Info</h2>
+        <h2>Contact Details</h2>
         <div v-for="item in info" :key="item.label" class="contact-item">
           <span class="contact-icon">{{ item.icon }}</span>
           <div>
@@ -69,7 +92,14 @@ function validateEmail() {
           </div>
         </div>
 
-        <h2 style="margin-top:40px">Follow Us</h2>
+        <div class="pickup-contact-card">
+          <span>Pickup Location</span>
+          <strong>Stack Petals pickup is around Santa Ana, Taytay, Rizal.</strong>
+          <p>Open the location in Google Maps before pickup so you can plan your route.</p>
+          <a :href="pickupMapUrl" target="_blank" rel="noopener">Open Google Maps</a>
+        </div>
+
+        <h2 class="contact-follow-heading">Follow Us</h2>
         <div class="social-links">
           <a href="https://www.facebook.com/StackOverPetals" class="social-btn">Facebook</a>
           <!-- <a href="#" class="social-btn">Instagram</a> -->
@@ -102,12 +132,12 @@ function validateEmail() {
             @click="sendMessage"
             :disabled="!formValid"
           >
-            Send Message 🌸
+            Send Message
           </button>
         </div>
 
         <div v-else class="contact-success">
-          <div style="font-size:48px">🌷</div>
+          <div class="contact-success-mark">Sent</div>
           <h2>Message Sent!</h2>
           <p>Thank you for reaching out! We'll get back to you within 24 hours.</p>
           <button class="co-btn-outline" style="margin-top:20px" @click="submitted = false">

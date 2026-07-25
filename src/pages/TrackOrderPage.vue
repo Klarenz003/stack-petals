@@ -56,6 +56,23 @@ const statusLabel = computed(() => {
   return labels[status] || status.replace(/_/g, ' ')
 })
 
+const statusHelpText = computed(() => {
+  const status = order.value?.status?.toLowerCase() || 'pending'
+  const messages: Record<string, string> = {
+    pending: 'We received your order and are reviewing your payment proof.',
+    confirmed: 'Your payment has been confirmed. Your order is now in our queue.',
+    preparing: 'Your Stack Petals piece is being prepared with care.',
+    ready: 'Your order is ready and waiting for the next delivery step.',
+    out_for_delivery: 'Your order is on the way. Please keep your phone available.',
+    delivered: 'Your order has been delivered. Thank you for choosing Stack Petals.',
+    preorder: 'This order is now a pre-order. Please allow the estimated preparation window.',
+    pre_order: 'This order is now a pre-order. Please allow the estimated preparation window.',
+    issue: 'We need your help to resolve something with this order. Please contact us.',
+    rejected: 'There may be an issue with the payment proof. Please contact us for help.',
+  }
+  return messages[status] || 'We will update this page as your order moves forward.'
+})
+
 const timeline = computed(() => {
   const status = order.value?.status?.toLowerCase() || 'pending'
   const steps = [
@@ -132,11 +149,17 @@ async function trackOrder() {
   <div class="page-section track-page">
     <div class="page-hero">
       <h1>Track <span>Order</span></h1>
-      <p>Use your order reference and phone number to check your order status.</p>
+      <p>Check where your handcrafted order is, from payment review to delivery day.</p>
     </div>
 
     <div class="track-shell">
       <form class="track-form" @submit.prevent="trackOrder">
+        <div class="track-form-intro">
+          <span>Order Lookup</span>
+          <h2>Find your Stack Petals order</h2>
+          <p>Use the same phone number you entered during checkout.</p>
+        </div>
+
         <label>Order Reference
           <input v-model="reference" type="text" placeholder="SP-..." autocomplete="off" />
         </label>
@@ -163,6 +186,7 @@ async function trackOrder() {
           <div>
             <span>Current Status</span>
             <h2>{{ statusLabel }}</h2>
+            <p>{{ statusHelpText }}</p>
           </div>
           <strong>SP-{{ order.id }}</strong>
         </div>
@@ -190,6 +214,7 @@ async function trackOrder() {
           <div><span>Name</span><strong>{{ order.customer_name }}</strong></div>
           <div><span>Delivery Date</span><strong>{{ order.delivery_date }}</strong></div>
           <div><span>Delivery Address</span><strong>{{ order.address }}</strong></div>
+          <div><span>Payment Method</span><strong>{{ order.payment_method }}</strong></div>
           <div><span>Total</span><strong>{{ order.total }}</strong></div>
         </div>
       </div>
