@@ -2288,13 +2288,13 @@ function skipAnimation() {
 }
 
 .bouquet-detail-row span {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
   border: 1px solid rgba(232, 180, 192, 0.34);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.44);
   color: #A56F7D;
-  font-size: clamp(9px, min(2.7vw, 1.55dvh), 11px);
+  font-size: clamp(8px, min(2.4vw, 1.4dvh), 11px);
   line-height: 1.1;
   overflow: hidden;
   padding: 6px 8px;
