@@ -1055,9 +1055,11 @@ function skipAnimation() {
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
           <h2 class="letter-title">Your gift<br><em>up close</em></h2>
+          <p class="bouquet-intro">A little showcase before the real one reaches your hands.</p>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
           <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
+            <div class="bouquet-tag">Gift spotlight</div>
             <div class="bouquet-stage">
               <div class="bouquet-halo"></div>
               <div class="bouquet-glass"></div>
@@ -1077,6 +1079,11 @@ function skipAnimation() {
             <div class="bouquet-plaque">
               <span>Crafted for</span>
               <strong>{{ letter.recipient }}</strong>
+            </div>
+            <div class="bouquet-detail-row" aria-hidden="true">
+              <span>Handcrafted</span>
+              <span>QR keepsake</span>
+              <span>Made with love</span>
             </div>
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
@@ -2094,7 +2101,7 @@ function skipAnimation() {
 /* ── Bouquet Preview ──────────────────────────────────────────────── */
 .bouquet-preview {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   justify-items: center;
   gap: clamp(6px, 1dvh, 10px);
@@ -2104,6 +2111,34 @@ function skipAnimation() {
   max-height: 100%;
   flex-shrink: 1;
   min-height: 0;
+}
+
+.bouquet-intro {
+  max-width: min(310px, 88vw);
+  margin: 0 auto;
+  color: #9A6875;
+  font-size: clamp(12px, min(3.5vw, 1.9dvh), 14px);
+  font-style: italic;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.bouquet-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 14px;
+  border: 1px solid rgba(232, 180, 192, 0.58);
+  border-radius: 999px;
+  background: rgba(255, 250, 249, 0.62);
+  box-shadow: 0 8px 20px rgba(212, 104, 122, 0.08);
+  color: #C48090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .bouquet-stage {
@@ -2240,6 +2275,30 @@ function skipAnimation() {
   font-weight: 600;
   line-height: 1.2;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bouquet-detail-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  width: min(100%, 330px);
+  min-width: 0;
+}
+
+.bouquet-detail-row span {
+  flex: 1 1 0;
+  min-width: 0;
+  border: 1px solid rgba(232, 180, 192, 0.34);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.44);
+  color: #A56F7D;
+  font-size: clamp(9px, min(2.7vw, 1.55dvh), 11px);
+  line-height: 1.1;
+  overflow: hidden;
+  padding: 6px 8px;
+  text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3220,6 +3279,10 @@ function skipAnimation() {
     max-width: min(300px, 100%, 34dvh);
   }
 
+  .bouquet-intro {
+    display: none;
+  }
+
   .bouquet-screen .letter-title,
   .memories-screen .letter-title {
     font-size: clamp(24px, 5dvh, 30px);
@@ -3352,6 +3415,10 @@ function skipAnimation() {
 
   .bouquet-preview {
     max-width: min(260px, 100%, 30dvh);
+  }
+
+  .bouquet-detail-row {
+    display: none;
   }
 
   .bouquet-screen .letter-title,
