@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+﻿<script setup lang="ts">
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -28,6 +28,7 @@ const loading = ref(true)
 const notFound = ref(false)
 const currentScreen = ref(0)
 const revealedPetals = ref<boolean[]>([false, false, false, false, false, false])
+const activePetal = ref<number | null>(null)
 const currentMemory = ref(0)
 const currentAngle = ref(0)
 const isDragging = ref(false)
@@ -45,6 +46,16 @@ const loadingTotal = ref(1)
 const angleAssetsReady = ref(false)
 const angleFrameSources = ref<string[]>([])
 const angleCanvas = ref<HTMLCanvasElement | null>(null)
+const activePetalMessage = computed(() => {
+  if (activePetal.value === null) return ''
+  return letter.value?.petal_messages?.[activePetal.value] || ''
+})
+const favoriteLine = computed(() => {
+  const message = letter.value?.message?.replace(/\s+/g, ' ').trim() || ''
+  if (!message) return 'You are loved in the quietest, sweetest ways.'
+  const sentence = message.match(/[^.!?]+[.!?]/)?.[0]?.trim() || message
+  return sentence.length > 120 ? `${sentence.slice(0, 117).trim()}...` : sentence
+})
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -412,7 +423,8 @@ function onMouseUp(e: MouseEvent) {
 
 // ── Petal Reveal ───────────────────────────────────────────────────
 function revealPetal(i: number) {
-  revealedPetals.value[i] = !revealedPetals.value[i]
+  revealedPetals.value[i] = true
+  activePetal.value = i
 }
 
 // ── Memory Slideshow ───────────────────────────────────────────────
@@ -793,24 +805,23 @@ function skipAnimation() {
       <!-- ── SCREEN 1 — Welcome ─────────────────────────────────── -->
       <div
         v-if="currentScreen === 0"
-        class="letter-screen"
+        class="letter-screen welcome-screen"
         :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="letter-invitation-card" aria-hidden="true">
-            <div class="letter-invite-paper">
-              <span></span>
-              <span></span>
-              <i></i>
-            </div>
-            <div class="letter-invite-seal">✦</div>
-          </div>
-          <div class="blooming-flower">🌸</div>
+          <div class="welcome-top-divider"><span></span>&#10022;<span></span></div>
+          <div class="recipient-keepsake">For {{ letter.recipient }}</div>
+          <div class="welcome-heart-line"><span></span>&#9825;<span></span></div>
           <h1 class="letter-headline">A message<br><em>just for you</em></h1>
-          <div class="letter-divider"><span></span>✦<span></span></div>
+          <div class="letter-invitation-card" aria-hidden="true">
+            <img src="/images/envelope-clean.png" alt="" class="letter-envelope-image" />
+          </div>
+          <div class="blooming-flower">&#127800;</div>
+          <div class="letter-divider"><span></span>&#10022;<span></span></div>
           <p class="letter-sub">Someone who loves you<br>has something to say</p>
-          <button class="letter-btn" @click="nextScreen">Open your letter</button>
+
+          <button class="letter-btn page1-open-btn" aria-label="Open your letter" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -820,34 +831,21 @@ function skipAnimation() {
       <!-- ── SCREEN 2 — Blooming Animation ─────────────────────── -->
       <div
         v-if="currentScreen === 1"
-        class="letter-screen"
+        class="letter-screen dedication-screen"
         :style="{ backgroundColor: screenBg('screen2') }"
       >
-        <div class="screen-content center">
+        <div class="screen-content center page2-content">
           <div class="letter-logo">Stack Petals</div>
+          <div class="page2-logo-divider"><span></span>&#9829;<span></span></div>
 
-          <div class="bloom-wrapper">
-            <div class="bloom-ring bloom-ring-1"></div>
-            <div class="bloom-ring bloom-ring-2"></div>
-            <div class="bloom-ring bloom-ring-3"></div>
-            <div class="bloom-center">
-              <svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9"/>
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(60 50 50)"/>
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F0B4C4" opacity="0.9" transform="rotate(120 50 50)"/>
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(180 50 50)"/>
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F0B4C4" opacity="0.9" transform="rotate(240 50 50)"/>
-                <ellipse cx="50" cy="20" rx="12" ry="20" fill="#F4C0CE" opacity="0.9" transform="rotate(300 50 50)"/>
-                <circle cx="50" cy="50" r="14" fill="#FAD4A8"/>
-                <circle cx="50" cy="50" r="10" fill="#FFE4B5"/>
-              </svg>
-            </div>
+          <div class="page2-flower-wrap" aria-hidden="true">
+            <img src="/images/page2_flower-clean.png" alt="" class="page2-flower" />
           </div>
 
-          <h2 class="letter-title" style="margin-top: 32px;">Something special<br><em>is waiting for you...</em></h2>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <p class="letter-sub">Please wait a moment</p>
-          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
+          <h2 class="page2-title">Something special<br><em>is waiting for you...</em></h2>
+          <div class="page2-divider"><span></span><i>&#9829;</i><span></span></div>
+          <p class="page2-sub">Please wait a moment<br>while we prepare your letter &#10022;</p>
+          <button class="letter-btn page2-continue" aria-label="Continue" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -857,71 +855,67 @@ function skipAnimation() {
       <!-- ── SCREEN 3 — Petal Messages ─────────────────────────── -->
       <div
         v-if="currentScreen === 2"
-        class="letter-screen"
+        class="letter-screen petal-message-screen"
         :style="{ backgroundColor: screenBg('screen3') }"
       >
-        <div class="screen-content center">
+        <div class="screen-content center page3-content">
           <div class="letter-logo">Stack Petals</div>
-          <h2 class="letter-title" style="margin-bottom: 4px;">Your petals</h2>
-          <p class="letter-sub" style="margin-bottom: 20px;">Tap a petal to reveal your message</p>
+          <div class="page3-logo-divider"><span></span>&#127800;<span></span></div>
+          <h2 class="page3-title">Your petals</h2>
+          <p class="page3-sub">Tap a petal to reveal your message</p>
 
           <div class="petals-flower">
-            <svg class="flower-svg" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88"/>
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(60 140 140)"/>
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(120 140 140)"/>
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(180 140 140)"/>
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(240 140 140)"/>
-              <ellipse cx="140" cy="60"  rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(300 140 140)"/>
-              <circle cx="140" cy="140" r="30" fill="#FAD4A8"/>
-              <circle cx="140" cy="140" r="22" fill="#FFE4B5"/>
-            </svg>
+            <img src="/images/6petals.png" alt="" class="flower-svg flower-image" />
 
             <!-- Petal 1 — Top -->
-            <div class="petal-zone petal-z-1" @click="revealPetal(0)">
-              <div class="petal-symbol" v-if="!revealedPetals[0]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[0] }}</div>
+            <div class="petal-zone petal-z-1" :class="{ revealed: revealedPetals[0], active: activePetal === 0 }" @click="revealPetal(0)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
 
             <!-- Petal 2 — Top Right -->
-            <div class="petal-zone petal-z-2" @click="revealPetal(1)">
-              <div class="petal-symbol" v-if="!revealedPetals[1]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[1] }}</div>
+            <div class="petal-zone petal-z-2" :class="{ revealed: revealedPetals[1], active: activePetal === 1 }" @click="revealPetal(1)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
 
             <!-- Petal 3 — Bottom Right -->
-            <div class="petal-zone petal-z-3" @click="revealPetal(2)">
-              <div class="petal-symbol" v-if="!revealedPetals[2]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[2] }}</div>
+            <div class="petal-zone petal-z-3" :class="{ revealed: revealedPetals[2], active: activePetal === 2 }" @click="revealPetal(2)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
 
             <!-- Petal 4 — Bottom -->
-            <div class="petal-zone petal-z-4" @click="revealPetal(3)">
-              <div class="petal-symbol" v-if="!revealedPetals[3]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[3] }}</div>
+            <div class="petal-zone petal-z-4" :class="{ revealed: revealedPetals[3], active: activePetal === 3 }" @click="revealPetal(3)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
 
             <!-- Petal 5 — Bottom Left -->
-            <div class="petal-zone petal-z-5" @click="revealPetal(4)">
-              <div class="petal-symbol" v-if="!revealedPetals[4]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[4] }}</div>
+            <div class="petal-zone petal-z-5" :class="{ revealed: revealedPetals[4], active: activePetal === 4 }" @click="revealPetal(4)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
 
             <!-- Petal 6 — Top Left -->
-            <div class="petal-zone petal-z-6" @click="revealPetal(5)">
-              <div class="petal-symbol" v-if="!revealedPetals[5]">✦</div>
-              <div class="petal-pill" v-else>{{ letter.petal_messages[5] }}</div>
+            <div class="petal-zone petal-z-6" :class="{ revealed: revealedPetals[5], active: activePetal === 5 }" @click="revealPetal(5)">
+              <div class="petal-symbol">&#9829;</div>
             </div>
+
           </div>
 
-          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Read the letter →</button>
+          <div class="petal-message-slot" aria-live="polite">
+            <Transition name="petal-message">
+              <div v-if="activePetalMessage" class="petal-message-card">
+                <span>&#9829;</span>
+                {{ activePetalMessage }}
+              </div>
+            </Transition>
+          </div>
+
+          <button class="letter-btn-outline page3-read-btn" aria-label="Read the letter" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
         </div>
       </div>
 
-      <!-- ── SCREEN 4 — The Letter ──────────────────────────────────────── -->
+      <!-- ── SCREEN 4 — The Letter ───────────────────────────── -->
       <div
         v-if="currentScreen === 3"
         class="letter-screen letter-message-screen"
@@ -940,20 +934,14 @@ function skipAnimation() {
 
           <!-- Before reveal -->
           <div v-if="!letterRevealed" class="letter-reveal-wrap" :class="{ opening: envelopeOpening }">
-            <div class="envelope-sparkles" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
+            <div class="page4-envelope-stage" aria-hidden="true">
+              <img src="/images/page4_circle.png" alt="" class="page4-circle" />
+              <img src="/images/page4_envelope-clean.png" alt="" class="page4-envelope" />
             </div>
-            <div class="envelope-icon">💌</div>
-            <div class="wax-seal">✦</div>
-            <h2 class="letter-title">A letter<br><em>written just for you</em></h2>
-            <div class="letter-divider"><span></span>✦<span></span></div>
+            <h2 class="page4-title">A letter<br><em>written just for you</em></h2>
+            <div class="page4-divider"><span></span>&#10022;<span></span></div>
             <p class="letter-sub">From someone who loves you deeply</p>
-            <button class="letter-btn" @click="startLetterReveal">
-              Open Letter 💌
-            </button>
+            <button class="letter-btn page4-open-btn" aria-label="Open letter" @click="startLetterReveal"></button>
           </div>
 
           <!-- After reveal — typewriter animation -->
@@ -977,9 +965,7 @@ function skipAnimation() {
               <div v-if="senderVisible" class="sender-footer">
                 <div class="letter-divider"><span></span>✦<span></span></div>
                 <p class="letter-from">— With love, {{ letter.sender }}</p>
-                <button class="letter-btn-outline" style="margin-top: 20px;" @click="nextScreen">
-                  See memories →
-                </button>
+                <button class="letter-btn-outline page4-memories-btn" aria-label="See memories" @click="nextScreen"></button>
               </div>
             </Transition>
           </div>
@@ -1032,6 +1018,10 @@ function skipAnimation() {
                 @click="goToMemory(i)"
               ></span>
             </div>
+            <div class="memory-caption">
+              <span>Memory {{ currentMemory + 1 }} of {{ letter.memories.length }}</span>
+              <p>A small piece of a story worth keeping.</p>
+            </div>
           </div>
 
           <div v-else class="no-memories">
@@ -1039,7 +1029,9 @@ function skipAnimation() {
             <p class="letter-sub">No memories attached</p>
           </div>
 
-          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">View your gift →</button>
+          <button class="letter-btn-outline page5-gift-btn" aria-label="View your gift" @click="nextScreen">
+            <img src="/images/page5_button-trim.png" alt="" class="page5-gift-btn-img" />
+          </button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1093,7 +1085,7 @@ function skipAnimation() {
             <p v-else class="letter-sub bouquet-note">Your gift is shown above. 360° view may be added soon.</p>
           </div>
 
-          <button class="letter-btn-outline" style="margin-top: 24px;" @click="nextScreen">Continue →</button>
+          <button class="letter-btn page2-continue page6-continue" aria-label="Continue" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1168,18 +1160,26 @@ function skipAnimation() {
       <!-- ── SCREEN 7 — Final Quote ─────────────────────────────── -->
       <div
         v-if="currentScreen === 6"
-        class="letter-screen"
+        class="letter-screen quote-screen"
         :style="{ backgroundColor: screenBg('screen7') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="quote-flower">🌸</div>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <blockquote class="letter-quote">
-            "You are loved more than you know, more than words can say, more than any gift can hold."
-          </blockquote>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <button class="letter-btn-outline" @click="nextScreen">Continue →</button>
+          <div class="quote-flower-wrap" aria-hidden="true">
+            <img src="/images/page2_flower-trim.png" alt="" class="quote-flower-img" />
+          </div>
+          <p class="quote-kicker">A little reminder...</p>
+          <div class="quote-divider"><span></span><i>&#10048;</i><span></span></div>
+
+          <div class="quote-card">
+            <blockquote class="letter-quote">
+              &ldquo;You are loved more<br>
+              than you know,<br>
+              more than words can say,<br>
+              more than any gift can hold.&rdquo;
+            </blockquote>
+          </div>
+          <button class="letter-btn page2-continue page7-continue" aria-label="Continue" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1189,16 +1189,19 @@ function skipAnimation() {
       <!-- ── SCREEN 8 — From Sender ─────────────────────────────── -->
       <div
         v-if="currentScreen === 7"
-        class="letter-screen"
+        class="letter-screen sender-screen"
         :style="{ backgroundColor: screenBg('screen8') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
-          <h2 class="letter-title" style="margin-top: 20px;">From <em>{{ letter.sender }}</em></h2>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <p class="letter-sub">This gift was crafted with love<br>and sent to you with all their heart</p>
-          <button class="letter-btn" style="margin-top: 28px;" @click="nextScreen">Finish →</button>
+          <div class="sender-keepsake">
+            <span class="sender-kicker">Sent with care by</span>
+            <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
+            <h2 class="letter-title">From <em>{{ letter.sender }}</em></h2>
+            <div class="letter-divider"><span></span>✦<span></span></div>
+            <p class="letter-sub">This gift was crafted with love<br>and sent to you with all their heart</p>
+          </div>
+          <button class="letter-btn page8-finish-btn" aria-label="Finish" @click="nextScreen"></button>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1208,20 +1211,33 @@ function skipAnimation() {
       <!-- ── SCREEN 9 — End ─────────────────────────────────────── -->
       <div
         v-if="currentScreen === 8"
-        class="letter-screen"
+        class="letter-screen end-screen"
         :style="{ backgroundColor: screenBg('screen9') }"
       >
         <div class="screen-content center">
           <div class="letter-logo">Stack Petals</div>
-          <div class="end-flowers">🌸🌷🌺</div>
-          <h2 class="letter-title">Thank you for<br><em>being loved</em></h2>
-          <div class="letter-divider"><span></span>✦<span></span></div>
-          <p class="letter-sub">Keep this letter close to your heart.<br>Scan the QR anytime to revisit.</p>
-          <div class="end-brand">
-            <p>Crafted by</p>
-            <strong>Stack Petals</strong>
+          <div class="end-card">
+            <div class="end-flowers">🌸🌷🌺</div>
+            <h2 class="letter-title">You are<br><em>so loved</em></h2>
+            <div class="letter-divider"><span></span>✦<span></span></div>
+            <p class="letter-sub">Keep this letter close to your heart.<br>Scan the QR anytime to revisit.</p>
+            <div class="favorite-line-card">
+              <span>A line to remember</span>
+              <p>{{ favoriteLine }}</p>
+            </div>
+            <div class="end-brand">
+              <p>Crafted by</p>
+              <strong>Stack Petals</strong>
+            </div>
           </div>
-          <button class="letter-btn-outline" style="margin-top: 20px;" @click="goToScreen(0)">Read again ↺</button>
+          <div class="end-actions">
+            <button class="letter-btn-outline end-primary-action page9-again-btn" aria-label="Read again" @click="goToScreen(0)"></button>
+            <div class="end-secondary-actions">
+              <button @click="goToScreen(4)">Memories</button>
+              <span aria-hidden="true">·</span>
+              <button @click="goToScreen(5)">Gift</button>
+            </div>
+          </div>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1235,7 +1251,7 @@ function skipAnimation() {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+Infant:ital,wght@0,400;0,500;1,400;1,500&family=Great+Vibes&family=Lora:ital,wght@0,400;0,600;1,400;1,600&family=Playfair+Display:wght@400;500;600&display=swap');
 
 /* ── Base ─────────────────────────────────────────────────────────── */
 .letter-page {
@@ -1409,7 +1425,7 @@ function skipAnimation() {
   --screen-pad-bottom-base: clamp(82px, 11dvh, 98px);
 }
 
-.memories-screen,
+memories-screen,
 .bouquet-screen {
   --screen-pad-top: clamp(22px, 4.5dvh, 44px);
   --screen-pad-bottom-base: clamp(82px, 11dvh, 98px);
@@ -1487,29 +1503,38 @@ function skipAnimation() {
   gap: 0;
 }
 
+.memories-screen .screen-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(7px, 1.05dvh, 12px);
+  padding-bottom: clamp(58px, 7.2dvh, 70px);
+}
+
 .memories-screen .letter-logo,
 .bouquet-screen .letter-logo {
   flex: 0 0 auto;
-  margin-bottom: clamp(8px, 1.8dvh, 18px);
+  margin-bottom: clamp(2px, 0.8dvh, 8px);
 }
 
 .memories-screen .letter-title,
 .bouquet-screen .letter-title {
   flex: 0 0 auto;
-  font-size: clamp(26px, 5.4dvh, 32px);
+  font-size: clamp(24px, 4.8dvh, 31px);
   line-height: 1.16;
-  margin-bottom: clamp(4px, 1dvh, 10px);
+  margin-bottom: 0;
 }
 
 .memories-screen .letter-divider,
 .bouquet-screen .letter-divider {
   flex: 0 0 auto;
-  margin: clamp(8px, 1.6dvh, 14px) auto;
+  margin: clamp(8px, 1.6dvh, 16px) auto;
 }
 
 .memories-screen .memory-slideshow,
 .bouquet-screen .bouquet-preview {
-  align-self: stretch;
+  align-self: center;
   min-height: 0;
 }
 
@@ -1523,7 +1548,41 @@ function skipAnimation() {
   margin-top: clamp(10px, 1.8dvh, 18px) !important;
 }
 
-/* ── Typography ───────────────────────────────────────────────────── */
+.page5-gift-btn {
+  display: inline-flex;
+  position: relative;
+  z-index: 6;
+  place-self: center;
+  align-self: center;
+  justify-self: center;
+  width: min(64vw, 308px);
+  max-width: none;
+  height: clamp(52px, 9vw, 90px);
+  aspect-ratio: 723 / 211;
+  min-height: 0;
+  margin: clamp(10px, 1.5dvh, 16px) auto 0 !important;
+  padding: 0;
+  border: none;
+  background: url('/images/page5_button-trim.png') center / 80% 80% no-repeat;
+  overflow: visible;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes page5SoftBreath {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+  50% {
+    transform: translateY(-1px) scale(1.012);
+    filter: none;
+  }
+}
+
+/* Typography */
 .letter-logo {
   font-family: 'Lora', serif;
   font-size: clamp(11px, min(3vw, 2dvh), 13px);
@@ -1531,6 +1590,28 @@ function skipAnimation() {
   letter-spacing: clamp(2px, 0.7vw, 3px);
   text-transform: uppercase;
   margin-bottom: clamp(10px, 3dvh, 32px);
+}
+
+.recipient-keepsake {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: min(280px, 82vw);
+  min-height: 30px;
+  margin: calc(clamp(8px, 2.2dvh, 22px) * -1) auto clamp(8px, 1.7dvh, 16px);
+  padding: 6px 16px;
+  border: 1px solid rgba(232, 180, 192, 0.44);
+  border-radius: 999px;
+  background: rgba(255, 250, 249, 0.58);
+  box-shadow: 0 10px 22px rgba(212, 104, 122, 0.08);
+  color: #9A5C6B;
+  font-size: clamp(12px, min(3.4vw, 1.9dvh), 14px);
+  font-style: italic;
+  line-height: 1.2;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .letter-headline {
@@ -1617,63 +1698,120 @@ function skipAnimation() {
 /* ── Buttons ──────────────────────────────────────────────────────── */
 .letter-btn {
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  max-width: min(100%, 300px);
-  min-height: clamp(40px, 6dvh, 46px);
-  background: #D4687A;
+  width: min(72vw, 286px);
+  max-width: min(100%, 286px);
+  min-height: clamp(44px, 6.2dvh, 58px);
+  background: url('/images/button-trim.png') center / 80% 80% no-repeat;
   color: white;
   border: none;
-  border-radius: 28px;
-  padding: clamp(10px, 1.8dvh, 14px) clamp(24px, 8vw, 40px);
-  font-family: 'Lora', serif;
-  font-size: clamp(13px, min(3.8vw, 2.4dvh), 15px);
+  border-radius: 999px;
+  padding:
+    clamp(10px, 1.8dvh, 14px)
+    clamp(56px, 13vw, 74px)
+    clamp(10px, 1.8dvh, 14px)
+    clamp(28px, 7vw, 42px);
+  font-family: 'Cormorant Garamond', 'Lora', serif;
+  font-size: clamp(17px, min(4.8vw, 2.55dvh), 22px);
+  font-weight: 400;
   line-height: 1.2;
   text-align: center;
   white-space: normal;
   cursor: pointer;
   margin-top: var(--action-space);
-  letter-spacing: 0.5px;
-  transition: all 0.2s;
+  letter-spacing: 0.01em;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+  transform-origin: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: visible;
 }
 
 .letter-btn:hover {
-  background: #C4586A;
-  transform: translateY(-1px);
+  transform: translate(var(--button-center-nudge, 0), -1px) scale(1.012);
+  filter: none;
+}
+
+.letter-btn:active {
+  transform: translate(var(--button-center-nudge, 0), 0) scale(0.988);
+}
+
+.page1-open-btn {
+  width: min(62vw, 292px);
+  aspect-ratio: 728 / 254;
+  min-height: 0;
+  padding: 0;
+  background: url('/images/page1_button-trim.png') center / 80% 80% no-repeat;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+@keyframes page1ButtonBreath {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+  50% {
+    transform: translateY(-1px) scale(1.014);
+    filter: none;
+  }
 }
 
 .letter-btn-outline {
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  max-width: min(100%, 300px);
-  min-height: clamp(38px, 5.6dvh, 44px);
-  background: transparent;
-  color: #D4687A;
-  border: 1px solid #E8B4C0;
-  border-radius: 28px;
-  padding: clamp(9px, 1.6dvh, 12px) clamp(22px, 7vw, 32px);
-  font-family: 'Lora', serif;
-  font-size: clamp(12px, min(3.6vw, 2.2dvh), 14px);
+  width: min(68vw, 260px);
+  max-width: min(100%, 260px);
+  min-height: clamp(42px, 5.8dvh, 54px);
+  background: url('/images/button-trim.png') center / 80% 80% no-repeat;
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding:
+    clamp(9px, 1.6dvh, 12px)
+    clamp(50px, 12vw, 68px)
+    clamp(9px, 1.6dvh, 12px)
+    clamp(24px, 6vw, 38px);
+  font-family: 'Cormorant Garamond', 'Lora', serif;
+  font-size: clamp(16px, min(4.4vw, 2.45dvh), 20px);
+  font-weight: 400;
   line-height: 1.2;
   text-align: center;
   white-space: normal;
   cursor: pointer;
-  letter-spacing: 0.5px;
-  transition: all 0.2s;
+  letter-spacing: 0.01em;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+  transform-origin: center;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: visible;
 }
 
 .letter-btn-outline:hover {
-  background: rgba(212, 104, 122, 0.08);
+  transform: translate(var(--button-center-nudge, 0), -1px) scale(1.012);
+  filter: none;
+}
+
+.letter-btn-outline:active {
+  transform: translate(var(--button-center-nudge, 0), 0) scale(0.988);
+}
+
+@keyframes letterButtonAlive {
+  0%, 100% { transform: translate(var(--button-center-nudge, 0), 0) scale(1); }
+  50% { transform: translate(var(--button-center-nudge, 0), -1px) scale(1.014); }
 }
 
 /* ── Screen Dots ──────────────────────────────────────────────────── */
-.screen-content.center > .letter-btn,
-.screen-content.center > .letter-btn-outline,
-.letter-reveal-content .letter-btn-outline {
-  margin-top: var(--action-space) !important;
+.screen-content.center > .page6-continue,
+.screen-content.center > .page7-continue {
+  margin-top: clamp(28px, 4dvh, 40px) !important;
 }
 
 .screen-dots {
@@ -1779,6 +1917,325 @@ function skipAnimation() {
   animation: invitationShine 2.8s ease-in-out infinite;
 }
 
+.letter-envelope-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+.dedication-screen {
+  --screen-pad-top: clamp(36px, 6.2dvh, 62px);
+  --screen-pad-bottom-base: clamp(72px, 9.8dvh, 90px);
+  --screen-content-gap: clamp(5px, 0.9dvh, 10px);
+}
+
+.dedication-screen .screen-content {
+  max-height: none;
+  overflow: visible;
+}
+
+.page2-content {
+  max-width: min(620px, 100%);
+}
+
+.page2-logo-divider,
+.page2-divider {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) auto minmax(48px, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: min(310px, 74vw);
+  color: #E59BAA;
+  line-height: 1;
+}
+
+.page2-logo-divider {
+  margin: clamp(2px, 0.5dvh, 6px) auto clamp(2px, 0.5dvh, 6px);
+  font-size: 13px;
+}
+
+.page2-logo-divider span,
+.page2-divider span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 104, 122, 0.36), transparent);
+}
+
+.page2-flower-wrap {
+  position: relative;
+  width: min(55vw, 248px, 25dvh);
+  aspect-ratio: 1 / 1;
+  margin: clamp(2px, 0.4dvh, 5px) auto clamp(8px, 1.4dvh, 16px);
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 20px 28px rgba(163, 90, 105, 0.14));
+  animation: page2FlowerFloat 4.8s ease-in-out infinite;
+}
+
+.page2-flower-wrap::before,
+.page2-flower-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 13%;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  opacity: 0.72;
+  pointer-events: none;
+  animation: page2HaloBreathe 3.8s ease-in-out infinite;
+}
+
+.page2-flower-wrap::after {
+  inset: 22%;
+  border-color: rgba(229, 155, 170, 0.22);
+  animation-delay: 1.1s;
+}
+
+.page2-flower {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  animation: page2FlowerGlow 3.6s ease-in-out infinite;
+}
+
+.page2-title {
+  margin: 0;
+  color: #7A3A4A;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-size: clamp(36px, min(10.8vw, 6dvh), 62px);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.018em;
+  text-shadow:
+    0 2px 0 rgba(255, 238, 242, 0.82),
+    0 9px 18px rgba(122, 58, 74, 0.12);
+}
+
+.page2-title em {
+  display: inline-block;
+  margin-top: clamp(1px, 0.25dvh, 4px);
+  color: #D4687A;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(32px, min(9.7vw, 5.4dvh), 56px);
+  font-weight: 400;
+  line-height: 0.86;
+  letter-spacing: -0.012em;
+  text-shadow:
+    0 1px 0 rgba(255, 246, 248, 0.72),
+    0 6px 14px rgba(212, 104, 122, 0.08);
+}
+
+.page2-divider {
+  width: min(330px, 72vw);
+  margin: clamp(8px, 1.3dvh, 14px) auto clamp(4px, 0.75dvh, 8px);
+}
+
+.page2-divider i {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  color: #E59BAA;
+  font-style: normal;
+  font-size: clamp(18px, 4.4vw, 24px);
+  animation: softHeartPulse 2.2s ease-in-out infinite;
+}
+
+.page2-divider i::before,
+.page2-divider i::after {
+  content: '';
+  position: absolute;
+  width: 28px;
+  height: 12px;
+  top: 50%;
+  background:
+    radial-gradient(ellipse at center, rgba(229, 155, 170, 0.55) 0 38%, transparent 42%);
+  opacity: 0.5;
+}
+
+.page2-divider i::before {
+  right: calc(100% + 8px);
+  transform: translateY(-50%) rotate(18deg);
+}
+
+.page2-divider i::after {
+  left: calc(100% + 8px);
+  transform: translateY(-50%) rotate(-18deg);
+}
+
+.page2-sub {
+  margin: 0;
+  color: #8F5A66;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-size: clamp(17px, min(4.4vw, 2.35dvh), 22px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+}
+
+.page2-continue {
+  --button-center-nudge: clamp(8px, 1.8vw, 14px);
+  width: min(60vw, 268px);
+  aspect-ratio: 660 / 238;
+  min-height: 0;
+  margin-top: clamp(12px, 1.8dvh, 18px) !important;
+  padding: 0;
+  background: url('/images/page2_button-trim.png') center / 80% 80% no-repeat;
+  font-size: clamp(15px, min(4vw, 2.2dvh), 18px);
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+.page6-continue,
+.page7-continue {
+  margin-top: clamp(28px, 4dvh, 40px) !important;
+}
+
+@keyframes page2FlowerFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-7px) rotate(1.2deg); }
+}
+
+@keyframes page2HaloBreathe {
+  0%, 100% { transform: scale(0.96); opacity: 0.42; }
+  50%      { transform: scale(1.07); opacity: 0.82; }
+}
+
+@keyframes page2FlowerGlow {
+  0%, 100% { filter: saturate(1) brightness(1); }
+  50%      { filter: saturate(1.08) brightness(1.035); }
+}
+
+@keyframes softHeartPulse {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.76; }
+  50%      { transform: translateY(-1px) scale(1.12); opacity: 1; }
+}
+
+@keyframes buttonBreath {
+  0%, 100% { transform: translateY(0) scale(1); filter: none; }
+  50%      { transform: translateY(-1px) scale(1.014); filter: none; }
+}
+
+@media (max-height: 700px) {
+  .dedication-screen {
+    --screen-pad-top: 22px;
+    --screen-pad-bottom-base: 56px;
+    --screen-content-gap: 4px;
+  }
+
+  .page2-flower-wrap {
+    width: min(48vw, 210px, 22dvh);
+    margin-bottom: 8px;
+  }
+
+  .page2-title {
+    font-size: clamp(31px, min(9.6vw, 5.2dvh), 48px);
+  }
+
+  .page2-title em {
+    font-size: clamp(27px, min(8.4vw, 4.7dvh), 42px);
+  }
+
+  .page2-divider {
+    margin-top: 6px;
+  }
+
+  .page2-sub {
+    font-size: clamp(15px, min(4.2vw, 2.2dvh), 19px);
+  }
+
+  .page2-continue {
+    width: min(56vw, 238px);
+    margin-top: 10px !important;
+  }
+}
+
+.dedication-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(100%, 350px);
+  padding: clamp(24px, 5dvh, 38px) clamp(20px, 6vw, 34px);
+  border: 1px solid rgba(232, 180, 192, 0.4);
+  border-radius: 28px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.76), rgba(255,244,247,0.58)),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.88), transparent 52%);
+  box-shadow:
+    0 22px 54px rgba(122, 58, 74, 0.11),
+    inset 0 1px 0 rgba(255,255,255,0.86);
+  overflow: hidden;
+}
+
+.dedication-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(232, 180, 192, 0.18);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.dedication-kicker,
+.favorite-line-card span {
+  color: #C48090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.dedication-card strong {
+  max-width: 100%;
+  margin-top: 10px;
+  color: #7A3A4A;
+  font-size: clamp(30px, min(9vw, 5.8dvh), 44px);
+  font-weight: 400;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.dedication-thread {
+  display: grid;
+  grid-template-columns: minmax(38px, 1fr) auto minmax(38px, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 230px);
+  margin: 16px 0 10px;
+  color: #C48090;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.dedication-thread span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212,104,122,0.44), transparent);
+}
+
+.dedication-card em {
+  max-width: 100%;
+  color: #D4687A;
+  font-size: clamp(20px, min(6vw, 3.6dvh), 28px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.dedication-card p {
+  max-width: 260px;
+  margin: 16px 0 0;
+  color: #9A6875;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.55;
+  text-align: center;
+}
+
 .letter-invite-seal {
   position: absolute;
   bottom: 4px;
@@ -1790,8 +2247,13 @@ function skipAnimation() {
   display: grid;
   place-items: center;
   background: radial-gradient(circle at 34% 30%, #fff8fa, #f2b6c4);
-  color: #c35a70;
-  font-size: 16px;
+  color: #9A4057;
+  font-family: 'Lora', serif;
+  font-size: clamp(15px, 4vw, 18px);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.62);
   box-shadow: 0 10px 18px rgba(212, 104, 122, 0.18);
   transform: translateX(-50%);
 }
@@ -1807,11 +2269,73 @@ function skipAnimation() {
   70%, 100% { left: 108%; opacity: 0; }
 }
 
+.petal-message-screen {
+  --screen-pad-top: clamp(28px, 5dvh, 48px);
+  --screen-pad-bottom-base: clamp(72px, 9.5dvh, 90px);
+  --screen-content-gap: clamp(4px, 0.75dvh, 8px);
+}
+
+.petal-message-screen .screen-content {
+  max-height: none;
+  overflow: visible;
+}
+
+.page3-content {
+  max-width: min(640px, 100%);
+}
+
+.page3-logo-divider {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) auto minmax(48px, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(280px, 68vw);
+  margin: clamp(3px, 0.7dvh, 8px) auto clamp(4px, 0.8dvh, 9px);
+  color: #E59BAA;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.page3-logo-divider span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 104, 122, 0.36), transparent);
+}
+
+.page3-logo-divider {
+  animation: page3DividerDrift 3.4s ease-in-out infinite;
+}
+
+.page3-title {
+  margin: 0;
+  color: #7A3A4A;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-size: clamp(46px, min(13vw, 7.2dvh), 76px);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 2px 0 rgba(255, 238, 242, 0.82),
+    0 9px 18px rgba(122, 58, 74, 0.12);
+}
+
+.page3-sub {
+  margin: clamp(2px, 0.55dvh, 6px) 0 clamp(4px, 1dvh, 12px);
+  color: #C65F74;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-size: clamp(23px, min(6.2vw, 3.45dvh), 34px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.012em;
+}
+
 .petals-flower {
   position: relative;
-  width: min(320px, 78vw, 46dvh);
-  height: min(320px, 78vw, 46dvh);
-  margin: 0 auto;
+  width: min(104vw, 680px, 58dvh);
+  height: min(104vw, 680px, 58dvh);
+  margin: clamp(-28px, -3.5dvh, -12px) auto 0;  /* was: margin: 0 auto; */
+  filter: drop-shadow(0 22px 30px rgba(163, 90, 105, 0.13));
+  animation: page3FlowerBreathe 5.2s ease-in-out infinite;
 }
 
 .flower-svg {
@@ -1822,23 +2346,105 @@ function skipAnimation() {
   left: 0;
 }
 
+.flower-image {
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  animation: page3PetalSheen 4.2s ease-in-out infinite;
+}
+
 .petal-zone {
   position: absolute;
-  width: 60px;
-  height: 60px;
+  width: clamp(44px, 10.5vw, 70px);
+  height: clamp(44px, 10.5vw, 70px);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 10;
+  transition: transform 0.24s ease, filter 0.24s ease;
 }
 
-.petal-z-1 { top: 0;    left: 50%; transform: translateX(-50%); }
-.petal-z-2 { top: 18%;  right: 4%; }
-.petal-z-3 { bottom: 18%; right: 4%; }
-.petal-z-4 { bottom: 0; left: 50%; transform: translateX(-50%); }
-.petal-z-5 { bottom: 18%; left: 4%; }
-.petal-z-6 { top: 18%;  left: 4%; }
+.petal-z-1 { top: 7.5%; left: 50%; transform: translateX(-50%); }
+.petal-z-2 { top: 24.7%; right: 12.2%; }
+.petal-z-3 { bottom: 21.8%; right: 12.6%; }
+.petal-z-4 { bottom: 6.4%; left: 50%; transform: translateX(-50%); }
+.petal-z-5 { bottom: 21.8%; left: 12.6%; }
+.petal-z-6 { top: 24.7%; left: 12.2%; }
+
+.petal-z-1 { animation: petalHintTop 2.9s ease-in-out infinite; }
+.petal-z-2,
+.petal-z-3,
+.petal-z-5,
+.petal-z-6 { animation: petalHint 3.2s ease-in-out infinite; }
+.petal-z-4 { animation: petalHintBottom 3.1s ease-in-out infinite; }
+.petal-z-2 { animation-delay: 0.25s; }
+.petal-z-3 { animation-delay: 0.5s; }
+.petal-z-4 { animation-delay: 0.75s; }
+.petal-z-5 { animation-delay: 1s; }
+.petal-z-6 { animation-delay: 1.25s; }
+
+.page3-read-btn {
+  width: min(62vw, 292px);
+  aspect-ratio: 709 / 216;
+  min-height: 0;
+  margin-top: clamp(8px, 1.3dvh, 14px) !important;
+  padding: 0;
+  background: url('/images/page3_button-trim.png') center / 80% 80% no-repeat;
+  color: #D4687A;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+@keyframes page3DividerDrift {
+  0%, 100% { opacity: 0.72; transform: translateY(0); }
+  50%      { opacity: 1; transform: translateY(-1px); }
+}
+
+@keyframes page3FlowerBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-4px) scale(1.018); }
+}
+
+@keyframes page3PetalSheen {
+  0%, 100% { filter: saturate(1) brightness(1); }
+  50%      { filter: saturate(1.06) brightness(1.025); }
+}
+
+@keyframes petalHint {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(212, 104, 122, 0)); }
+  50%      { transform: translateY(-2px) scale(1.08); filter: drop-shadow(0 5px 8px rgba(212, 104, 122, 0.16)); }
+}
+
+@keyframes petalHintTop {
+  0%, 100% { transform: translateX(-50%) translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(212, 104, 122, 0)); }
+  50%      { transform: translateX(-50%) translateY(-2px) scale(1.08); filter: drop-shadow(0 5px 8px rgba(212, 104, 122, 0.16)); }
+}
+
+@keyframes petalHintBottom {
+  0%, 100% { transform: translateX(-50%) translateY(0) scale(1); filter: drop-shadow(0 0 0 rgba(212, 104, 122, 0)); }
+  50%      { transform: translateX(-50%) translateY(2px) scale(1.08); filter: drop-shadow(0 5px 8px rgba(212, 104, 122, 0.16)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page2-flower-wrap,
+  .page2-flower-wrap::before,
+  .page2-flower-wrap::after,
+  .page2-flower,
+  .page2-divider i,
+  .page1-open-btn,
+  .page2-continue,
+  .page3-logo-divider,
+  .petals-flower,
+  .flower-image,
+  .petal-zone,
+  .page3-read-btn,
+  .page4-memories-btn,
+  .page5-gift-btn {
+    animation: none !important;
+  }
+}
 
 /* ── Letter Message ───────────────────────────────────────────────── */
 .letter-message-box {
@@ -1926,7 +2532,7 @@ function skipAnimation() {
   vertical-align: baseline;
 }
 
-/* ── Sender Footer Transition ─────────────────────────────────────── */
+/* ── Sender Footer Transition ───────────────────────────────────── */
 .sender-footer {
   width: 100%;
   flex: 0 0 auto;
@@ -1944,6 +2550,29 @@ function skipAnimation() {
   max-width: 100%;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.page4-memories-btn {
+  width: min(62vw, 292px);
+  aspect-ratio: 728 / 221;
+  min-height: 0;
+  margin-top: clamp(12px, 2dvh, 20px) !important;
+  padding: 0;
+  background: url('/images/page4_button2-trim.png') center / 80% 80% no-repeat;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+@keyframes page4MemoriesBreath {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+  50% {
+    transform: translateY(-1px) scale(1.014);
+    filter: none;
+  }
 }
 
 .sender-reveal-enter-active {
@@ -1983,11 +2612,11 @@ function skipAnimation() {
   transition-delay: 0.24s;
 }
 
-/* ── Memories ─────────────────────────────────────────────────────── */
+/* ── Memories ──────────────────────────────────────────────────────── */
 .memory-slideshow {
   width: 100%;
-  max-width: min(360px, 100%, 44dvh);
-  height: 100%;
+  max-width: min(320px, 100%, 34dvh);
+  height: auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1997,8 +2626,8 @@ function skipAnimation() {
 
 .memory-frame {
   position: relative;
-  width: min(100%, 40dvh, 360px);
-  max-height: min(360px, 40dvh);
+  width: min(100%, 30dvh, 300px);
+  max-height: min(300px, 30dvh);
   flex: 0 1 auto;
   border: clamp(8px, 1.6dvh, 12px) solid rgba(255, 255, 255, 0.9);
   border-bottom-width: clamp(30px, 5.2dvh, 44px);
@@ -2080,7 +2709,7 @@ function skipAnimation() {
   display: flex;
   justify-content: center;
   gap: 6px;
-  margin-top: clamp(6px, 1.2dvh, 12px);
+  margin-top: clamp(4px, 0.7dvh, 7px);
 }
 
 .memory-dots span {
@@ -2098,26 +2727,53 @@ function skipAnimation() {
   border-radius: 4px;
 }
 
+.memory-caption {
+  width: min(100%, 300px);
+  margin-top: clamp(6px, 0.9dvh, 10px);
+  padding: clamp(7px, 1dvh, 9px) 14px;
+  border: 1px solid rgba(232, 180, 192, 0.32);
+  border-radius: 18px;
+  background: rgba(255, 250, 249, 0.5);
+  box-shadow: 0 10px 22px rgba(212, 104, 122, 0.07);
+  text-align: center;
+}
+
+.memory-caption span {
+  color: #C48090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.7px;
+  text-transform: uppercase;
+}
+
+.memory-caption p {
+  margin: 3px 0 0;
+  color: #9A6875;
+  font-size: clamp(12px, min(3.4vw, 1.8dvh), 13px);
+  font-style: italic;
+  line-height: 1.45;
+}
+
 /* ── Bouquet Preview ──────────────────────────────────────────────── */
 .bouquet-preview {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto auto auto auto auto;
   align-items: center;
   justify-items: center;
-  gap: clamp(6px, 1dvh, 10px);
+  gap: clamp(10px, 1.6dvh, 16px);
   width: 100%;
-  height: 100%;
+  height: auto;
   max-width: min(360px, 100%, 38dvh);
-  max-height: 100%;
-  flex-shrink: 1;
-  min-height: 0;
+  max-height: none;
+  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
 .bouquet-intro {
   max-width: min(310px, 88vw);
-  margin: 0 auto;
+  margin: 0 auto !important;
   color: #9A6875;
-  font-size: clamp(12px, min(3.5vw, 1.9dvh), 14px);
+  font-size: clamp(11px, min(3vw, 1.6dvh), 13px) !important;
   font-style: italic;
   line-height: 1.45;
   text-align: center;
@@ -2127,8 +2783,9 @@ function skipAnimation() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 5px 14px;
+  min-height: 20px !important;
+  margin: 0 !important;
+  padding: 3px 12px !important;
   border: 1px solid rgba(232, 180, 192, 0.58);
   border-radius: 999px;
   background: rgba(255, 250, 249, 0.62);
@@ -2146,7 +2803,7 @@ function skipAnimation() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 35dvh, 330px);
+  width: min(100%, 22dvh, 200px) !important;
   max-width: 100%;
   align-self: center;
   aspect-ratio: 1;
@@ -2252,7 +2909,7 @@ function skipAnimation() {
   background: rgba(255, 255, 255, 0.58);
   box-shadow: 0 10px 24px rgba(212, 104, 122, 0.1);
   backdrop-filter: blur(8px);
-  padding: clamp(7px, 1.1dvh, 9px) 18px;
+  padding: clamp(4px, 0.7dvh, 6px) 18px !important;
   color: #9A5C6B;
   text-align: center;
 }
@@ -2297,7 +2954,7 @@ function skipAnimation() {
   font-size: clamp(8px, min(2.4vw, 1.4dvh), 11px);
   line-height: 1.1;
   overflow: hidden;
-  padding: 6px 8px;
+  padding: 4px 8px !important;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2307,16 +2964,18 @@ function skipAnimation() {
   position: relative;
   z-index: 2;
   display: inline-flex;
+  margin-bottom: clamp(4px, 0.7dvh, 8px) !important;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 30px !important;
   min-width: 166px;
   max-width: min(100%, 240px);
+  margin: 0 !important;
   line-height: 1.2;
   white-space: nowrap;
   margin-top: 0;
-  padding: 10px 20px;
+  padding: 6px 16px !important;
   background:
     linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,240,244,0.76));
   color: #D4687A;
@@ -2326,8 +2985,10 @@ function skipAnimation() {
   font-size: 14px;
   cursor: pointer;
   letter-spacing: 0.5px;
-  box-shadow: 0 10px 22px rgba(212, 104, 122, 0.12);
-  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: none;
+  animation: letterButtonAlive 5s ease-in-out infinite;
+  transform-origin: center;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
 }
 
 .rotate-mark {
@@ -2346,7 +3007,11 @@ function skipAnimation() {
   background:
     linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,226,235,0.86));
   border-color: #D4687A;
-  transform: translateY(-1px);
+  transform: translateY(-1px) scale(1.012);
+}
+
+.btn-360:active {
+  transform: translateY(0) scale(0.988);
 }
 
 .btn-360:disabled,
@@ -2356,7 +3021,8 @@ function skipAnimation() {
   border-color: rgba(232, 180, 192, 0.62);
   background:
     linear-gradient(135deg, rgba(255,255,255,0.78), rgba(255,240,244,0.58));
-  box-shadow: 0 8px 18px rgba(212, 104, 122, 0.08);
+  box-shadow: none;
+  animation: none;
   transform: none;
 }
 
@@ -2733,7 +3399,7 @@ function skipAnimation() {
 }
 
 
-/* ── Quote ────────────────────────────────────────────────────────── */
+/* ── Quote ───────────────────────────────────────────────────────── */
 .quote-flower {
   font-size: 56px;
   margin-bottom: 16px;
@@ -2793,7 +3459,7 @@ function skipAnimation() {
   font-weight: 600;
 }
 
-/* ── Loading / Not Found ──────────────────────────────────────────── */
+/* ── Loading / Not Found ───────────────────────────────────────────── */
 .letter-loading,
 .letter-not-found {
   height: 100vh;
@@ -3006,7 +3672,7 @@ function skipAnimation() {
   100% { transform: rotate(0deg) scale(1); }
 }
 
-/* ── Desktop ────────────────────────────────────────────────────── */
+/* ── Desktop ──────────────────────────────────────────────────────── */
 @media (min-width: 768px) {
   .letter-screens {
     max-width: 600px;
@@ -3029,8 +3695,8 @@ function skipAnimation() {
   .letter-sub      { font-size: 16px; }
   .letter-quote    { font-size: 22px; }
   .petals-flower   { width: 380px; height: 380px; }
-  .memory-slideshow { max-width: min(420px, 100%, 44dvh); }
-  .memory-frame { width: min(100%, 40dvh, 420px); }
+  .memory-slideshow { max-width: min(320px, 100%, 34dvh); }
+  .memory-frame { width: min(100%, 30dvh, 300px); }
   .bouquet-preview  { max-width: min(420px, 100%, 36dvh); }
   .bouquet-stage { width: min(100%, 34dvh, 360px); }
   .viewer-360-full  { max-width: 700px; }
@@ -3135,6 +3801,15 @@ function skipAnimation() {
     min-height: 38px;
   }
 
+  .page5-gift-btn {
+    width: min(64vw, 300px);
+    max-width: none;
+    height: clamp(48px, 8.8vw, 88px);
+    aspect-ratio: 723 / 211;
+    min-height: 0;
+    padding: 0;
+  }
+
   .memory-frame {
     width: min(100%, 30cqh, 290px);
   }
@@ -3176,6 +3851,15 @@ function skipAnimation() {
   .letter-btn-outline,
   .btn-360 {
     max-width: min(100%, 260px);
+  }
+
+  .page5-gift-btn {
+    width: min(70cqw, 300px) !important;
+    max-width: none !important;
+    height: clamp(48px, 18cqw, 88px) !important;
+    aspect-ratio: 723 / 211;
+    min-height: 0 !important;
+    padding: 0 !important;
   }
 }
 
@@ -3268,11 +3952,12 @@ function skipAnimation() {
   }
 
   .memory-slideshow {
-    max-width: min(340px, 100%, 38dvh);
+    max-width: min(310px, 100%, 33dvh);
   }
 
   .memory-frame {
-    max-height: min(340px, 38dvh);
+    width: min(100%, 29dvh, 290px);
+    max-height: min(290px, 29dvh);
   }
 
   .bouquet-preview {
@@ -3406,11 +4091,12 @@ function skipAnimation() {
   }
 
   .memory-slideshow {
-    max-width: min(300px, 100%, 32dvh);
+    max-width: min(290px, 100%, 31dvh);
   }
 
   .memory-frame {
-    max-height: min(300px, 32dvh);
+    width: min(100%, 28dvh, 280px);
+    max-height: min(280px, 28dvh);
   }
 
   .bouquet-preview {
@@ -3421,10 +4107,12 @@ function skipAnimation() {
     display: none;
   }
 
-  .bouquet-screen .letter-title,
-  .memories-screen .letter-title {
-    font-size: clamp(22px, 4.8dvh, 28px);
-  }
+  .memories-screen .letter-title,
+  .bouquet-screen .letter-title {
+  font-size: clamp(24px, 4.8dvh, 31px);
+  line-height: 1.16;
+  margin-bottom: clamp(4px, 0.8dvh, 8px);   /* was: 0 */
+}
 
   .bouquet-screen .letter-divider,
   .memories-screen .letter-divider {
@@ -3486,6 +4174,15 @@ function skipAnimation() {
     margin-bottom: 10px;
   }
 
+  .page5-gift-btn {
+    width: min(64vw, 300px);
+    max-width: none;
+    height: clamp(48px, 8.8vw, 88px);
+    aspect-ratio: 723 / 211;
+    min-height: 0;
+    padding: 0;
+  }
+
   .screen-content.center > .letter-btn,
   .screen-content.center > .letter-btn-outline,
   .letter-reveal-content .letter-btn-outline {
@@ -3497,17 +4194,23 @@ function skipAnimation() {
     padding: 0 clamp(16px, 5vw, 24px);
   }
 
+  .memories-screen .screen-content {
+    justify-content: center;
+    padding-bottom: clamp(58px, 8dvh, 72px);
+  }
+
   .memories-screen .letter-title,
   .bouquet-screen .letter-title {
     font-size: clamp(25px, 8vw, 32px);
   }
 
   .memory-slideshow {
-    max-width: min(100%, 42dvh);
+    max-width: min(100%, 34dvh, 320px);
   }
 
   .memory-frame {
-    max-height: 42dvh;
+    width: min(100%, 30dvh, 300px);
+    max-height: min(300px, 30dvh);
   }
 
   .bouquet-preview {
@@ -3579,6 +4282,7 @@ function skipAnimation() {
   }
 
   .memory-frame {
+    width: min(100%, 27dvh, 270px);
     max-height: 30dvh;
   }
 
@@ -3609,45 +4313,146 @@ function skipAnimation() {
   .viewer-footer {
     gap: 8px;
   }
+
+  .petal-message-screen .petal-message-card {
+  bottom: 100px !important;
+  }
+
+  .petal-message-screen .page3-read-btn {
+  margin-bottom: 36px !important;
+  }
 }
 
 /* ── Petal Symbol ─────────────────────────────────────────────────── */
 .petal-symbol {
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid #F4C0CE;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: #C48090;
+  padding: 0;
+  font-size: clamp(14px, 3vw, 19px);
+  color: #B65A6C;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .petal-symbol:hover {
-  background: rgba(255, 255, 255, 0.8);
   transform: scale(1.1);
 }
 
+.petal-zone.active .petal-symbol {
+  color: #D4687A;
+  transform: scale(1.12);
+}
+
+.petal-zone.revealed .petal-symbol {
+  text-shadow: 0 2px 7px rgba(212, 104, 122, 0.22);
+}
+
 /* ── Petal Pill ───────────────────────────────────────────────────── */
-.petal-pill {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #F4C0CE;
-  border-radius: 20px;
-  padding: 6px 10px;
-  font-size: 10px;
-  font-family: 'Lora', serif;
-  color: #9A5060;
+.petal-message-card {
+  width: min(76vw, 330px);
+  min-height: 40px;
+  margin: clamp(18px, 3.5dvh, 32px) auto 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(232, 180, 192, 0.72);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 250, 0.95), rgba(255, 239, 244, 0.9));
+  box-shadow:
+    0 12px 22px rgba(163, 90, 105, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  color: #8A4050;
+  font-family: 'Cormorant Garamond', 'Lora', serif;
+  font-size: clamp(15px, min(4vw, 2.35dvh), 20px);
+  font-weight: 500;
+  line-height: 1.05;
   text-align: center;
-  font-style: italic;
-  max-width: 80px;
-  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.petal-message-card span {
+  color: #D4687A;
+  font-size: 0.8em;
+  flex: 0 0 auto;
+}
+
+.petal-message-enter-active,
+.petal-message-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.petal-message-enter-from,
+.petal-message-leave-to {
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+}
+
+.petal-pill {
+  position: absolute;
+  width: max-content;
+  max-width: min(132px, 30vw);
+  min-width: 86px;
+  min-height: 32px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 250, 0.94), rgba(255, 239, 244, 0.9));
+  border: 1px solid rgba(232, 180, 192, 0.72);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: clamp(11px, min(2.75vw, 1.7dvh), 15px);
+  font-family: 'Cormorant Garamond', 'Lora', serif;
+  font-weight: 600;
+  color: #8A4050;
+  text-align: center;
+  font-style: normal;
+  max-width: none;
+  line-height: 1.05;
   cursor: pointer;
   animation: pillReveal 0.4s ease;
-  box-shadow: 0 2px 8px rgba(212, 104, 122, 0.15);
+  box-shadow:
+    0 10px 18px rgba(163, 90, 105, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.petal-z-1 .petal-pill,
+.petal-z-2 .petal-pill,
+.petal-z-3 .petal-pill,
+.petal-z-4 .petal-pill,
+.petal-z-5 .petal-pill,
+.petal-z-6 .petal-pill {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.petal-z-1 .petal-pill {
+  bottom: calc(100% + 2px);
+}
+
+.petal-z-2 .petal-pill,
+.petal-z-6 .petal-pill {
+  bottom: calc(100% - 4px);
+}
+
+.petal-z-3 .petal-pill,
+.petal-z-5 .petal-pill {
+  top: calc(100% - 4px);
+}
+
+.petal-z-4 .petal-pill {
+  top: calc(100% + 2px);
 }
 
 @keyframes pillReveal {
@@ -3662,68 +4467,123 @@ function skipAnimation() {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  width: 100%;
 }
 
-.letter-reveal-wrap.opening .envelope-icon {
+.letter-reveal-wrap.opening .page4-envelope {
   animation: envelopeOpen 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.letter-reveal-wrap.opening .wax-seal {
+.letter-reveal-wrap.opening .page4-circle {
   animation: sealRelease 0.72s ease both;
 }
 
-.letter-reveal-wrap.opening .envelope-sparkles span {
-  animation-play-state: running;
+.page4-envelope-stage {
+  position: relative;
+  width: min(72vw, 360px, 34dvh);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto clamp(10px, 1.6dvh, 18px);
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 22px 30px rgba(163, 90, 105, 0.13));
 }
 
-.envelope-sparkles {
-  position: absolute;
-  inset: -16px 0 auto;
-  height: 120px;
+.page4-circle {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
   pointer-events: none;
+  user-select: none;
 }
 
-.envelope-sparkles span {
+.page4-envelope {
   position: absolute;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.96), rgba(244, 192, 206, 0.7));
-  box-shadow: 0 0 14px rgba(255, 255, 255, 0.9);
-  opacity: 0;
-  animation: envelopeSpark 0.9s ease-out paused;
+  width: 62%;
+  height: auto;
+  object-fit: contain;
+  transform: rotate(-7deg);
+  animation: envelopePulse 2.3s ease-in-out infinite;
+  pointer-events: none;
+  user-select: none;
 }
 
-.envelope-sparkles span:nth-child(1) { left: 28%; top: 54%; animation-delay: 0.05s; }
-.envelope-sparkles span:nth-child(2) { left: 42%; top: 24%; animation-delay: 0.14s; }
-.envelope-sparkles span:nth-child(3) { right: 32%; top: 42%; animation-delay: 0.2s; }
-.envelope-sparkles span:nth-child(4) { right: 22%; top: 64%; animation-delay: 0.28s; }
+.page4-title {
+  margin: 0;
+  color: #7A3A4A;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-size: clamp(44px, min(13vw, 7dvh), 74px);
+  font-weight: 500;
+  line-height: 0.88;
+  letter-spacing: -0.02em;
+  text-shadow:
+    0 2px 0 rgba(255, 238, 242, 0.82),
+    0 9px 18px rgba(122, 58, 74, 0.12);
+}
 
-.envelope-icon {
-  font-size: 72px;
-  margin-bottom: 24px;
-  animation: envelopePulse 2s ease-in-out infinite;
+.page4-title em {
+  display: inline-block;
+  margin-top: clamp(2px, 0.4dvh, 6px);
+  color: #D4687A;
+  font-family: 'Cormorant Infant', 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: clamp(38px, min(11.6vw, 6.4dvh), 66px);
+  font-weight: 400;
+  line-height: 0.82;
+  letter-spacing: -0.014em;
+}
+
+.page4-divider {
+  display: grid;
+  grid-template-columns: minmax(54px, 1fr) auto minmax(54px, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: min(340px, 76vw);
+  margin: clamp(10px, 1.6dvh, 18px) auto clamp(6px, 1dvh, 12px);
+  color: #E59BAA;
+  line-height: 1;
+}
+
+.page4-divider span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 104, 122, 0.36), transparent);
+}
+
+.page4-open-btn {
+  width: min(62vw, 292px);
+  aspect-ratio: 683 / 212;
+  min-height: 0;
+  margin-top: clamp(12px, 2dvh, 22px) !important;
+  padding: 0;
+  background: url('/images/page4_ButtonFinal-trim.png') center / 80% 80% no-repeat;
+  color: #fff;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+  font-size: clamp(18px, min(4.9vw, 2.6dvh), 25px);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 @keyframes envelopePulse {
-  0%, 100% { transform: scale(1) rotate(-3deg); }
-  50%       { transform: scale(1.08) rotate(3deg); }
+  0%, 100% { transform: rotate(-7deg) translateY(0) scale(1); }
+  50%       { transform: rotate(-5deg) translateY(-5px) scale(1.03); }
 }
 
 @keyframes envelopeOpen {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1) rotate(-3deg);
+    transform: rotate(-7deg) translateY(0) scale(1);
     filter: drop-shadow(0 0 0 rgba(255,255,255,0));
   }
   48% {
     opacity: 1;
-    transform: translateY(-4px) scale(1.12) rotate(2deg);
+    transform: rotate(-3deg) translateY(-4px) scale(1.12);
     filter: drop-shadow(0 12px 18px rgba(212, 104, 122, 0.24));
   }
   100% {
     opacity: 0;
-    transform: translateY(-34px) scale(1.22) rotate(8deg);
+    transform: rotate(6deg) translateY(-34px) scale(1.22);
     filter: drop-shadow(0 18px 24px rgba(255,255,255,0.74));
   }
 }
@@ -3798,7 +4658,12 @@ function skipAnimation() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-family: 'Lora', serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 1px rgba(122, 58, 74, 0.22);
   color: rgba(255,255,255,0.9);
   box-shadow: 0 4px 12px rgba(192, 80, 106, 0.4);
   margin: 0 auto 16px;
@@ -3962,5 +4827,988 @@ function skipAnimation() {
   opacity: 0;
   transform: translateX(22px) scale(0.992);
   filter: blur(1px);
+}
+.quote-card,
+.sender-keepsake,
+.end-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(100%, 360px);
+  border: 1px solid rgba(232, 180, 192, 0.38);
+  border-radius: 26px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 244, 247, 0.52)),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.78), transparent 48%);
+  box-shadow:
+    0 22px 54px rgba(122, 58, 74, 0.11),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+  overflow: hidden;
+  padding: clamp(22px, 4.8dvh, 34px) clamp(18px, 6vw, 30px);
+}
+
+.quote-card::before,
+.sender-keepsake::before,
+.end-card::before {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(232, 180, 192, 0.18);
+  border-radius: 20px;
+  pointer-events: none;
+}
+
+.quote-card .quote-flower,
+.end-card .end-flowers {
+  margin-bottom: 12px;
+  filter: drop-shadow(0 10px 14px rgba(212, 104, 122, 0.18));
+}
+
+.quote-mark {
+  height: 32px;
+  color: rgba(212, 104, 122, 0.28);
+  font-family: Georgia, serif;
+  font-size: 68px;
+  line-height: 0.7;
+}
+
+.quote-card .letter-quote {
+  font-size: clamp(18px, min(5.4vw, 3dvh), 22px);
+  line-height: 1.7;
+  padding: 0;
+}
+
+.quote-note {
+  margin: 16px 0 0;
+  color: #B08090;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.sender-keepsake {
+  gap: 10px;
+}
+
+.sender-kicker {
+  color: #C48090;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.sender-keepsake .sender-circle {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.84), transparent 26%),
+    linear-gradient(135deg, #F4C0CE, #D4687A);
+  border: 4px solid rgba(255,255,255,0.68);
+  box-shadow: 0 16px 30px rgba(212, 104, 122, 0.2);
+}
+
+.sender-keepsake .letter-title {
+  margin-top: 0;
+}
+
+.end-card .end-flowers {
+  font-size: 42px;                       
+  margin-bottom: 8px;                    
+}
+
+.end-card .end-flowers {
+  margin-bottom: 10px;
+}
+
+.end-card .end-brand {
+  margin-top: 14px;
+}
+
+.favorite-line-card {
+  width: min(100%, 280px);
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(232, 180, 192, 0.34);
+  border-radius: 18px;
+  background: rgba(255, 250, 249, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+  text-align: center;
+}
+
+.favorite-line-card p {
+  margin: 8px 0 0;
+  color: #7A3A4A;
+  font-size: clamp(13px, min(3.8vw, 2dvh), 15px);
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.end-actions {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(100%, 300px);
+  margin-top: 20px;
+}
+
+.end-actions .letter-btn-outline {
+  min-height: 40px;
+  min-width: min(210px, 100%);
+  padding: 10px 22px;
+  font-size: clamp(12px, min(3.4vw, 1.9dvh), 14px);
+  white-space: nowrap;
+}
+
+.end-secondary-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #C48090;
+  font-size: 12px;
+}
+
+.end-secondary-actions button {
+  border: 0;
+  background: transparent;
+  color: #B76578;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-style: italic;
+  padding: 3px 2px;
+}
+
+.end-secondary-actions button:hover {
+  color: #D4687A;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+@media (max-height: 620px) {
+  .recipient-keepsake {
+    min-height: 26px;
+    margin-bottom: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+  }
+
+  .quote-card,
+  .sender-keepsake,
+  .end-card {
+    border-radius: 20px;
+    padding: 18px 16px;
+  }
+
+  .quote-card::before,
+  .sender-keepsake::before,
+  .end-card::before {
+    inset: 8px;
+    border-radius: 15px;
+  }
+
+  .quote-note {
+    display: none;
+  }
+
+  .dedication-card p,
+  .favorite-line-card,
+  .memory-caption p {
+    display: none;
+  }
+
+  .end-actions {
+    margin-top: 12px;
+  }
+}
+
+.welcome-screen {
+  --screen-pad-top: clamp(22px, 3.8dvh, 36px);
+  --screen-pad-bottom-base: clamp(62px, 8.6dvh, 78px);
+  --screen-content-gap: clamp(2px, 0.45dvh, 6px);
+}
+
+.welcome-screen .screen-content {
+  justify-content: center;
+  max-height: none;
+  overflow: visible;
+}
+
+.welcome-screen .letter-logo {
+  margin-bottom: 0;
+  letter-spacing: clamp(5px, 1.7vw, 9px);
+  font-size: clamp(11px, min(3vw, 1.8dvh), 13px);
+}
+
+.welcome-top-divider,
+.welcome-heart-line {
+  display: grid;
+  grid-template-columns: minmax(42px, 1fr) auto minmax(42px, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(300px, 74vw);
+  color: #D4687A;
+  line-height: 1;
+}
+
+.welcome-top-divider {
+  margin: clamp(2px, 0.55dvh, 6px) auto clamp(4px, 0.8dvh, 9px);
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.welcome-heart-line {
+  margin: clamp(4px, 0.75dvh, 8px) auto 0;
+  color: #E89AAA;
+  font-size: clamp(18px, min(4.8vw, 2.5dvh), 24px);
+}
+
+.welcome-top-divider span,
+.welcome-heart-line span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 104, 122, 0.42), transparent);
+}
+
+.welcome-screen .recipient-keepsake {
+  min-height: clamp(28px, 4dvh, 38px);
+  margin: 0 auto;
+  padding: 5px 20px;
+  border-color: rgba(232, 180, 192, 0.72);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.78), rgba(255,239,243,0.58));
+  box-shadow:
+    0 14px 30px rgba(212, 104, 122, 0.12),
+    inset 0 1px 0 rgba(255,255,255,0.88);
+  color: #8F4C5E;
+  font-size: clamp(15px, min(4.3vw, 2.35dvh), 20px);
+}
+
+.welcome-screen .recipient-keepsake::before,
+.welcome-screen .recipient-keepsake::after {
+  content: '\2665';
+  color: #E8A6B4;
+  font-size: 11px;
+  margin: 0 10px;
+}
+
+.welcome-screen .letter-headline {
+  margin: 0 0 clamp(-8px, -0.8dvh, -3px);
+  color: #7A3A4A;
+  font-family: 'Playfair Display', 'Lora', serif;
+  font-size: clamp(44px, min(13.6vw, 7.4dvh), 72px);
+  font-weight: 400;
+  line-height: 0.9;
+  text-shadow:
+    0 2px 0 rgba(255, 238, 242, 0.82),
+    0 9px 18px rgba(122, 58, 74, 0.14);
+}
+
+.welcome-screen .letter-headline em {
+  display: inline-block;
+  margin-top: clamp(1px, 0.25dvh, 4px);
+  color: #D4687A;
+  font-family: 'Great Vibes', 'Lora', cursive;
+  font-size: clamp(52px, min(16vw, 8.2dvh), 82px);
+  font-weight: 400;
+  line-height: 0.72;
+  text-shadow:
+    0 1px 0 rgba(255, 248, 249, 0.8),
+    0 8px 18px rgba(212, 104, 122, 0.12);
+}
+
+.welcome-screen .letter-invitation-card {
+  width: min(70vw, 310px, 29dvh);
+  height: auto;
+  aspect-ratio: 1.34 / 1;
+  margin: clamp(2px, 0.4dvh, 5px) auto clamp(0px, 0.25dvh, 4px);
+  filter: drop-shadow(0 22px 30px rgba(163, 90, 105, 0.18));
+}
+
+.welcome-screen .letter-envelope-image {
+  transform: translateZ(0);
+}
+
+.welcome-screen .letter-invite-paper {
+  height: 100%;
+  border-radius: 8px;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,0.98), rgba(255,234,240,0.94)),
+    repeating-linear-gradient(0deg, transparent 0 22px, rgba(212, 104, 122, 0.06) 23px 24px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.92),
+    inset 0 -20px 34px rgba(212,104,122,0.08);
+}
+
+.welcome-screen .letter-invite-paper::before {
+  background:
+    linear-gradient(145deg, transparent 0 49%, rgba(212,104,122,0.18) 50%, transparent 51%),
+    linear-gradient(215deg, transparent 0 49%, rgba(212,104,122,0.14) 50%, transparent 51%),
+    linear-gradient(0deg, transparent 0 46%, rgba(255,255,255,0.54) 47%, transparent 48%);
+}
+
+.welcome-screen .letter-invite-seal {
+  bottom: 48%;
+  width: clamp(48px, 13vw, 64px);
+  height: clamp(48px, 13vw, 64px);
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.82), transparent 25%),
+    radial-gradient(circle at 50% 52%, #F19AAA, #C45268);
+  border: 3px solid rgba(255,255,255,0.6);
+  color: rgba(255,255,255,0.94);
+  font-size: clamp(22px, 5vw, 30px);
+  text-shadow: 0 1px 2px rgba(122, 58, 74, 0.2);
+  transform: translate(-50%, 50%);
+}
+
+.welcome-screen .letter-divider {
+  margin: clamp(-2px, -0.2dvh, 0px) auto 0;
+}
+
+.welcome-screen .letter-sub {
+  color: #8F5A66;
+  font-size: clamp(14px, min(3.8vw, 2dvh), 17px);
+  font-style: italic;
+  line-height: 1.24;
+  margin: 0;
+}
+
+.welcome-screen .letter-btn {
+  min-width: min(270px, 72vw);
+  min-height: clamp(44px, 5.8dvh, 56px);
+  margin-top: clamp(8px, 1.2dvh, 12px);
+  border: none;
+  color: #fff;
+  font-size: clamp(17px, min(4.4vw, 2.35dvh), 22px);
+  font-weight: 400;
+}
+
+.welcome-screen .page1-open-btn {
+  width: min(62vw, 292px);
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+@media (max-height: 700px) {
+  .welcome-screen {
+    --screen-pad-top: 16px;
+    --screen-pad-bottom-base: 52px;
+    --screen-content-gap: 2px;
+  }
+
+  .welcome-screen .letter-headline {
+    font-size: clamp(34px, min(12vw, 6.2dvh), 50px);
+  }
+
+  .welcome-screen .letter-headline em {
+    font-size: clamp(42px, min(14vw, 7.2dvh), 58px);
+  }
+
+  .welcome-screen .letter-invitation-card {
+    width: min(62vw, 252px, 25dvh);
+  }
+
+  .welcome-heart-line {
+    margin-top: 4px;
+  }
+
+  .welcome-screen .letter-sub {
+    font-size: 13px;
+  }
+
+.welcome-screen .letter-btn {
+    min-height: 42px;
+  }
+
+  .welcome-screen .page1-open-btn {
+    width: min(58vw, 258px);
+    min-height: 0;
+    padding: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .petal-message-screen .petals-flower {
+    width: min(114vw, 560px, 62dvh);
+    height: min(114vw, 560px, 62dvh);
+  }
+
+  .petal-message-screen .petal-zone {
+    width: clamp(42px, 11vw, 58px);
+    height: clamp(42px, 11vw, 58px);
+  }
+
+  .petal-pill {
+    max-width: min(128px, 31vw);
+    min-width: 74px;
+    padding: 6px 9px;
+  }
+
+  .page3-title {
+    font-size: clamp(40px, 12vw, 54px);
+  }
+
+  .page3-sub {
+    font-size: clamp(21px, 6vw, 28px);
+  }
+}
+
+@media (max-height: 700px) {
+  .petal-message-screen {
+    --screen-pad-top: 20px;
+    --screen-pad-bottom-base: 58px;
+    --screen-content-gap: 4px;
+  }
+
+  .petal-message-screen .petals-flower {
+    width: min(106vw, 540px, 60dvh);
+    height: min(106vw, 540px, 60dvh);
+  }
+
+  .page3-title {
+    font-size: clamp(34px, min(10vw, 5.4dvh), 52px);
+  }
+
+  .page3-sub {
+    margin-bottom: 8px;
+    font-size: clamp(18px, min(5vw, 3dvh), 26px);
+  }
+
+  .page3-read-btn {
+    min-height: 42px;
+    width: min(58vw, 252px);
+    margin-top: 8px !important;
+  }
+
+  .page4-envelope-stage {
+    width: min(58vw, 280px, 27dvh);
+    margin-bottom: 8px;
+  }
+
+  .page4-title {
+    font-size: clamp(34px, min(10vw, 5.4dvh), 52px);
+  }
+
+  .page4-title em {
+    font-size: clamp(30px, min(9vw, 4.8dvh), 46px);
+  }
+
+  .page4-divider {
+    margin: 8px auto 6px;
+  }
+}
+
+.memories-screen .page5-gift-btn {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  width: min(68vw, 320px, 78cqw) !important;
+  height: auto !important;
+  aspect-ratio: 723 / 211 !important;
+  min-height: 0 !important;
+  margin: clamp(10px, 1.5dvh, 16px) auto 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: url('/images/page5_button-trim.png') center / 20% 20% no-repeat !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Final page 5 guard: keep memories centered and the image button visible. */
+.memories-screen.letter-screen {
+  --screen-pad-top: clamp(18px, 3dvh, 28px);
+  --screen-pad-bottom-base: clamp(58px, 8dvh, 72px);
+}
+
+.memories-screen .screen-content.center {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  max-height: none !important;
+  gap: clamp(7px, 1.05dvh, 12px) !important;
+  padding: 0 clamp(18px, 5vw, 28px) clamp(18px, 2.8dvh, 28px) !important;
+}
+
+.memories-screen .letter-logo {
+  margin: 0 !important;
+}
+
+.memories-screen .letter-title {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  font-size: clamp(23px, min(5vw, 4.6dvh), 31px) !important;
+  line-height: 1.12 !important;
+}
+
+.memories-screen .letter-divider {
+  flex: 0 0 auto !important;
+  margin: clamp(4px, 0.8dvh, 8px) auto !important;
+}
+
+.memories-screen .memory-slideshow {
+  flex: 0 0 auto !important;
+  width: min(100%, 310px, 34dvh) !important;
+  max-width: min(100%, 310px, 34dvh) !important;
+  height: auto !important;
+  justify-content: center !important;
+}
+
+.memories-screen .memory-frame {
+  width: min(100%, 280px, 29dvh) !important;
+  max-height: min(280px, 29dvh) !important;
+}
+
+.memories-screen .memory-caption {
+  width: min(100%, 288px) !important;
+  margin-top: clamp(6px, 0.8dvh, 10px) !important;
+}
+
+.memories-screen .page5-gift-btn {
+  display: inline-flex !important;
+  flex: 0 0 auto !important;
+  width: min(50vw, 210px, 56cqw) !important;
+  height: auto !important;
+  aspect-ratio: 723 / 211 !important;
+  min-height: 0 !important;
+  margin: clamp(10px, 1.5dvh, 16px) auto 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: url('/images/page5_button-trim.png') center / 100% 100% no-repeat !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.memories-screen .page5-gift-btn-img {
+  display: none !important;
+}
+
+/* Final page 7 guard: polished reminder card with clean, safe symbols. */
+.quote-screen.letter-screen {
+  --screen-pad-top: clamp(22px, 4dvh, 42px);
+  --screen-pad-bottom-base: clamp(62px, 8dvh, 82px);
+}
+
+.quote-screen .screen-content {
+  max-height: none;
+  overflow: visible;
+}
+
+.quote-screen .screen-content.center {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  gap: clamp(8px, 1.2dvh, 14px) !important;
+  padding: 0 clamp(18px, 5vw, 32px) clamp(12px, 1.8dvh, 22px) !important;
+}
+
+.quote-screen .quote-logo {
+  position: relative;
+  margin: 0 0 clamp(8px, 1.5dvh, 18px) !important;
+  color: #A9556A;
+  font-size: clamp(12px, min(3.2vw, 1.9dvh), 16px);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+}
+
+.quote-screen .quote-logo::before,
+.quote-screen .quote-logo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: clamp(4px, 1vw, 6px);
+  height: clamp(4px, 1vw, 6px);
+  border-radius: 2px;
+  background: #E18499;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.quote-screen .quote-logo::before {
+  left: clamp(-28px, -5vw, -18px);
+}
+
+.quote-screen .quote-logo::after {
+  right: clamp(-28px, -5vw, -18px);
+}
+
+.quote-flower-wrap {
+  position: relative;
+  width: min(23vw, 118px, 15dvh);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  margin-bottom: clamp(4px, 0.8dvh, 8px);
+  animation: letterButtonAlive 5.8s ease-in-out infinite;
+}
+
+.quote-flower-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.82), rgba(255,220,228,0.24) 62%, transparent 72%);
+}
+
+.quote-flower-img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: saturate(1.05);
+}
+
+.quote-kicker {
+  margin: 0;
+  color: #8A3D4E;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(19px, min(5vw, 3dvh), 29px);
+  font-style: italic;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.quote-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: min(58vw, 230px);
+  color: #D76A82;
+  margin: clamp(2px, 0.5dvh, 6px) auto clamp(4px, 0.8dvh, 8px);
+}
+
+.quote-divider span {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, rgba(215, 106, 130, 0.58), transparent);
+}
+
+.quote-divider i {
+  font-style: normal;
+  font-size: clamp(14px, min(4vw, 2.3dvh), 19px);
+}
+
+.quote-screen .quote-card {
+  position: relative;
+  width: min(100%, 520px, 72cqw);
+  min-height: clamp(145px, 22dvh, 230px);
+  display: grid;
+  place-items: center;
+  padding: clamp(22px, 4dvh, 36px) clamp(22px, 6vw, 46px);
+  overflow: hidden;
+  border: 1px solid rgba(246, 205, 213, 0.78);
+  border-radius: clamp(24px, 5vw, 38px);
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255,255,255,0.82), transparent 48%),
+    linear-gradient(145deg, rgba(255, 244, 247, 0.82), rgba(255, 217, 226, 0.54));
+  box-shadow: none !important;
+}
+
+.quote-screen .quote-card::before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px solid rgba(255,255,255,0.7);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.quote-screen .quote-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 14px 12px auto;
+  width: clamp(48px, 12vw, 86px);
+  height: clamp(48px, 12vw, 86px);
+  opacity: 0.62;
+  background:
+    radial-gradient(ellipse at 30% 78%, transparent 0 42%, rgba(255,255,255,0.9) 44% 48%, transparent 50%),
+    radial-gradient(ellipse at 60% 70%, transparent 0 42%, rgba(255,255,255,0.86) 44% 48%, transparent 50%),
+    linear-gradient(135deg, transparent 46%, rgba(255,255,255,0.82) 47% 50%, transparent 51%);
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+.quote-screen .letter-quote {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  padding: 0;
+  color: #87384A;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(24px, min(6.8vw, 4.2dvh), 42px);
+  font-style: italic;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.quote-screen .page7-continue {
+  width: min(58vw, 300px, 64cqw);
+  margin-top: clamp(14px, 2.2dvh, 24px) !important;
+}
+
+@media (max-width: 520px) {
+  .petal-message-screen .petals-flower {
+    width: min(96vw, 500px, 45dvh) !important;
+    height: min(96vw, 500px, 45dvh) !important;
+    min-width: min(96vw, 500px, 45dvh) !important;
+    min-height: min(96vw, 500px, 45dvh) !important;
+    max-width: min(96vw, 500px, 45dvh) !important;
+    max-height: min(96vw, 500px, 45dvh) !important;
+  }
+}
+
+@media (max-height: 700px) {
+  .petal-message-screen .screen-content.center {
+    gap: clamp(2px, 0.45dvh, 5px) !important;
+    padding-top: clamp(4px, 1dvh, 10px) !important;
+    padding-bottom: clamp(56px, 8dvh, 70px) !important;
+  }
+
+  .petal-message-screen .petals-flower {
+    width: min(86vw, 460px, 39dvh) !important;
+    height: min(86vw, 460px, 39dvh) !important;
+    min-width: min(86vw, 460px, 39dvh) !important;
+    min-height: min(86vw, 460px, 39dvh) !important;
+    max-width: min(86vw, 460px, 39dvh) !important;
+    max-height: min(86vw, 460px, 39dvh) !important;
+  }
+
+  .petal-message-screen .petal-message-card {
+    bottom: clamp(64px, 9dvh, 84px) !important;
+  }
+
+  .petal-message-screen .page3-read-btn {
+    width: min(52vw, 226px) !important;
+    margin-bottom: clamp(30px, 4.2dvh, 40px) !important;
+  }
+}
+
+.page8-finish-btn {
+  width: min(62vw, 292px);
+  aspect-ratio: 709 / 216;
+  min-height: 0;
+  margin-top: clamp(12px, 2dvh, 22px) !important;
+  padding: 0;
+  background: url('/images/page8_button-trim.png') center / 80% 80% no-repeat;
+  color: #fff;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+.page9-again-btn {
+  width: min(58vw, 268px);
+  aspect-ratio: 709 / 216;
+  min-height: 0;
+  padding: 0;
+  background: url('/images/page9_button-trim.png') center / 80% 80% no-repeat;
+  color: #D4687A;
+  filter: none;
+  box-shadow: none;
+  animation: letterButtonAlive 4.8s ease-in-out infinite;
+}
+
+.bouquet-screen .screen-content.center > .letter-btn.page2-continue.page6-continue {
+  position: relative !important;
+  z-index: 5 !important;
+  margin-top: clamp(4px, 0.6dvh, 8px) !important;
+}
+
+.bouquet-screen .screen-content {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: visible !important;
+  padding-top: clamp(6px, 1dvh, 12px) !important;
+  padding-bottom: clamp(10px, 1.5dvh, 18px) !important;
+  gap: clamp(4px, 0.8dvh, 8px) !important;
+}
+
+.bouquet-screen .letter-divider {
+  margin: clamp(2px, 0.4dvh, 4px) auto !important;
+}
+
+.bouquet-screen .letter-logo {
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 520px) {
+  .petal-message-screen .petals-flower {
+    width: min(114vw, 560px, 62dvh);
+    height: min(114vw, 560px, 62dvh);
+  }
+
+  .petal-message-screen .petal-zone {
+    width: clamp(42px, 11vw, 58px);
+    height: clamp(42px, 11vw, 58px);
+  }
+
+  .petal-pill {
+    max-width: min(128px, 31vw);
+    min-width: 74px;
+    padding: 6px 9px;
+  }
+
+  .page3-title {
+    font-size: clamp(40px, 12vw, 54px);
+  }
+
+  .page3-sub {
+    font-size: clamp(21px, 6vw, 28px);
+  }
+
+  /* add these two rules */
+  .petal-message-screen .petal-message-card {
+    bottom: clamp(78px, 11dvh, 100px) !important;
+  }
+
+  .petal-message-screen .page3-read-btn {
+    margin: clamp(6px, 1dvh, 10px) auto clamp(24px, 3.6dvh, 34px) !important;
+  }
+}
+
+@media (max-height: 720px) {
+  .quote-screen .quote-flower-wrap {
+    width: min(18vw, 92px, 12dvh);
+  }
+
+  .quote-screen .quote-card {
+    min-height: clamp(122px, 19dvh, 170px);
+    padding-block: clamp(18px, 3dvh, 26px);
+  }
+
+  .quote-screen .letter-quote {
+    font-size: clamp(22px, min(5.8vw, 3.6dvh), 34px);
+    line-height: 1.34;
+  }
+}
+
+/* Page 3 final layout: keep the petal flower stable while messages reveal. */
+.petal-message-screen .screen-content.center {
+  position: relative !important;
+  justify-content: center !important;
+  overflow: visible !important;
+  gap: clamp(5px, 0.8dvh, 10px) !important;
+  padding-top: clamp(24px, 3.8dvh, 38px) !important;
+  padding-bottom: clamp(56px, 7.4dvh, 74px) !important;
+}
+
+.petal-message-screen .letter-logo {
+  max-width: min(74vw, 260px) !important;
+  margin: 0 auto clamp(2px, 0.45dvh, 5px) !important;
+  color: #A9556A !important;
+  font-size: clamp(8px, min(2.1vw, 1.25dvh), 10px) !important;
+  line-height: 1.2 !important;
+  letter-spacing: clamp(4px, 0.78vw, 7px) !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-align: center !important;
+}
+
+.petal-message-screen .page3-logo-divider {
+  margin: 0 auto clamp(2px, 0.55dvh, 6px) !important;
+}
+
+.petal-message-screen .page3-title {
+  font-size: clamp(32px, min(8.4vw, 5.35dvh), 50px) !important;
+  line-height: 0.98 !important;
+  margin-top: clamp(1px, 0.3dvh, 4px) !important;
+}
+
+.petal-message-screen .page3-sub {
+  font-size: clamp(16px, min(4.35vw, 2.45dvh), 23px) !important;
+  line-height: 1.05 !important;
+  margin: clamp(1px, 0.3dvh, 3px) 0 clamp(10px, 1.55dvh, 16px) !important;
+}
+
+.petal-message-screen .petals-flower {
+  flex: 0 0 auto !important;
+  width: min(86vw, 520px, 40dvh) !important;
+  height: min(86vw, 520px, 40dvh) !important;
+  min-width: min(86vw, 520px, 40dvh) !important;
+  min-height: min(86vw, 520px, 40dvh) !important;
+  max-width: min(86vw, 520px, 40dvh) !important;
+  max-height: min(86vw, 520px, 40dvh) !important;
+  margin: 0 auto !important;
+  contain: layout paint;
+}
+
+.petal-message-screen .flower-image {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.petal-message-screen .petal-message-slot {
+  position: relative !important;
+  flex: 0 0 clamp(34px, 5dvh, 44px) !important;
+  width: min(78vw, 330px) !important;
+  display: grid !important;
+  place-items: center !important;
+  margin: clamp(2px, 0.5dvh, 6px) auto 0 !important;
+  z-index: 80 !important;
+}
+
+.petal-message-screen .petal-message-card {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  transform: none !important;
+  z-index: 90 !important;
+  margin: 0 !important;
+  pointer-events: none;
+}
+
+.petal-message-screen .page3-read-btn {
+  position: relative !important;
+  z-index: 130 !important;
+  flex: 0 0 auto !important;
+  width: min(54vw, 238px) !important;
+  margin: clamp(4px, 0.7dvh, 8px) auto clamp(30px, 4dvh, 42px) !important;
+  transform-origin: center;
+}
+
+.petal-message-screen > .screen-dots {
+  z-index: 25 !important;
+  bottom: calc(clamp(10px, 2dvh, 16px) + var(--safe-bottom)) !important;
+}
+
+.petal-message-enter-from,
+.petal-message-leave-to {
+  opacity: 0;
+  transform: translateY(5px) scale(0.98) !important;
+}
+
+@media (min-width: 700px) and (max-height: 760px) {
+  .petal-message-screen .screen-content.center {
+    padding-top: clamp(30px, 4.4dvh, 42px) !important;
+    gap: clamp(3px, 0.55dvh, 7px) !important;
+  }
+
+  .petal-message-screen .letter-logo {
+    font-size: clamp(8px, 1.45dvh, 10px) !important;
+    letter-spacing: clamp(5px, 0.72vw, 8px) !important;
+    margin-bottom: 0 !important;
+  }
+
+  .petal-message-screen .page3-logo-divider {
+    margin-bottom: clamp(1px, 0.35dvh, 4px) !important;
+  }
+
+  .petal-message-screen .page3-title {
+    font-size: clamp(34px, 5.6dvh, 44px) !important;
+    line-height: 0.98 !important;
+    margin: 0 !important;
+  }
+
+  .petal-message-screen .page3-sub {
+    font-size: clamp(17px, 2.75dvh, 22px) !important;
+    line-height: 1.02 !important;
+    margin: clamp(2px, 0.45dvh, 5px) 0 clamp(10px, 1.7dvh, 16px) !important;
+  }
 }
 </style>
