@@ -50,12 +50,6 @@ const activePetalMessage = computed(() => {
   if (activePetal.value === null) return ''
   return letter.value?.petal_messages?.[activePetal.value] || ''
 })
-const favoriteLine = computed(() => {
-  const message = letter.value?.message?.replace(/\s+/g, ' ').trim() || ''
-  if (!message) return 'You are loved in the quietest, sweetest ways.'
-  const sentence = message.match(/[^.!?]+[.!?]/)?.[0]?.trim() || message
-  return sentence.length > 120 ? `${sentence.slice(0, 117).trim()}...` : sentence
-})
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -1221,10 +1215,6 @@ function skipAnimation() {
             <h2 class="letter-title">You are<br><em>so loved</em></h2>
             <div class="letter-divider"><span></span>✦<span></span></div>
             <p class="letter-sub">Keep this letter close to your heart.<br>Scan the QR anytime to revisit.</p>
-            <div class="favorite-line-card">
-              <span>A line to remember</span>
-              <p>{{ favoriteLine }}</p>
-            </div>
             <div class="end-brand">
               <p>Crafted by</p>
               <strong>Stack Petals</strong>
@@ -2180,8 +2170,7 @@ memories-screen,
   pointer-events: none;
 }
 
-.dedication-kicker,
-.favorite-line-card span {
+.dedication-kicker {
   color: #C48090;
   font-size: 10px;
   font-weight: 700;
@@ -4923,25 +4912,6 @@ memories-screen,
   margin-top: 14px;
 }
 
-.favorite-line-card {
-  width: min(100%, 280px);
-  margin-top: 14px;
-  padding: 14px 16px;
-  border: 1px solid rgba(232, 180, 192, 0.34);
-  border-radius: 18px;
-  background: rgba(255, 250, 249, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
-  text-align: center;
-}
-
-.favorite-line-card p {
-  margin: 8px 0 0;
-  color: #7A3A4A;
-  font-size: clamp(13px, min(3.8vw, 2dvh), 15px);
-  font-style: italic;
-  line-height: 1.55;
-}
-
 .end-actions {
   display: grid;
   justify-items: center;
@@ -5011,7 +4981,6 @@ memories-screen,
   }
 
   .dedication-card p,
-  .favorite-line-card,
   .memory-caption p {
     display: none;
   }
