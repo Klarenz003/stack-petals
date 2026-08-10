@@ -1,0 +1,296 @@
+/* ============================================================
+   Stack Petals dark mode
+   Import this file only when the dark theme is ready to ship.
+   ============================================================ */
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --sp-bg: #151112;
+  --sp-surface: rgba(31, 25, 27, 0.88);
+  --sp-surface-solid: #211b1d;
+  --sp-surface-soft: rgba(43, 34, 37, 0.82);
+  --sp-text: #f8eded;
+  --sp-text-soft: #decfd0;
+  --sp-text-muted: #aa969a;
+  --sp-primary: #9bc2ad;
+  --sp-primary-strong: #b8dcc9;
+  --sp-pink: #e7a0af;
+  --sp-pink-strong: #f0b9c4;
+  --sp-border: rgba(231, 160, 175, 0.28);
+  --sp-shadow: rgba(0, 0, 0, 0.34);
+}
+
+:root[data-theme='dark'] header {
+  background: linear-gradient(180deg, rgba(21, 17, 18, 0.78), rgba(21, 17, 18, 0));
+}
+
+:root[data-theme='dark'] .logo img {
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.22));
+}
+
+:root[data-theme='dark'] #circuit-canvas,
+:root[data-theme='dark'] #petal-canvas {
+  opacity: 0.42;
+}
+
+:root[data-theme='dark'] .petal-code-item {
+  color: #9bc2ad;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.72);
+}
+
+:root[data-theme='dark'] .petal-code-item.petal {
+  color: #e7a0af;
+}
+
+:root[data-theme='dark'] .hero-left h1,
+:root[data-theme='dark'] .products h2,
+:root[data-theme='dark'] .page-hero h1,
+:root[data-theme='dark'] .about-text h2,
+:root[data-theme='dark'] .process-section-header h2,
+:root[data-theme='dark'] .gallery-featured-copy h2,
+:root[data-theme='dark'] .reviews-cta h2,
+:root[data-theme='dark'] .contact-info h2,
+:root[data-theme='dark'] .contact-form h2,
+:root[data-theme='dark'] .cart-panel h2 {
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] .hero-left h1 span,
+:root[data-theme='dark'] .page-hero h1 span {
+  color: var(--sp-pink-strong);
+}
+
+:root[data-theme='dark'] .hero-left p,
+:root[data-theme='dark'] .page-hero p,
+:root[data-theme='dark'] .about-text p,
+:root[data-theme='dark'] .process-section-desc,
+:root[data-theme='dark'] .process-body p,
+:root[data-theme='dark'] .process-feature p,
+:root[data-theme='dark'] .process-feature-copy p,
+:root[data-theme='dark'] .gallery-featured-copy p,
+:root[data-theme='dark'] .gallery-notice p,
+:root[data-theme='dark'] .gallery-empty-state p,
+:root[data-theme='dark'] .review-text,
+:root[data-theme='dark'] .contact-item p,
+:root[data-theme='dark'] .contact-form-hint,
+:root[data-theme='dark'] .contact-success p {
+  color: var(--sp-text-soft);
+}
+
+:root[data-theme='dark'] .feature-bar,
+:root[data-theme='dark'] .home-experience,
+:root[data-theme='dark'] .home-trust-strip,
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .product-card.card,
+:root[data-theme='dark'] .cart-panel,
+:root[data-theme='dark'] .checkout-modal,
+:root[data-theme='dark'] .gallery-featured,
+:root[data-theme='dark'] .gallery-notice,
+:root[data-theme='dark'] .gallery-empty-state,
+:root[data-theme='dark'] .review-card,
+:root[data-theme='dark'] .reviews-cta,
+:root[data-theme='dark'] .contact-support-card,
+:root[data-theme='dark'] .contact-info,
+:root[data-theme='dark'] .contact-form,
+:root[data-theme='dark'] .track-card,
+:root[data-theme='dark'] .receipt-card {
+  border-color: var(--sp-border);
+  background: var(--sp-surface);
+  box-shadow: 0 18px 44px var(--sp-shadow);
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] .card-image-wrap,
+:root[data-theme='dark'] .product-card .card-image-wrap {
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.12), transparent 52%),
+    linear-gradient(180deg, rgba(43,34,37,0.78), rgba(24,20,21,0.9));
+}
+
+:root[data-theme='dark'] .card h3,
+:root[data-theme='dark'] .product-card h3,
+:root[data-theme='dark'] .process-feature strong,
+:root[data-theme='dark'] .process-feature-copy strong,
+:root[data-theme='dark'] .gallery-caption strong,
+:root[data-theme='dark'] .reviews-trust-card strong,
+:root[data-theme='dark'] .contact-item strong {
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] .card p,
+:root[data-theme='dark'] .card-category,
+:root[data-theme='dark'] .product-card .card-category,
+:root[data-theme='dark'] .gallery-caption span,
+:root[data-theme='dark'] .reviews-trust-card span {
+  color: var(--sp-text-muted) !important;
+}
+
+:root[data-theme='dark'] .product-price,
+:root[data-theme='dark'] .product-price:not(.sale),
+:root[data-theme='dark'] .review-author,
+:root[data-theme='dark'] .home-trust-strip span {
+  color: var(--sp-primary);
+}
+
+:root[data-theme='dark'] .product-price .sale-price,
+:root[data-theme='dark'] .cart-item-price .sale-price {
+  color: var(--sp-pink-strong);
+}
+
+:root[data-theme='dark'] .preorder-note {
+  border-color: rgba(231, 160, 175, 0.32);
+  background: rgba(68, 43, 51, 0.72);
+  color: #ffd6de;
+}
+
+:root[data-theme='dark'] .add-to-cart-btn,
+:root[data-theme='dark'] .primary,
+:root[data-theme='dark'] .co-btn-primary,
+:root[data-theme='dark'] .contact-submit-btn {
+  background: var(--sp-primary);
+  color: #101514;
+}
+
+:root[data-theme='dark'] .add-to-cart-btn:hover,
+:root[data-theme='dark'] .primary:hover,
+:root[data-theme='dark'] .co-btn-primary:hover,
+:root[data-theme='dark'] .contact-submit-btn:hover {
+  background: var(--sp-primary-strong);
+}
+
+:root[data-theme='dark'] .secondary,
+:root[data-theme='dark'] .co-btn-outline,
+:root[data-theme='dark'] .co-btn-secondary,
+:root[data-theme='dark'] .gallery-notice button {
+  border-color: var(--sp-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] select {
+  border-color: var(--sp-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder {
+  color: #9b898d;
+}
+
+:root[data-theme='dark'] footer {
+  background: #0f0c0d;
+  color: #f8eded;
+}
+
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] main,
+:root[data-theme='dark'] .page,
+:root[data-theme='dark'] .home,
+:root[data-theme='dark'] .shop-page,
+:root[data-theme='dark'] .about-page,
+:root[data-theme='dark'] .process-page,
+:root[data-theme='dark'] .gallery-page,
+:root[data-theme='dark'] .reviews-page,
+:root[data-theme='dark'] .contact-page,
+:root[data-theme='dark'] .track-order-page,
+:root[data-theme='dark'] .receipt-page {
+  background-color: var(--sp-bg);
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] main :where(h1, h2, h3, h4, h5, h6, strong, label, th, dt):not(.letter-page *) {
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] main :where(p, span, small, li, td, dd, figcaption):not(.letter-page *):not(.badge):not(.sale-badge):not(.nav-badge) {
+  color: inherit;
+}
+
+:root[data-theme='dark'] main :where(.muted, .sub, .hint, .empty, .empty-state, .helper, .meta, .date, .description, .subtitle, .caption, .note):not(.letter-page *) {
+  color: var(--sp-text-muted) !important;
+}
+
+:root[data-theme='dark'] :where(
+  .section,
+  .section-card,
+  .panel,
+  .modal,
+  .modal-content,
+  .modal-box,
+  .cart-drawer,
+  .cart-item,
+  .checkout-step,
+  .checkout-card,
+  .summary-card,
+  .order-card,
+  .status-card,
+  .timeline-card,
+  .gallery-card,
+  .memory-card,
+  .receipt-section,
+  .tracking-result,
+  .address-card,
+  .pickup-card,
+  .map-link-card,
+  .letter-preview-card
+):not(.letter-page *) {
+  border-color: var(--sp-border) !important;
+  background: var(--sp-surface) !important;
+  color: var(--sp-text) !important;
+}
+
+:root[data-theme='dark'] :where(
+  .filter-chip,
+  .category-chip,
+  .category-btn,
+  .more-categories,
+  .more-categories-select,
+  .chip,
+  .pill,
+  .tag,
+  .status-pill
+):not(.letter-page *) {
+  border-color: var(--sp-border) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--sp-text-soft) !important;
+}
+
+:root[data-theme='dark'] :where(
+  .filter-chip.active,
+  .category-chip.active,
+  .category-btn.active,
+  .chip.active,
+  .pill.active
+):not(.letter-page *) {
+  background: var(--sp-primary) !important;
+  color: #101514 !important;
+}
+
+:root[data-theme='dark'] :where(table, thead, tbody, tr, th, td):not(.letter-page *) {
+  border-color: rgba(231, 160, 175, 0.16) !important;
+}
+
+:root[data-theme='dark'] :where(th, thead td):not(.letter-page *) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--sp-text-soft) !important;
+}
+
+:root[data-theme='dark'] :where(option, optgroup) {
+  background: #211b1d;
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] :where(.old-price, .compare-price, .original-price):not(.letter-page *) {
+  color: #8f7d81 !important;
+}
+
+:root[data-theme='dark'] :where(.error, .form-error, .checkout-error):not(.letter-page *) {
+  color: #ffb4c1 !important;
+}
+
+:root[data-theme='dark'] :where(.success, .form-success, .checkout-success):not(.letter-page *) {
+  color: #b8dcc9 !important;
+}

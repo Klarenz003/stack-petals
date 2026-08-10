@@ -46,6 +46,7 @@ const loadingTotal = ref(1)
 const angleAssetsReady = ref(false)
 const angleFrameSources = ref<string[]>([])
 const angleCanvas = ref<HTMLCanvasElement | null>(null)
+const petalSparkleKey = ref(0)
 const activePetalMessage = computed(() => {
   if (activePetal.value === null) return ''
   return letter.value?.petal_messages?.[activePetal.value] || ''
@@ -56,6 +57,7 @@ let loadingTextTimer: number | null = null
 let musicUnlockHandler: (() => void) | null = null
 let angleFrameImages: Array<HTMLImageElement | null> = []
 let anglePreloadRun = 0
+const MINIMUM_LOADING_MS = 900
 
 const loadingMessages = [
   'Preparing your memories, unwrapping your letter...',
@@ -72,6 +74,7 @@ const totalScreens = 9
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
+  const loadingStartedAt = performance.now()
   startLoadingTextShuffle()
   loadingLoaded.value = 0
   loadingTotal.value = 1
@@ -98,10 +101,17 @@ async function loadLetter() {
   }
   void preloadLetterAssetsInBackground(data)
   await preloadInitialLetterAssets()
+  await waitForMinimumLoadingTime(loadingStartedAt)
   loading.value = false
   stopLoadingTextShuffle()
   startMemoryTimer()
   void startDefaultMusic()
+}
+
+function waitForMinimumLoadingTime(startedAt: number) {
+  const remaining = MINIMUM_LOADING_MS - (performance.now() - startedAt)
+  if (remaining <= 0) return Promise.resolve()
+  return new Promise<void>(resolve => window.setTimeout(resolve, remaining))
 }
 
 function randomLoadingMessage() {
@@ -419,6 +429,7 @@ function onMouseUp(e: MouseEvent) {
 function revealPetal(i: number) {
   revealedPetals.value[i] = true
   activePetal.value = i
+  petalSparkleKey.value += 1
 }
 
 // ── Memory Slideshow ───────────────────────────────────────────────
@@ -757,18 +768,29 @@ function skipAnimation() {
 
     <!-- Loading -->
     <div v-if="loading" class="letter-loading">
-      <div class="loading-bloom" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <span></span>
-        <i></i>
-      </div>
-      <p class="loading-message">{{ loadingMessage }}</p>
-      <div class="letter-loading-bar" aria-hidden="true">
-        <span :style="{ width: `${Math.round((loadingLoaded / loadingTotal) * 100)}%` }"></span>
+      <div class="letter-loading-card">
+        <div class="loading-brand">
+          <span></span>
+          Stack Petals
+          <span></span>
+        </div>
+        <div class="loading-keepsake" aria-hidden="true">
+          <div class="loading-bloom">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <i></i>
+          </div>
+          <img src="/images/envelope.png" alt="" class="loading-envelope">
+        </div>
+        <p class="loading-kicker">A little moment is being prepared</p>
+        <p class="loading-message">{{ loadingMessage }}</p>
+        <div class="letter-loading-bar" aria-hidden="true">
+          <span :style="{ width: `${Math.round((loadingLoaded / loadingTotal) * 100)}%` }"></span>
+        </div>
       </div>
     </div>
 
@@ -860,6 +882,14 @@ function skipAnimation() {
 
           <div class="petals-flower">
             <img src="/images/6petals.png" alt="" class="flower-svg flower-image" />
+            <div :key="petalSparkleKey" class="petal-sparkle-burst" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
 
             <!-- Petal 1 — Top -->
             <div class="petal-zone petal-z-1" :class="{ revealed: revealedPetals[0], active: activePetal === 0 }" @click="revealPetal(0)">
@@ -3463,6 +3493,73 @@ memories-screen,
   padding: 40px;
 }
 
+.letter-loading {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 213, 224, 0.72), transparent 26%),
+    radial-gradient(circle at 86% 76%, rgba(255, 226, 232, 0.68), transparent 30%),
+    linear-gradient(145deg, #fff6f7 0%, #ffe8ee 54%, #fff7f4 100%);
+}
+
+.letter-loading::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 34px;
+  box-shadow: inset 0 0 0 1px rgba(226, 152, 168, 0.16);
+  pointer-events: none;
+}
+
+.letter-loading-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 88vw);
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 6vw, 44px);
+  border: 1px solid rgba(226, 152, 168, 0.22);
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 248, 249, 0.7));
+  box-shadow: 0 26px 70px rgba(122, 58, 74, 0.1);
+  animation: loadingCardArrive 520ms ease both;
+}
+
+.loading-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #B96578;
+  font-size: 13px;
+  letter-spacing: 6px;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.loading-brand span {
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(216, 105, 128, 0.42));
+}
+
+.loading-brand span:last-child {
+  background: linear-gradient(90deg, rgba(216, 105, 128, 0.42), transparent);
+}
+
+.loading-keepsake {
+  position: relative;
+  width: 184px;
+  height: 164px;
+  display: grid;
+  place-items: center;
+  margin: 28px 0 18px;
+}
+
 .loading-flower {
   font-size: 72px;
   margin-bottom: 24px;
@@ -3471,11 +3568,10 @@ memories-screen,
 
 .loading-bloom {
   position: relative;
-  width: 96px;
-  height: 96px;
-  margin-bottom: 24px;
-  filter: drop-shadow(0 16px 22px rgba(212, 104, 122, 0.16));
-  animation: loadingBloomFloat 2.8s ease-in-out infinite;
+  width: 118px;
+  height: 118px;
+  filter: drop-shadow(0 16px 22px rgba(212, 104, 122, 0.12));
+  animation: loadingBloomFloat 3.4s ease-in-out infinite;
 }
 
 .loading-bloom span {
@@ -3489,7 +3585,7 @@ memories-screen,
     radial-gradient(circle at 48% 24%, rgba(255,255,255,0.82), transparent 30%),
     linear-gradient(160deg, #FFD7E0, #D4687A);
   transform-origin: 50% 78%;
-  opacity: 0.9;
+  opacity: 0.62;
 }
 
 .loading-bloom span:nth-child(1) { transform: translate(-50%, -82%) rotate(0deg); }
@@ -3507,9 +3603,21 @@ memories-screen,
   height: 26px;
   border: 4px solid rgba(255,255,255,0.78);
   border-radius: 50%;
-  background: #F8B8C4;
+  background: #FFE0E7;
   transform: translate(-50%, -50%);
   box-shadow: inset 0 1px 4px rgba(122,58,74,0.12);
+}
+
+.loading-envelope {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 142px;
+  max-width: 74%;
+  transform: translateX(-50%);
+  object-fit: contain;
+  filter: drop-shadow(0 16px 20px rgba(169, 92, 108, 0.14));
+  animation: loadingEnvelopeBreathe 2.8s ease-in-out infinite;
 }
 
 .letter-loading p,
@@ -3518,9 +3626,20 @@ memories-screen,
   color: #B08090;
 }
 
+.loading-kicker {
+  margin: 0 0 8px;
+  color: #9A5A68 !important;
+  font-size: 13px;
+  font-style: normal !important;
+  letter-spacing: 2.8px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
 .loading-message {
   width: min(320px, 82vw);
   min-height: 44px;
+  margin: 0;
   line-height: 1.55;
 }
 
@@ -3584,6 +3703,26 @@ memories-screen,
   }
   50% {
     transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+@keyframes loadingEnvelopeBreathe {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-4px) scale(1.025);
+  }
+}
+
+@keyframes loadingCardArrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -5712,6 +5851,61 @@ memories-screen,
   height: 100% !important;
 }
 
+.petal-message-screen .petal-sparkle-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+}
+
+.petal-message-screen .petal-sparkle-burst span {
+  position: absolute;
+  width: clamp(5px, 1.1vw, 9px);
+  height: clamp(5px, 1.1vw, 9px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.98) 0 28%, rgba(255, 196, 211, 0.9) 30% 54%, transparent 58%);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  animation: petalSparklePop 920ms ease-out both;
+}
+
+.petal-message-screen .petal-sparkle-burst span:nth-child(1) { left: 50%; top: 22%; animation-delay: 0ms; }
+.petal-message-screen .petal-sparkle-burst span:nth-child(2) { left: 76%; top: 40%; animation-delay: 70ms; }
+.petal-message-screen .petal-sparkle-burst span:nth-child(3) { left: 70%; top: 67%; animation-delay: 130ms; }
+.petal-message-screen .petal-sparkle-burst span:nth-child(4) { left: 50%; top: 78%; animation-delay: 190ms; }
+.petal-message-screen .petal-sparkle-burst span:nth-child(5) { left: 28%; top: 66%; animation-delay: 120ms; }
+.petal-message-screen .petal-sparkle-burst span:nth-child(6) { left: 24%; top: 39%; animation-delay: 50ms; }
+
+.petal-message-screen .petal-zone {
+  z-index: 32 !important;
+  border-radius: 999px;
+  transition:
+    filter 260ms ease,
+    transform 260ms ease,
+    background-color 260ms ease;
+}
+
+.petal-message-screen .petal-zone.revealed {
+  filter:
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.9))
+    drop-shadow(0 0 12px rgba(216, 105, 128, 0.22));
+}
+
+.petal-message-screen .petal-zone.active {
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.34), rgba(255, 210, 222, 0.1) 58%, transparent 72%);
+  filter:
+    drop-shadow(0 0 10px rgba(255, 255, 255, 0.98))
+    drop-shadow(0 0 20px rgba(216, 105, 128, 0.35));
+  transform: translateZ(0) scale(1.05);
+}
+
+.petal-message-screen .petal-zone.active .petal-symbol,
+.petal-message-screen .petal-zone.revealed .petal-symbol {
+  color: #C85C73;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.95);
+}
+
 .petal-message-screen .petal-message-slot {
   position: relative !important;
   flex: 0 0 clamp(34px, 5dvh, 44px) !important;
@@ -5726,10 +5920,11 @@ memories-screen,
   position: relative !important;
   inset: auto !important;
   width: 100% !important;
-  transform: none !important;
   z-index: 90 !important;
   margin: 0 !important;
   pointer-events: none;
+  transform-origin: center bottom;
+  box-shadow: 0 10px 24px rgba(145, 73, 89, 0.08);
 }
 
 .petal-message-screen .page3-read-btn {
@@ -5749,7 +5944,30 @@ memories-screen,
 .petal-message-enter-from,
 .petal-message-leave-to {
   opacity: 0;
-  transform: translateY(5px) scale(0.98) !important;
+  transform: translateY(12px) scale(0.96) !important;
+}
+
+.petal-message-enter-active {
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.petal-message-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+@keyframes petalSparklePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.25);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -92%) scale(0.72);
+  }
 }
 
 @media (min-width: 700px) and (max-height: 760px) {

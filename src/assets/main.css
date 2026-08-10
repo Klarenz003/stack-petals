@@ -21,6 +21,23 @@ img {
   -webkit-user-drag: none;
 }
 
+:root {
+  color-scheme: light;
+  --sp-bg: #fdf0ef;
+  --sp-surface: rgba(255, 250, 250, 0.86);
+  --sp-surface-solid: #fff;
+  --sp-surface-soft: rgba(255, 246, 247, 0.82);
+  --sp-text: #222;
+  --sp-text-soft: #555;
+  --sp-text-muted: #888;
+  --sp-primary: #5f8872;
+  --sp-primary-strong: #4a6b5a;
+  --sp-pink: #d8a5a7;
+  --sp-pink-strong: #c48b8d;
+  --sp-border: rgba(216, 165, 167, 0.34);
+  --sp-shadow: rgba(122, 58, 74, 0.12);
+}
+
 @media (hover: hover) and (pointer: fine) {
   html,
   body {
@@ -66,9 +83,10 @@ img {
 
 body {
   font-family: 'Inter', sans-serif;
-  background: #fdf0ef;
-  color: #222;
+  background: var(--sp-bg);
+  color: var(--sp-text);
   overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .petal-code-bg {
@@ -159,10 +177,10 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 20px;
   position: relative;
-  z-index: 1;
+  z-index: 50;
 }
 
 .logo img {
@@ -172,21 +190,51 @@ header {
   cursor: pointer;
 }
 
-nav { display: flex; gap: 36px; flex-wrap: wrap; }
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(14px, 2vw, 36px);
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
 
 nav a {
   text-decoration: none;
-  color: #222;
-  font-size: 16px;
+  color: var(--sp-text);
+  font-size: clamp(14px, 1.05vw, 16px);
   transition: color 0.2s;
   position: relative;
   padding-bottom: 4px;
 }
 
-nav a:hover { color: #5f8872; }
+.nav-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--sp-border);
+  border-radius: 14px;
+  background: var(--sp-surface);
+  cursor: pointer;
+}
+
+.nav-toggle span {
+  width: 20px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--sp-primary);
+}
+
+nav a:hover { color: var(--sp-primary); }
 
 nav a.router-link-active {
-  color: #5f8872;
+  color: var(--sp-primary);
   font-weight: 600;
 }
 
@@ -197,7 +245,7 @@ nav a.router-link-active::after {
   left: 0;
   width: 100%;
   height: 2px;
-  background: #d8a5a7;
+  background: var(--sp-pink);
   border-radius: 2px;
 }
 
@@ -3925,6 +3973,23 @@ input, textarea, [contenteditable="true"] {
 }
 
 @media (max-width: 1024px) {
+  header {
+    padding: 16px 5%;
+    gap: 14px;
+  }
+
+  .logo img {
+    max-width: 160px;
+  }
+
+  nav {
+    gap: 16px;
+  }
+
+  nav a {
+    font-size: 14px;
+  }
+
   .experience-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -3952,9 +4017,70 @@ input, textarea, [contenteditable="true"] {
   }
 }
 
+@media (max-width: 920px) {
+  header {
+    align-items: center;
+  }
+
+  .logo img {
+    max-width: 150px;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  nav {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 5%;
+    right: 5%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid var(--sp-border);
+    border-radius: 18px;
+    background: var(--sp-surface);
+    box-shadow: 0 18px 42px var(--sp-shadow);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    white-space: normal;
+  }
+
+  nav.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  nav a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--sp-surface-solid) 70%, transparent);
+    font-size: 14px;
+  }
+
+  nav a.router-link-active::after {
+    display: none;
+  }
+
+  nav a.router-link-active {
+    background: color-mix(in srgb, var(--sp-primary) 16%, transparent);
+  }
+}
+
 @media (max-width: 768px) {
-  header { flex-direction: column; }
-  nav { flex-wrap: wrap; justify-content: center; gap: 14px; }
+  header {
+    flex-direction: row;
+  }
+
   .hero { padding: 30px 5%; gap: 28px; }
   .buttons { flex-direction: column; align-items: center; }
   .primary, .secondary { width: 220px; }
@@ -3993,6 +4119,20 @@ input, textarea, [contenteditable="true"] {
 }
 
 @media (max-width: 480px) {
+  header {
+    padding: 14px 4.5%;
+  }
+
+  .logo img {
+    max-width: 132px;
+  }
+
+  nav {
+    left: 4.5%;
+    right: 4.5%;
+    grid-template-columns: 1fr;
+  }
+
   .hero-left h1 { font-size: 3rem; }
   .hero-left p { font-size: 1rem; }
   .hero-right img { width: min(96vw, 430px); }
@@ -4969,6 +5109,8 @@ input, textarea, [contenteditable="true"] {
     max-width: 720px !important;
   }
 }
+
+/* Dark mode is isolated in src/assets/darkmode.css. Import it from src/main.ts when ready. */
 
 @media (hover: hover) and (pointer: fine) {
   input,

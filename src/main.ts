@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import './assets/main.css'
+// Import './assets/darkmode.css' when the dark theme is ready to ship.
 
 const app = createApp(App)
 

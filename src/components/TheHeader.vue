@@ -1,6 +1,17 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+const route = useRoute()
 const router = useRouter()
+const menuOpen = ref(false)
+
+watch(
+  () => route.fullPath,
+  () => {
+    menuOpen.value = false
+  },
+)
 </script>
 
 <template>
@@ -8,7 +19,20 @@ const router = useRouter()
     <div class="logo" @click="router.push('/')">
       <img src="/images/logo.png" alt="Stack Petals" />
     </div>
-    <nav>
+
+    <button
+      class="nav-toggle"
+      type="button"
+      :aria-expanded="menuOpen"
+      aria-label="Toggle navigation"
+      @click="menuOpen = !menuOpen"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav :class="{ open: menuOpen }">
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/products">Shop</RouterLink>
       <RouterLink to="/about">About</RouterLink>
