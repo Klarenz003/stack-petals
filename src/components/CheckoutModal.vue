@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const cart = useCartStore()
 const router = useRouter()
+const checkoutModal = ref<HTMLElement | null>(null)
 const isShaking = ref(false)
 const emailError = ref('')
-const showPreview = ref(false)
 const showLetterExperiencePreview = ref(false)
 const letterPreviewScreen = ref(0)
-const previewRevealed = ref([false, false, false, false, false, false])
 const letterPreviewPetals = ref([false, false, false, false, false, false])
+const activeLetterPreviewPetal = ref<number | null>(null)
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
@@ -298,13 +298,10 @@ async function handleMemoryDrop(e: DragEvent) {
   }
 }
 
-function togglePreviewPetal(i: number) {
-  previewRevealed.value[i] = !previewRevealed.value[i]
-}
-
 function openLetterExperiencePreview() {
   letterPreviewScreen.value = 0
   letterPreviewPetals.value = [false, false, false, false, false, false]
+  activeLetterPreviewPetal.value = null
   showLetterExperiencePreview.value = true
 }
 
@@ -317,8 +314,22 @@ function prevLetterPreviewScreen() {
 }
 
 function toggleLetterPreviewPetal(i: number) {
-  letterPreviewPetals.value[i] = !letterPreviewPetals.value[i]
+  letterPreviewPetals.value[i] = true
+  activeLetterPreviewPetal.value = i
 }
+
+const activeLetterPreviewPetalMessage = computed(() => {
+  if (activeLetterPreviewPetal.value === null) return ''
+  return cart.letterData.petalMessages[activeLetterPreviewPetal.value] || 'Your petal message will appear here.'
+})
+
+watch(
+  () => cart.checkoutStep,
+  async () => {
+    await nextTick()
+    checkoutModal.value?.scrollTo({ top: 0, behavior: 'auto' })
+  },
+)
 
 </script>
 
@@ -328,7 +339,7 @@ function toggleLetterPreviewPetal(i: number) {
     class="checkout-overlay"
     @click.self="shakeModal"
   >
-    <div class="checkout-modal" :class="{ shake: isShaking }">
+    <div ref="checkoutModal" class="checkout-modal" :class="{ shake: isShaking }">
 
       <!-- Step indicator -->
       <div class="checkout-steps">
@@ -556,10 +567,7 @@ function toggleLetterPreviewPetal(i: number) {
           </div>
 
           <div class="petals-section">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-              <label style="margin: 0;">6 Petal Messages</label>
-              <button class="flower-preview-btn" @click="showPreview = true">👀 Preview</button>
-            </div>
+            <label class="petals-section-title">6 Petal Messages</label>
 
             <div class="petals-grid">
               <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-field">
@@ -613,59 +621,6 @@ function toggleLetterPreviewPetal(i: number) {
         </p>
       </div>
 
-    <!-- Flower Preview Modal -->
-    <div v-if="showPreview" class="flower-modal-overlay" @click.self="showPreview = false">
-      <div class="flower-modal">
-        <button class="flower-modal-close" @click="showPreview = false">✕</button>
-        
-        <h3 style="text-align: center; margin: 0 0 4px; font-size: 16px; font-family: 'Lora', serif;">Your Flower 🌸</h3>
-        <p style="text-align: center; font-size: 12px; color: #B08090; margin: 0 0 16px; font-style: italic; font-family: 'Lora', serif;">Tap a petal to reveal</p>
-
-        <div class="flower-container">
-          <svg class="flower-svg-preview" viewBox="0 0 280 280" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88"/>
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(60 140 140)"/>
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(120 140 140)"/>
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(180 140 140)"/>
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F4C0CE" opacity="0.88" transform="rotate(240 140 140)"/>
-            <ellipse cx="140" cy="60" rx="32" ry="48" fill="#F0B4C4" opacity="0.88" transform="rotate(300 140 140)"/>
-            <circle cx="140" cy="140" r="30" fill="#FAD4A8"/>
-            <circle cx="140" cy="140" r="22" fill="#FFE4B5"/>
-          </svg>
-
-          <div class="preview-petal-zone preview-petal-1" @click="togglePreviewPetal(0)">
-            <div class="preview-symbol" v-if="!previewRevealed[0]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[0] || '...' }}</div>
-          </div>
-          <div class="preview-petal-zone preview-petal-2" @click="togglePreviewPetal(1)">
-            <div class="preview-symbol" v-if="!previewRevealed[1]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[1] || '...' }}</div>
-          </div>
-          <div class="preview-petal-zone preview-petal-3" @click="togglePreviewPetal(2)">
-            <div class="preview-symbol" v-if="!previewRevealed[2]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[2] || '...' }}</div>
-          </div>
-          <div class="preview-petal-zone preview-petal-4" @click="togglePreviewPetal(3)">
-            <div class="preview-symbol" v-if="!previewRevealed[3]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[3] || '...' }}</div>
-          </div>
-          <div class="preview-petal-zone preview-petal-5" @click="togglePreviewPetal(4)">
-            <div class="preview-symbol" v-if="!previewRevealed[4]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[4] || '...' }}</div>
-          </div>
-          <div class="preview-petal-zone preview-petal-6" @click="togglePreviewPetal(5)">
-            <div class="preview-symbol" v-if="!previewRevealed[5]">✦</div>
-            <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[5] || '...' }}</div>
-          </div>
-        </div>
-
-        <p style="text-align: center; font-size: 11px; color: #C48090; margin-top: 16px; font-family: 'Lora', serif; font-style: italic;">
-          This is how your petals will look to the recipient
-        </p>
-      </div>
-    </div>
-
-
     <!-- Full Letter Experience Preview Modal -->
     <div
       v-if="showLetterExperiencePreview"
@@ -673,7 +628,14 @@ function toggleLetterPreviewPetal(i: number) {
       @click.self="showLetterExperiencePreview = false"
     >
       <div class="letter-experience-modal">
-        <button class="flower-modal-close" @click="showLetterExperiencePreview = false">x</button>
+        <button
+          class="flower-modal-close letter-experience-close"
+          type="button"
+          aria-label="Close letter preview"
+          @click="showLetterExperiencePreview = false"
+        >
+          &times;
+        </button>
 
         <div class="letter-preview-phone">
           <section v-if="letterPreviewScreen === 0" class="letter-preview-screen center">
@@ -716,12 +678,28 @@ function toggleLetterPreviewPetal(i: number) {
               <div
                 v-for="(_, i) in cart.letterData.petalMessages"
                 :key="i"
-                :class="['letter-preview-petal-zone', `letter-preview-petal-${i + 1}`]"
+                :class="[
+                  'letter-preview-petal-zone',
+                  `letter-preview-petal-${i + 1}`,
+                  { revealed: letterPreviewPetals[i], active: activeLetterPreviewPetal === i },
+                ]"
                 @click="toggleLetterPreviewPetal(i)"
               >
-                <div class="preview-symbol" v-if="!letterPreviewPetals[i]">*</div>
-                <div class="preview-pill" v-else>{{ cart.letterData.petalMessages[i] || '...' }}</div>
+                <div class="preview-symbol">&#9829;</div>
               </div>
+            </div>
+
+            <div class="letter-preview-petal-message" aria-live="polite">
+              <Transition name="checkout-petal-message" mode="out-in">
+                <p
+                  v-if="activeLetterPreviewPetalMessage"
+                  :key="activeLetterPreviewPetal ?? 'petal-message'"
+                >
+                  <span aria-hidden="true">&#9829;</span>
+                  {{ activeLetterPreviewPetalMessage }}
+                </p>
+                <p v-else class="is-placeholder">Select a petal to reveal its message</p>
+              </Transition>
             </div>
           </section>
 
