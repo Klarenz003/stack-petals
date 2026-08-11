@@ -60,6 +60,11 @@ let angleFrameImages: Array<HTMLImageElement | null> = []
 let anglePreloadRun = 0
 const MINIMUM_LOADING_MS = 900
 
+function syncVisibleViewportHeight() {
+  const visibleHeight = window.visualViewport?.height || window.innerHeight
+  document.documentElement.style.setProperty('--letter-viewport-height', `${Math.round(visibleHeight)}px`)
+}
+
 const loadingMessages = [
   'Preparing your memories, unwrapping your letter...',
   'Teaching petals where to fall...',
@@ -659,8 +664,11 @@ function applyMomentum(timestamp = performance.now()) {
 
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => {
+  syncVisibleViewportHeight()
   loadLetter()
   window.addEventListener('resize', renderAngleFrame)
+  window.addEventListener('resize', syncVisibleViewportHeight)
+  window.visualViewport?.addEventListener('resize', syncVisibleViewportHeight)
 })
 
 watch(show360, async (visible) => {
@@ -682,6 +690,9 @@ onUnmounted(() => {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
   window.removeEventListener('resize', renderAngleFrame)
+  window.removeEventListener('resize', syncVisibleViewportHeight)
+  window.visualViewport?.removeEventListener('resize', syncVisibleViewportHeight)
+  document.documentElement.style.removeProperty('--letter-viewport-height')
   removeMusicUnlockListener()
   stopAngleHold()
   stopAngleMomentum()
@@ -1286,9 +1297,12 @@ function skipAnimation() {
 /* ── Base ─────────────────────────────────────────────────────────── */
 .letter-page {
   font-family: 'Lora', serif;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   width: 100vw;
   height: 100vh;
   height: 100dvh;
+  height: var(--letter-viewport-height, 100dvh);
   overflow: hidden; /* ← prevent outer scroll */
   position: fixed;
   inset: 0;
@@ -1304,6 +1318,7 @@ function skipAnimation() {
   width: 100%;
   height: 100vh;
   height: 100dvh;
+  height: var(--letter-viewport-height, 100dvh);
   max-width: 480px;
   position: relative;
   margin: 0 auto;
@@ -1433,11 +1448,11 @@ function skipAnimation() {
 
 @supports (height: 100svh) {
   .letter-page {
-    height: 100svh;
+    height: var(--letter-viewport-height, 100svh);
   }
 
   .letter-screens {
-    height: 100svh;
+    height: var(--letter-viewport-height, 100svh);
   }
 }
 
