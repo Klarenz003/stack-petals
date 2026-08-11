@@ -17,7 +17,7 @@ const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
 const showPickupAddress = ref(false)
 const MAIN_LETTER_WORD_LIMIT = 300
-const PETAL_MESSAGE_CHAR_LIMIT = 30
+const PETAL_MESSAGE_CHAR_LIMIT = 60
 const PICKUP_ADDRESS = 'Evasco Family, Santa Ana, Taytay Rizal'
 
 // ── Functions ──────────────────────────────────────

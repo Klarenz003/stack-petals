@@ -35,6 +35,7 @@ const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
+const hasViewed360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
 const bouquetImage = ref('/images/b5.png')
@@ -78,6 +79,7 @@ async function loadLetter() {
   startLoadingTextShuffle()
   loadingLoaded.value = 0
   loadingTotal.value = 1
+  hasViewed360.value = false
 
   const { data, error } = await supabase
     .from('letters')
@@ -594,6 +596,7 @@ function stepAngle(direction: number) {
 
 function open360Viewer() {
   if (!angleAssetsReady.value) return
+  hasViewed360.value = true
   show360.value = true
 }
 
@@ -1109,7 +1112,14 @@ function skipAnimation() {
             <p v-else class="letter-sub bouquet-note">Your gift is shown above. 360° view may be added soon.</p>
           </div>
 
-          <button class="letter-btn page2-continue page6-continue" aria-label="Continue" @click="nextScreen"></button>
+          <Transition name="page6-unlock">
+            <button
+              v-if="hasViewed360 || !letter.angle_photos || letter.angle_photos.length === 0"
+              class="letter-btn page2-continue page6-continue"
+              aria-label="Continue"
+              @click="nextScreen"
+            ></button>
+          </Transition>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -5724,6 +5734,15 @@ memories-screen,
   position: relative !important;
   z-index: 5 !important;
   margin-top: clamp(4px, 0.6dvh, 8px) !important;
+}
+
+.page6-unlock-enter-active {
+  transition: opacity 360ms ease, filter 360ms ease;
+}
+
+.page6-unlock-enter-from {
+  opacity: 0;
+  filter: blur(3px);
 }
 
 .bouquet-screen .screen-content {
