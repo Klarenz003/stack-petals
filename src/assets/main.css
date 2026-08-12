@@ -3688,6 +3688,21 @@ input, textarea, [contenteditable="true"] {
   letter-spacing: 0.5px;
 }
 
+.song-suggestion-field label span {
+  margin-left: 5px;
+  color: #a58e94;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.song-suggestion-field small {
+  display: block;
+  margin-top: 7px;
+  color: #8f7b81;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .letter-input,
 .letter-textarea {
   width: 100%;
@@ -5022,6 +5037,49 @@ input, textarea, [contenteditable="true"] {
   gap: 10px;
   margin: 22px 0;
   position: relative;
+}
+
+/* Checkout letter step: keep its long form clear of the shared sticky footer. */
+.checkout-modal .checkout-body.letter-step {
+  padding-bottom: 34px;
+}
+
+.checkout-modal .letter-step > .co-actions {
+  position: static;
+  z-index: auto;
+  flex: 0 0 auto;
+  margin: 8px 0 0;
+  padding: 0;
+  background: transparent;
+}
+
+.checkout-modal .letter-step .letter-card {
+  overflow: visible;
+}
+
+.checkout-modal .letter-step .petal-number,
+.checkout-modal .letter-step .petal-char-count {
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .checkout-modal .checkout-body.letter-step {
+    padding: 20px 14px 28px;
+  }
+
+  .checkout-modal .letter-step .petals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-modal .letter-step .petal-input {
+    min-height: 42px;
+  }
+
+  .checkout-modal .letter-step > .co-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 10px;
+  }
 }
 
 .track-timeline::before {

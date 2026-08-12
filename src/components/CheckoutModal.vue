@@ -566,6 +566,19 @@ watch(
             </span>
           </div>
 
+          <div class="letter-field song-suggestion-field">
+            <label for="checkout-song-suggestion">Song Suggestion <span>Optional</span></label>
+            <input
+              id="checkout-song-suggestion"
+              v-model="cart.letterData.songSuggestion"
+              type="text"
+              maxlength="150"
+              placeholder="Song title and artist, or a Spotify/YouTube link"
+              class="letter-input"
+            />
+            <small>Suggest the background song you would like for the letter experience. Final availability will be confirmed by Stack Petals.</small>
+          </div>
+
           <div class="petals-section">
             <label class="petals-section-title">6 Petal Messages</label>
 

@@ -57,6 +57,7 @@ export const useCartStore = defineStore('cart', () => {
     include: false,
     recipientName: '',
     mainMessage: '',
+    songSuggestion: '',
     petalMessages: ['', '', '', '', '', ''],
     memories: [] as string[],
   })
@@ -648,6 +649,9 @@ export const useCartStore = defineStore('cart', () => {
       customer.value.barangay ? `Barangay: ${customer.value.barangay}` : '',
       customer.value.city ? `City/Municipality: ${customer.value.city}` : '',
       customer.value.province ? `Province: ${customer.value.province}` : '',
+      letterData.value.include && letterData.value.songSuggestion.trim()
+        ? `Customer song suggestion: ${letterData.value.songSuggestion.trim()}`
+        : '',
       customer.value.addressLat !== null && customer.value.addressLng !== null
         ? `Pinned location: ${customer.value.addressLat}, ${customer.value.addressLng}`
         : '',
@@ -698,6 +702,7 @@ export const useCartStore = defineStore('cart', () => {
         recipient:      letterData.value.recipientName,
         sender:         customer.value.name,
         message:        letterData.value.mainMessage,
+        song_suggestion: letterData.value.songSuggestion.trim(),
         petal_messages: letterData.value.petalMessages,
         memories:       letterData.value.memories,
         angle_photos:   [],
@@ -797,6 +802,7 @@ export const useCartStore = defineStore('cart', () => {
       include: false,
       recipientName: '',
       mainMessage: '',
+      songSuggestion: '',
       petalMessages: ['', '', '', '', '', ''],
       memories: [],
     }
