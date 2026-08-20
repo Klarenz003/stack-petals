@@ -15,6 +15,7 @@ type TrackedOrder = {
   total?: string
   payment_method?: string
   status?: string
+  delivery_method?: string
 }
 
 type StatusHistory = {
@@ -40,15 +41,31 @@ const normalizedReference = computed(() =>
   reference.value.trim().replace(/^SP-/i, '').toLowerCase()
 )
 const normalizedStatus = computed(() => order.value?.status?.toLowerCase() || 'pending')
+const isPickupOrder = computed(() => {
+  const method = order.value?.delivery_method?.toLowerCase() || ''
+  const address = order.value?.address?.toLowerCase() || ''
+  return method === 'pickup' || address.includes('pick up') || address.includes('pickup')
+})
 const timelineStatus = computed(() => {
   const status = normalizedStatus.value
   if (status === 'preorder' || status === 'pre_order') return 'confirmed'
   if (status === 'issue' || status === 'rejected') return 'pending'
+  if (isPickupOrder.value && status === 'out_for_delivery') return 'ready'
   return status
 })
 const needsSupport = computed(() => ['issue', 'rejected'].includes(normalizedStatus.value))
 
 const statusLabel = computed(() => {
+  if (isPickupOrder.value) {
+    const pickupLabels: Record<string, string> = {
+      ready: 'Ready for pickup',
+      out_for_delivery: 'Ready for pickup',
+      delivered: 'Picked up',
+    }
+
+    if (pickupLabels[normalizedStatus.value]) return pickupLabels[normalizedStatus.value]
+  }
+
   const labels: Record<string, string> = {
     pending: 'Payment under review',
     confirmed: 'Payment confirmed',
@@ -65,6 +82,16 @@ const statusLabel = computed(() => {
 })
 
 const statusHelpText = computed(() => {
+  if (isPickupOrder.value) {
+    const pickupMessages: Record<string, string> = {
+      ready: 'Your order is ready for pickup at Stack Petals.',
+      out_for_delivery: 'Your order is ready for pickup at Stack Petals.',
+      delivered: 'Your order has been picked up. Thank you for choosing Stack Petals.',
+    }
+
+    if (pickupMessages[normalizedStatus.value]) return pickupMessages[normalizedStatus.value]
+  }
+
   const messages: Record<string, string> = {
     pending: 'We received your order and are reviewing your payment proof.',
     confirmed: 'Your payment has been confirmed. Your order is now in our queue.',
@@ -81,7 +108,13 @@ const statusHelpText = computed(() => {
 })
 
 const timeline = computed(() => {
-  const steps = [
+  const steps = isPickupOrder.value ? [
+    { key: 'pending', label: 'Order received' },
+    { key: 'confirmed', label: 'Payment confirmed' },
+    { key: 'preparing', label: 'Preparing order' },
+    { key: 'ready', label: 'Ready for pickup' },
+    { key: 'delivered', label: 'Picked up' },
+  ] : [
     { key: 'pending', label: 'Order received' },
     { key: 'confirmed', label: 'Payment confirmed' },
     { key: 'preparing', label: 'Preparing order' },
@@ -239,8 +272,8 @@ function viewReceipt() {
 
         <div class="track-details">
           <div><span>Name</span><strong>{{ order.customer_name }}</strong></div>
-          <div><span>Delivery Date</span><strong>{{ order.delivery_date }}</strong></div>
-          <div><span>Delivery Address</span><strong>{{ order.address }}</strong></div>
+          <div><span>{{ isPickupOrder ? 'Pickup Date' : 'Delivery Date' }}</span><strong>{{ order.delivery_date }}</strong></div>
+          <div><span>{{ isPickupOrder ? 'Pickup Location' : 'Delivery Address' }}</span><strong>{{ order.address }}</strong></div>
           <div><span>Payment Method</span><strong>{{ order.payment_method }}</strong></div>
           <div><span>Total</span><strong>{{ order.total }}</strong></div>
         </div>

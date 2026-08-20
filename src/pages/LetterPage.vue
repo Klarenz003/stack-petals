@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import { supabase } from '@/supabaseClient'
 
 
@@ -48,6 +49,18 @@ const angleAssetsReady = ref(false)
 const angleFrameSources = ref<string[]>([])
 const angleCanvas = ref<HTMLCanvasElement | null>(null)
 const petalSparkleKey = ref(0)
+const forwardPageTransitions = [
+  'slide-forward',
+  'magic-bloom',
+  'magic-petals',
+  'magic-envelope',
+  'magic-memories',
+  'magic-spotlight',
+  'magic-reminder',
+  'magic-signature',
+  'magic-keepsake',
+  'magic-finale',
+] as const
 const activePetalMessage = computed(() => {
   if (activePetal.value === null) return ''
   return letter.value?.petal_messages?.[activePetal.value] || ''
@@ -59,6 +72,121 @@ let musicUnlockHandler: (() => void) | null = null
 let angleFrameImages: Array<HTMLImageElement | null> = []
 let anglePreloadRun = 0
 const MINIMUM_LOADING_MS = 900
+const LETTER_ANALYTICS_VISITOR_KEY = 'stack-petals-letter-viewer'
+const analyticsVisitToken = createAnalyticsToken()
+const trackedAnalyticsEvents = new Set<string>()
+let analyticsVisitorToken = ''
+let analyticsOpenPromise: Promise<boolean> | null = null
+let meaningfulOpenTimer: number | null = null
+
+type LetterAnalyticsEvent =
+  | 'letter_opened'
+  | 'letter_engaged'
+  | 'screen_viewed'
+  | 'memories_viewed'
+  | 'bouquet_360_viewed'
+  | 'music_played'
+  | 'letter_completed'
+  | 'letter_replayed'
+
+function createAnalyticsToken() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().replace(/-/g, '')
+  }
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
+}
+
+function getAnalyticsVisitorToken() {
+  if (analyticsVisitorToken) return analyticsVisitorToken
+  const fallback = createAnalyticsToken()
+  try {
+    const stored = window.localStorage.getItem(LETTER_ANALYTICS_VISITOR_KEY)
+    analyticsVisitorToken = stored && stored.length >= 20 ? stored : fallback
+    if (!stored) window.localStorage.setItem(LETTER_ANALYTICS_VISITOR_KEY, analyticsVisitorToken)
+  } catch {
+    analyticsVisitorToken = fallback
+  }
+  return analyticsVisitorToken
+}
+
+function analyticsDeviceType() {
+  const width = window.innerWidth
+  if (width <= 640) return 'mobile'
+  if (width <= 1024) return 'tablet'
+  return 'desktop'
+}
+
+async function sendLetterAnalyticsEvent(eventType: LetterAnalyticsEvent, screenNumber?: number) {
+  if (!letter.value) return false
+  const eventKey = `${eventType}:${screenNumber || 0}`
+  if (trackedAnalyticsEvents.has(eventKey)) return true
+
+  const { error } = await supabase.rpc('record_letter_analytics_event', {
+    p_letter_id: letter.value.id,
+    p_visitor_token: getAnalyticsVisitorToken(),
+    p_visit_token: analyticsVisitToken,
+    p_event_type: eventType,
+    p_screen_number: screenNumber || null,
+    p_device_type: analyticsDeviceType(),
+  })
+
+  if (error) {
+    console.warn('Letter analytics event was not recorded:', error.message)
+    return false
+  }
+
+  trackedAnalyticsEvents.add(eventKey)
+  return true
+}
+
+function ensureLetterOpenTracked() {
+  if (!analyticsOpenPromise) {
+    analyticsOpenPromise = sendLetterAnalyticsEvent('letter_opened').then(recorded => {
+      if (!recorded) analyticsOpenPromise = null
+      return recorded
+    })
+  }
+  return analyticsOpenPromise
+}
+
+async function trackLetterEvent(eventType: Exclude<LetterAnalyticsEvent, 'letter_opened'>, screenNumber?: number) {
+  const opened = await ensureLetterOpenTracked()
+  if (!opened) return
+  await sendLetterAnalyticsEvent(eventType, screenNumber)
+}
+
+async function trackCurrentLetterScreen(screen = currentScreen.value) {
+  await trackLetterEvent('screen_viewed', screen + 1)
+  if (screen === 4) await trackLetterEvent('memories_viewed')
+  if (screen === totalScreens - 1) await trackLetterEvent('letter_completed')
+}
+
+function markLetterEngaged() {
+  clearMeaningfulOpenTimer()
+  void trackLetterEvent('letter_engaged')
+}
+
+function clearMeaningfulOpenTimer() {
+  if (meaningfulOpenTimer !== null) {
+    window.clearTimeout(meaningfulOpenTimer)
+    meaningfulOpenTimer = null
+  }
+}
+
+function scheduleMeaningfulLetterOpen() {
+  clearMeaningfulOpenTimer()
+  if (!letter.value || document.visibilityState !== 'visible') return
+  meaningfulOpenTimer = window.setTimeout(async () => {
+    meaningfulOpenTimer = null
+    const opened = await ensureLetterOpenTracked()
+    if (opened) await trackCurrentLetterScreen()
+  }, 2000)
+}
+
+function handleAnalyticsVisibilityChange() {
+  if (document.visibilityState === 'visible') scheduleMeaningfulLetterOpen()
+  else clearMeaningfulOpenTimer()
+}
 
 function syncVisibleViewportHeight() {
   const visibleHeight = window.visualViewport?.height || window.innerHeight
@@ -76,7 +204,7 @@ const loadingMessages = [
 ]
 
 // ── Screens ────────────────────────────────────────────────────────
-const totalScreens = 9
+const totalScreens = 10
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
@@ -111,6 +239,7 @@ async function loadLetter() {
   await waitForMinimumLoadingTime(loadingStartedAt)
   loading.value = false
   stopLoadingTextShuffle()
+  scheduleMeaningfulLetterOpen()
   startMemoryTimer()
   void startDefaultMusic()
 }
@@ -309,12 +438,13 @@ function renderAngleFrame() {
 
 // ── Navigation ─────────────────────────────────────────────────────
 function toggleMusic() {
+  markLetterEngaged()
   if (musicPlaying.value) {
     stopSoftMusic()
     return
   }
 
-  void startSoftMusic()
+  void startSoftMusic(true)
 }
 
 async function startDefaultMusic() {
@@ -327,7 +457,7 @@ function attachMusicUnlockListener() {
 
   musicUnlockHandler = () => {
     removeMusicUnlockListener()
-    void startSoftMusic()
+    void startSoftMusic(true)
   }
 
   window.addEventListener('pointerdown', musicUnlockHandler, { once: true })
@@ -341,7 +471,7 @@ function removeMusicUnlockListener() {
   musicUnlockHandler = null
 }
 
-async function startSoftMusic() {
+async function startSoftMusic(trackPlay = false) {
   if (typeof window === 'undefined') return false
 
   const musicSrc = letter.value?.music_url?.trim() || '/music/lettermusic.mp3'
@@ -355,6 +485,7 @@ async function startSoftMusic() {
   try {
     await letterMusic.play()
     musicPlaying.value = true
+    if (trackPlay) void trackLetterEvent('music_played')
     return true
   } catch (error) {
     console.warn('Letter music could not be played yet:', error)
@@ -376,17 +507,27 @@ function stopSoftMusic() {
 }
 
 function nextScreen() {
-  slideDirection.value = 'slide-forward'
-  if (currentScreen.value < totalScreens - 1) currentScreen.value++
+  if (currentScreen.value >= totalScreens - 1) return
+  markLetterEngaged()
+  const destination = currentScreen.value + 1
+  slideDirection.value = forwardPageTransitions[destination] || 'slide-forward'
+  currentScreen.value = destination
 }
 
 function prevScreen() {
-  slideDirection.value = 'slide-back'
+  markLetterEngaged()
+  slideDirection.value = 'magic-back'
   if (currentScreen.value > 0) currentScreen.value--
 }
 
 function goToScreen(n: number) {
-  slideDirection.value = n > currentScreen.value ? 'slide-forward' : 'slide-back'
+  markLetterEngaged()
+  if (currentScreen.value === totalScreens - 1 && n < currentScreen.value) {
+    void trackLetterEvent('letter_replayed')
+  }
+  slideDirection.value = n > currentScreen.value
+    ? forwardPageTransitions[n] || 'slide-forward'
+    : 'magic-back'
   currentScreen.value = n
 }
 
@@ -434,6 +575,7 @@ function onMouseUp(e: MouseEvent) {
 
 // ── Petal Reveal ───────────────────────────────────────────────────
 function revealPetal(i: number) {
+  markLetterEngaged()
   revealedPetals.value[i] = true
   activePetal.value = i
   petalSparkleKey.value += 1
@@ -601,6 +743,8 @@ function stepAngle(direction: number) {
 
 function open360Viewer() {
   if (!angleAssetsReady.value) return
+  markLetterEngaged()
+  void trackLetterEvent('bouquet_360_viewed')
   hasViewed360.value = true
   show360.value = true
 }
@@ -669,6 +813,7 @@ onMounted(() => {
   window.addEventListener('resize', renderAngleFrame)
   window.addEventListener('resize', syncVisibleViewportHeight)
   window.visualViewport?.addEventListener('resize', syncVisibleViewportHeight)
+  document.addEventListener('visibilitychange', handleAnalyticsVisibilityChange)
 })
 
 watch(show360, async (visible) => {
@@ -692,6 +837,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', renderAngleFrame)
   window.removeEventListener('resize', syncVisibleViewportHeight)
   window.visualViewport?.removeEventListener('resize', syncVisibleViewportHeight)
+  document.removeEventListener('visibilitychange', handleAnalyticsVisibilityChange)
+  clearMeaningfulOpenTimer()
   document.documentElement.style.removeProperty('--letter-viewport-height')
   removeMusicUnlockListener()
   stopAngleHold()
@@ -741,6 +888,7 @@ function startLetterReveal() {
 }
 
 watch(() => currentScreen.value, (screen) => {
+  if (letter.value && !loading.value) void trackCurrentLetterScreen(screen)
   if (screen !== 3) {
     letterRevealed.value = false
     displayedText.value = ''
@@ -817,6 +965,12 @@ function skipAnimation() {
 
     <!-- Letter Screens -->
     <div v-else-if="letter" class="letter-screens">
+      <header class="letter-global-header" aria-label="Stack Petals">
+        <span aria-hidden="true"></span>
+        <strong>Stack Petals</strong>
+        <span aria-hidden="true"></span>
+      </header>
+
       <button
         class="music-toggle"
         :class="{ playing: musicPlaying }"
@@ -839,7 +993,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen1') }"
       >
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
           <div class="welcome-top-divider"><span></span>&#10022;<span></span></div>
           <div class="recipient-keepsake">For {{ letter.recipient }}</div>
           <div class="welcome-heart-line"><span></span>&#9825;<span></span></div>
@@ -851,7 +1004,7 @@ function skipAnimation() {
           <div class="letter-divider"><span></span>&#10022;<span></span></div>
           <p class="letter-sub">Someone who loves you<br>has something to say</p>
 
-          <button class="letter-btn page1-open-btn" aria-label="Open your letter" @click="nextScreen"></button>
+          <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -865,7 +1018,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen2') }"
       >
         <div class="screen-content center page2-content">
-          <div class="letter-logo">Stack Petals</div>
           <div class="page2-logo-divider"><span></span>&#9829;<span></span></div>
 
           <div class="page2-flower-wrap" aria-hidden="true">
@@ -875,7 +1027,7 @@ function skipAnimation() {
           <h2 class="page2-title">Something special<br><em>is waiting for you...</em></h2>
           <div class="page2-divider"><span></span><i>&#9829;</i><span></span></div>
           <p class="page2-sub">Please wait a moment<br>while we prepare your letter &#10022;</p>
-          <button class="letter-btn page2-continue" aria-label="Continue" @click="nextScreen"></button>
+          <LetterMagicButton class="letter-magic-action page2-magic-action" label="Continue" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -889,7 +1041,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen3') }"
       >
         <div class="screen-content center page3-content">
-          <div class="letter-logo">Stack Petals</div>
           <div class="page3-logo-divider"><span></span>&#127800;<span></span></div>
           <h2 class="page3-title">Your petals</h2>
           <p class="page3-sub">Tap a petal to reveal your message</p>
@@ -946,7 +1097,7 @@ function skipAnimation() {
             </Transition>
           </div>
 
-          <button class="letter-btn-outline page3-read-btn" aria-label="Read the letter" @click="nextScreen"></button>
+          <LetterMagicButton class="letter-magic-action page3-magic-action" label="Read the letter" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -968,8 +1119,6 @@ function skipAnimation() {
         </div>
 
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
-
           <!-- Before reveal -->
           <div v-if="!letterRevealed" class="letter-reveal-wrap" :class="{ opening: envelopeOpening }">
             <div class="page4-envelope-stage" aria-hidden="true">
@@ -979,7 +1128,7 @@ function skipAnimation() {
             <h2 class="page4-title">A letter<br><em>written just for you</em></h2>
             <div class="page4-divider"><span></span>&#10022;<span></span></div>
             <p class="letter-sub">From someone who loves you deeply</p>
-            <button class="letter-btn page4-open-btn" aria-label="Open letter" @click="startLetterReveal"></button>
+            <LetterMagicButton class="letter-magic-action page4-open-magic-action" label="Open letter" @activate="startLetterReveal" />
           </div>
 
           <!-- After reveal — typewriter animation -->
@@ -1003,7 +1152,7 @@ function skipAnimation() {
               <div v-if="senderVisible" class="sender-footer">
                 <div class="letter-divider"><span></span>✦<span></span></div>
                 <p class="letter-from">— With love, {{ letter.sender }}</p>
-                <button class="letter-btn-outline page4-memories-btn" aria-label="See memories" @click="nextScreen"></button>
+                <LetterMagicButton class="letter-magic-action page4-memories-magic-action" label="See memories" @activate="nextScreen" />
               </div>
             </Transition>
           </div>
@@ -1021,7 +1170,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen5') }"
       >
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
           <h2 class="letter-title">Some of my favorite<br><em>memories with you</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
@@ -1067,9 +1215,7 @@ function skipAnimation() {
             <p class="letter-sub">No memories attached</p>
           </div>
 
-          <button class="letter-btn-outline page5-gift-btn" aria-label="View your gift" @click="nextScreen">
-            <img src="/images/page5_button-trim.png" alt="" class="page5-gift-btn-img" />
-          </button>
+          <LetterMagicButton class="letter-magic-action page5-magic-action" label="View your gift" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1083,7 +1229,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen6') }"
       >
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
           <h2 class="letter-title">Your gift<br><em>up close</em></h2>
           <p class="bouquet-intro">A little showcase before the real one reaches your hands.</p>
           <div class="letter-divider"><span></span>✦<span></span></div>
@@ -1124,12 +1269,12 @@ function skipAnimation() {
           </div>
 
           <Transition name="page6-unlock">
-            <button
+            <LetterMagicButton
               v-if="hasViewed360 || !letter.angle_photos || letter.angle_photos.length === 0"
-              class="letter-btn page2-continue page6-continue"
-              aria-label="Continue"
-              @click="nextScreen"
-            ></button>
+              class="letter-magic-action page6-magic-action"
+              label="Continue"
+              @activate="nextScreen"
+            />
           </Transition>
         </div>
         <div class="screen-dots">
@@ -1209,7 +1354,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen7') }"
       >
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
           <div class="quote-flower-wrap" aria-hidden="true">
             <img src="/images/page2_flower-trim.png" alt="" class="quote-flower-img" />
           </div>
@@ -1224,7 +1368,7 @@ function skipAnimation() {
               more than any gift can hold.&rdquo;
             </blockquote>
           </div>
-          <button class="letter-btn page2-continue page7-continue" aria-label="Continue" @click="nextScreen"></button>
+          <LetterMagicButton class="letter-magic-action page7-magic-action" label="Continue" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1238,7 +1382,6 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen8') }"
       >
         <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
           <div class="sender-keepsake">
             <span class="sender-kicker">Sent with care by</span>
             <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
@@ -1246,38 +1389,128 @@ function skipAnimation() {
             <div class="letter-divider"><span></span>✦<span></span></div>
             <p class="letter-sub">This gift was crafted with love<br>and sent to you with all their heart</p>
           </div>
-          <button class="letter-btn page8-finish-btn" aria-label="Finish" @click="nextScreen"></button>
+          <LetterMagicButton class="letter-magic-action page8-magic-action" label="See your keepsake" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
         </div>
       </div>
 
-      <!-- ── SCREEN 9 — End ─────────────────────────────────────── -->
+      <!-- ── SCREEN 9 — Experience Menu ─────────────────────────── -->
       <div
         v-if="currentScreen === 8"
+        class="letter-screen keepsake-screen"
+        :style="{ backgroundColor: screenBg('screen9') }"
+      >
+        <div class="screen-content center keepsake-content">
+          <div class="keepsake-heading">
+            <span>The story, kept for you</span>
+            <h2>Your little archive<br><em>of love</em></h2>
+            <p>Untie any memory and return to the moment.</p>
+          </div>
+
+          <div class="keepsake-menu" aria-label="Keepsake chapters">
+            <span class="keepsake-ribbon" aria-hidden="true"></span>
+
+            <button class="keepsake-tile keepsake-letter" @click="goToScreen(3)">
+              <span class="keepsake-number" aria-hidden="true">01</span>
+              <img src="/images/keepsake-letter.png" alt="" />
+              <span class="keepsake-copy">
+                <small>Words from the heart</small>
+                <strong>Open the letter</strong>
+                <em>Read it once more</em>
+              </span>
+              <i aria-hidden="true">&#8594;</i>
+            </button>
+
+            <button class="keepsake-tile keepsake-memory" :disabled="!letter.memories?.length" @click="goToScreen(4)">
+              <span class="keepsake-number" aria-hidden="true">02</span>
+              <img
+                :src="letter.memories?.length ? normalizeImageSrc(letter.memories[0]) : bouquetImage"
+                alt=""
+              />
+              <span class="keepsake-copy">
+                <small>Held close</small>
+                <strong>{{ letter.memories?.length ? 'Memories' : 'No memories added' }}</strong>
+                <em>{{ letter.memories?.length ? 'See every photograph' : 'A chapter waiting to be filled' }}</em>
+              </span>
+            </button>
+
+            <button class="keepsake-tile keepsake-music" :class="{ active: musicPlaying }" @click.stop="toggleMusic">
+              <span class="keepsake-number" aria-hidden="true">03</span>
+              <img src="/images/keepsake-music.png" alt="" />
+              <span class="keepsake-copy">
+                <small>Your soundtrack</small>
+                <strong>{{ musicPlaying ? 'Music playing' : 'Play the music' }}</strong>
+                <em>{{ musicPlaying ? 'Tap to gently pause' : 'Let the moment have a melody' }}</em>
+              </span>
+            </button>
+
+            <button class="keepsake-tile keepsake-gift" @click="goToScreen(5)">
+              <span class="keepsake-number" aria-hidden="true">04</span>
+              <img :src="bouquetImage" alt="" />
+              <span class="keepsake-copy">
+                <small>{{ letter.angle_photos?.length ? 'Made to be discovered' : 'Made especially for you' }}</small>
+                <strong>{{ letter.angle_photos?.length ? 'Gift & 360° view' : 'Your gift' }}</strong>
+                <em>{{ letter.angle_photos?.length ? 'Turn it around, slowly' : 'See what was chosen for you' }}</em>
+              </span>
+              <i aria-hidden="true">&#8594;</i>
+            </button>
+          </div>
+
+          <LetterMagicButton class="letter-magic-action page9-magic-action" label="Close with love" @activate="nextScreen" />
+        </div>
+        <div class="screen-dots">
+          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+        </div>
+      </div>
+
+      <!-- ── SCREEN 10 — End ────────────────────────────────────── -->
+      <div
+        v-if="currentScreen === 9"
         class="letter-screen end-screen"
         :style="{ backgroundColor: screenBg('screen9') }"
       >
-        <div class="screen-content center">
-          <div class="letter-logo">Stack Petals</div>
-          <div class="end-card">
-            <div class="end-flowers">🌸🌷🌺</div>
-            <h2 class="letter-title">You are<br><em>so loved</em></h2>
-            <div class="letter-divider"><span></span>✦<span></span></div>
-            <p class="letter-sub">Keep this letter close to your heart.<br>Scan the QR anytime to revisit.</p>
-            <div class="end-brand">
-              <p>Crafted by</p>
+        <div class="screen-content center end-content">
+          <section class="end-stationery" aria-labelledby="end-title">
+            <img class="end-floral-mark" src="/images/page2_flower-trim.png" alt="" aria-hidden="true" />
+
+            <h2 id="end-title" class="end-title">You are<br><em>so loved</em></h2>
+
+            <div class="end-heart-divider" aria-hidden="true">
+              <span></span>
+              <b>&#9825;</b>
+              <span></span>
+            </div>
+
+            <p class="end-message">
+              Keep this letter close to your heart.<br />
+              Scan the QR anytime to revisit.
+            </p>
+
+            <div class="end-signature-divider" aria-hidden="true"><span></span><i></i><span></span></div>
+
+            <div class="end-brand-signature">
+              <small>Crafted with love by</small>
               <strong>Stack Petals</strong>
+              <p>Create a meaningful gift<br />for someone special.</p>
+              <a href="https://stackoverpetals.shop" aria-label="Discover Stack Petals crafted gifts">
+                Discover Stack Petals <span aria-hidden="true">&#8594;</span>
+              </a>
             </div>
-          </div>
+          </section>
+
           <div class="end-actions">
-            <button class="letter-btn-outline end-primary-action page9-again-btn" aria-label="Read again" @click="goToScreen(0)"></button>
-            <div class="end-secondary-actions">
-              <button @click="goToScreen(4)">Memories</button>
-              <span aria-hidden="true">·</span>
-              <button @click="goToScreen(5)">Gift</button>
-            </div>
+            <button class="end-read-again" type="button" aria-label="Read the letter again" @click="goToScreen(0)">
+              <img src="/images/envelope-clean.png" alt="" aria-hidden="true" />
+              <span>Read again</span>
+              <i aria-hidden="true">&#9825;</i>
+            </button>
+            <button class="end-keepsake-link" type="button" @click="goToScreen(8)">
+              <span aria-hidden="true"></span>
+              Keepsake
+              <span aria-hidden="true"></span>
+            </button>
           </div>
         </div>
         <div class="screen-dots">
@@ -1323,6 +1556,41 @@ function skipAnimation() {
   position: relative;
   margin: 0 auto;
   overflow: hidden;
+}
+
+.letter-global-header {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 175;
+  width: min(calc(100% - 120px), 280px);
+  min-height: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(9px, 2.5vw, 14px);
+  color: #a9556a;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.letter-global-header strong {
+  font-family: 'Lora', serif;
+  font-size: clamp(10px, min(2.8vw, 1.7dvh), 12px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.letter-global-header > span {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 1px;
+  background: #df8297;
+  transform: rotate(45deg);
 }
 
 .music-toggle {
@@ -1384,12 +1652,16 @@ function skipAnimation() {
 .letter-screen {
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --screen-pad-top: clamp(24px, 6dvh, 48px);
+  --screen-effective-pad-top: max(
+    var(--screen-pad-top),
+    calc(58px + env(safe-area-inset-top, 0px))
+  );
   --screen-pad-bottom-base: clamp(88px, 13dvh, 104px);
   --screen-pad-bottom: calc(var(--screen-pad-bottom-base) + var(--safe-bottom));
   --screen-dot-bottom: calc(clamp(14px, 2.6dvh, 22px) + var(--safe-bottom));
   --screen-inline-pad: clamp(18px, 6vw, 32px);
   --screen-content-gap: clamp(8px, 1.4dvh, 14px);
-  --screen-reserved-y: calc(var(--screen-pad-top) + var(--screen-pad-bottom));
+  --screen-reserved-y: calc(var(--screen-effective-pad-top) + var(--screen-pad-bottom));
   --title-size: clamp(26px, min(7vw, 5.4dvh), 32px);
   --sub-size: clamp(13px, min(3.8vw, 2.4dvh), 15px);
   --divider-space: clamp(8px, 1.6dvh, 16px);
@@ -1407,7 +1679,7 @@ function skipAnimation() {
   background-repeat: no-repeat;
   position: relative;
   overflow: hidden;
-  padding: var(--screen-pad-top) 0 var(--screen-pad-bottom);
+  padding: var(--screen-effective-pad-top) 0 var(--screen-pad-bottom);
 }
 
 .letter-screen::before {
@@ -4981,6 +5253,204 @@ memories-screen,
   transform: translateX(22px) scale(0.992);
   filter: blur(1px);
 }
+
+/* Each chapter opens with its own restrained magical movement. */
+:is(
+  .magic-bloom-enter-active,
+  .magic-petals-enter-active,
+  .magic-envelope-enter-active,
+  .magic-memories-enter-active,
+  .magic-spotlight-enter-active,
+  .magic-reminder-enter-active,
+  .magic-signature-enter-active,
+  .magic-keepsake-enter-active,
+  .magic-finale-enter-active,
+  .magic-back-enter-active
+) {
+  transition:
+    opacity 480ms ease,
+    transform 620ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 520ms ease,
+    clip-path 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform, filter, clip-path;
+}
+
+:is(
+  .magic-bloom-leave-active,
+  .magic-petals-leave-active,
+  .magic-envelope-leave-active,
+  .magic-memories-leave-active,
+  .magic-spotlight-leave-active,
+  .magic-reminder-leave-active,
+  .magic-signature-leave-active,
+  .magic-keepsake-leave-active,
+  .magic-finale-leave-active,
+  .magic-back-leave-active
+) {
+  transition: opacity 220ms ease, transform 280ms ease, filter 240ms ease;
+  will-change: opacity, transform, filter;
+}
+
+:is(
+  .magic-bloom-leave-to,
+  .magic-petals-leave-to,
+  .magic-envelope-leave-to,
+  .magic-memories-leave-to,
+  .magic-spotlight-leave-to,
+  .magic-reminder-leave-to,
+  .magic-signature-leave-to,
+  .magic-keepsake-leave-to,
+  .magic-finale-leave-to
+) {
+  opacity: 0;
+  transform: scale(0.985);
+  filter: blur(1px) saturate(0.92);
+}
+
+.magic-bloom-enter-from {
+  opacity: 0;
+  transform: scale(0.82);
+  filter: blur(5px) saturate(1.16);
+  clip-path: circle(12% at 50% 48%);
+}
+
+.magic-petals-enter-from {
+  opacity: 0;
+  transform: rotate(3deg) scale(0.9);
+  filter: blur(3px) saturate(1.2);
+  clip-path: ellipse(28% 22% at 50% 48%);
+}
+
+.magic-envelope-enter-from {
+  opacity: 0;
+  transform: perspective(800px) translateY(42px) rotateX(-12deg) scale(0.96);
+  filter: blur(2px);
+  clip-path: inset(42% 8% 0 round 36px);
+}
+
+.magic-memories-enter-from {
+  opacity: 0;
+  transform: translateX(34px) rotate(1.5deg) scale(0.965);
+  filter: sepia(0.24) blur(2px);
+  clip-path: inset(0 0 0 72% round 30px);
+}
+
+.magic-spotlight-enter-from {
+  opacity: 0;
+  transform: scale(1.08);
+  filter: blur(6px) brightness(1.08);
+  clip-path: circle(18% at 50% 45%);
+}
+
+.magic-reminder-enter-from {
+  opacity: 0;
+  transform: translateY(-34px) scale(0.97);
+  filter: blur(3px);
+  clip-path: inset(0 0 72% 0 round 28px);
+}
+
+.magic-signature-enter-from {
+  opacity: 0;
+  transform: perspective(900px) rotateY(-8deg) translateX(34px) scale(0.97);
+  filter: blur(2px);
+  clip-path: inset(0 62% 0 0 round 30px);
+}
+
+.magic-keepsake-enter-from {
+  opacity: 0;
+  transform: scale(0.92) translateY(22px);
+  filter: blur(4px) saturate(1.12);
+  clip-path: circle(8% at 50% 54%);
+}
+
+.magic-finale-enter-from {
+  opacity: 0;
+  transform: scale(0.88) translateY(18px);
+  filter: blur(5px) brightness(1.04);
+  clip-path: circle(18% at 50% 50%);
+}
+
+.magic-back-enter-from {
+  opacity: 0;
+  transform: translateX(-28px) scale(0.98);
+  filter: blur(2px);
+}
+
+.magic-back-leave-to {
+  opacity: 0;
+  transform: translateX(20px) scale(0.99);
+  filter: blur(1px);
+}
+
+:is(
+  .magic-bloom-enter-active,
+  .magic-petals-enter-active,
+  .magic-envelope-enter-active,
+  .magic-memories-enter-active,
+  .magic-spotlight-enter-active,
+  .magic-reminder-enter-active,
+  .magic-signature-enter-active,
+  .magic-keepsake-enter-active,
+  .magic-finale-enter-active
+)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 190;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 42% 42%, rgba(255, 255, 255, 0.38) 0 2px, transparent 3px),
+    radial-gradient(circle at 62% 54%, rgba(222, 115, 143, 0.28) 0 2px, transparent 3px),
+    radial-gradient(circle at 52% 68%, rgba(255, 219, 226, 0.46) 0 3px, transparent 4px);
+  animation: chapterSparkleVeil 680ms ease-out both;
+}
+
+@keyframes chapterSparkleVeil {
+  0% { opacity: 0; transform: scale(0.82); }
+  34% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .magic-bloom-enter-active,
+    .magic-petals-enter-active,
+    .magic-envelope-enter-active,
+    .magic-memories-enter-active,
+    .magic-spotlight-enter-active,
+    .magic-reminder-enter-active,
+    .magic-signature-enter-active,
+    .magic-keepsake-enter-active,
+    .magic-finale-enter-active,
+    .magic-back-enter-active,
+    .magic-bloom-leave-active,
+    .magic-petals-leave-active,
+    .magic-envelope-leave-active,
+    .magic-memories-leave-active,
+    .magic-spotlight-leave-active,
+    .magic-reminder-leave-active,
+    .magic-signature-leave-active,
+    .magic-keepsake-leave-active,
+    .magic-finale-leave-active,
+    .magic-back-leave-active
+  ) {
+    transition-duration: 1ms;
+  }
+
+  :is(
+    .magic-bloom-enter-active,
+    .magic-petals-enter-active,
+    .magic-envelope-enter-active,
+    .magic-memories-enter-active,
+    .magic-spotlight-enter-active,
+    .magic-reminder-enter-active,
+    .magic-signature-enter-active,
+    .magic-keepsake-enter-active,
+    .magic-finale-enter-active
+  )::after {
+    display: none;
+  }
+}
 .quote-card,
 .sender-keepsake,
 .end-card {
@@ -5074,6 +5544,33 @@ memories-screen,
 
 .end-card .end-brand {
   margin-top: 14px;
+}
+
+.end-brand-home {
+  display: grid;
+  justify-items: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+.end-brand-home span {
+  margin-top: 7px;
+  color: #b76578;
+  font: 400 clamp(11px, min(3vw, 1.7dvh), 13px)/1.2 'Cormorant Garamond', serif;
+  letter-spacing: 0;
+  transition: color 220ms ease, transform 220ms ease;
+}
+
+.end-brand-home:hover span,
+.end-brand-home:focus-visible span {
+  color: #93495b;
+  transform: translateY(-1px);
+}
+
+.end-brand-home:focus-visible {
+  border-radius: 6px;
+  outline: 1px solid rgba(183, 101, 120, 0.55);
+  outline-offset: 5px;
 }
 
 .end-actions {
@@ -6030,6 +6527,702 @@ memories-screen,
     font-size: clamp(17px, 2.75dvh, 22px) !important;
     line-height: 1.02 !important;
     margin: clamp(2px, 0.45dvh, 5px) 0 clamp(10px, 1.7dvh, 16px) !important;
+  }
+}
+
+/* Experience menu: a ribbon-bound folio back into the romantic journey. */
+.keepsake-screen {
+  --screen-pad-top: clamp(34px, 5dvh, 48px);
+  --screen-pad-bottom-base: clamp(62px, 8dvh, 78px);
+}
+
+.keepsake-screen .keepsake-content {
+  justify-content: center;
+  gap: clamp(9px, 1.35dvh, 14px);
+  height: 100%;
+  max-height: none;
+  padding-inline: clamp(20px, 5.5vw, 32px);
+}
+
+.keepsake-heading > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #b76a7d;
+  font: 600 clamp(8px, min(2.2vw, 1.3dvh), 10px)/1.2 'Lora', serif;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.keepsake-heading h2 {
+  margin: 0;
+  color: #783747;
+  font: 500 clamp(29px, min(7.6vw, 4.45dvh), 40px)/0.88 'Cormorant Garamond', serif;
+  letter-spacing: 0;
+}
+
+.keepsake-heading h2 em {
+  color: #d6677d;
+  font-weight: 400;
+}
+
+.keepsake-heading p {
+  max-width: 330px;
+  margin: 7px auto 0;
+  color: #9b6571;
+  font: italic clamp(12px, min(3.3vw, 1.85dvh), 15px)/1.2 'Cormorant Garamond', serif;
+}
+
+.keepsake-menu {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(7px, 1.05dvh, 10px);
+  width: min(100%, 390px);
+  isolation: isolate;
+}
+
+.keepsake-ribbon {
+  position: absolute;
+  z-index: -1;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(195, 106, 125, 0.42) 12%, rgba(195, 106, 125, 0.42) 88%, transparent);
+}
+
+.keepsake-ribbon::before,
+.keepsake-ribbon::after {
+  position: absolute;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(195, 106, 125, 0.58);
+  background: #fff4f5;
+  content: '';
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.keepsake-ribbon::before { top: 27%; }
+.keepsake-ribbon::after { bottom: 27%; }
+
+.keepsake-tile {
+  appearance: none;
+  position: relative;
+  min-width: 0;
+  min-height: clamp(112px, 15.8dvh, 134px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(211, 126, 145, 0.38);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(255, 242, 244, 0.68)),
+    repeating-linear-gradient(0deg, transparent 0 12px, rgba(204, 119, 139, 0.035) 13px);
+  color: #783747;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 260ms ease, border-color 260ms ease, background-color 260ms ease;
+}
+
+.keepsake-tile::after {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 5px;
+  content: '';
+  pointer-events: none;
+}
+
+.keepsake-tile:hover,
+.keepsake-tile:focus-visible {
+  border-color: rgba(190, 76, 102, 0.68);
+  background-color: rgba(255, 252, 252, 0.92);
+  transform: translateY(-3px) rotate(-0.25deg);
+  outline: none;
+}
+
+.keepsake-tile:active { transform: scale(0.985); }
+
+.keepsake-tile:disabled {
+  cursor: default;
+  opacity: 0.58;
+  transform: none;
+}
+
+.keepsake-tile > img {
+  position: absolute;
+  z-index: 1;
+  display: block;
+}
+
+.keepsake-number {
+  position: absolute;
+  z-index: 4;
+  top: 9px;
+  left: 10px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid rgba(191, 94, 116, 0.32);
+  border-radius: 50%;
+  background: rgba(255, 250, 250, 0.86);
+  color: #ad6072;
+  font: 600 8px/1 'Lora', serif;
+  letter-spacing: 0.08em;
+}
+
+.keepsake-copy {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 8px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 6px;
+  background: rgba(255, 248, 249, 0.9);
+  backdrop-filter: blur(7px);
+}
+
+.keepsake-tile small {
+  color: #a87882;
+  font: 600 clamp(7px, 1.85vw, 9px)/1.2 'Lora', serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.keepsake-tile strong {
+  margin-top: 2px;
+  color: #783747;
+  font: 500 clamp(15px, 3.8vw, 19px)/1 'Cormorant Garamond', serif;
+}
+
+.keepsake-tile em {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  color: #a97a84;
+  font: italic clamp(9px, 2.3vw, 11px)/1.1 'Cormorant Garamond', serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.keepsake-tile > i {
+  position: absolute;
+  z-index: 4;
+  right: 16px;
+  bottom: 26px;
+  color: #c55d73;
+  font-style: normal;
+}
+
+.keepsake-letter,
+.keepsake-gift {
+  grid-column: 1 / -1;
+  min-height: clamp(92px, 12.6dvh, 108px);
+}
+
+.keepsake-letter > img {
+  top: -15%;
+  bottom: -15%;
+  left: -1%;
+  width: 49%;
+  height: 130%;
+  object-fit: contain;
+}
+
+.keepsake-letter .keepsake-copy,
+.keepsake-gift .keepsake-copy {
+  top: 13px;
+  right: 12px;
+  bottom: 13px;
+  left: 43%;
+  justify-content: center;
+  padding-right: 30px;
+}
+
+.keepsake-memory > img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.keepsake-memory .keepsake-copy,
+.keepsake-music .keepsake-copy {
+  padding: 7px 8px;
+}
+
+.keepsake-music {
+  background: linear-gradient(145deg, rgba(255, 241, 243, 0.9), rgba(245, 222, 226, 0.82));
+}
+
+.keepsake-music > img {
+  top: -12%;
+  right: -10%;
+  width: 86%;
+  height: 88%;
+  object-fit: contain;
+  transition: transform 600ms ease;
+}
+
+.keepsake-music.active {
+  border-color: rgba(95, 136, 114, 0.56);
+  background: linear-gradient(145deg, rgba(239, 248, 243, 0.92), rgba(249, 231, 235, 0.86));
+}
+
+.keepsake-music.active > img {
+  animation: keepsakeMusicSway 3.8s ease-in-out infinite;
+}
+
+.keepsake-gift > img {
+  inset: 0 auto 0 0;
+  width: 47%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  mask-image: linear-gradient(90deg, #000 72%, transparent 100%);
+}
+
+@keyframes keepsakeMusicSway {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+
+@media (max-height: 720px) {
+  .keepsake-screen .keepsake-content { gap: 6px; }
+  .keepsake-heading p { margin-top: 3px; }
+  .keepsake-menu { gap: 6px; }
+  .keepsake-tile { min-height: 98px; }
+  .keepsake-letter,
+  .keepsake-gift { min-height: 76px; }
+  .keepsake-tile em { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .keepsake-music.active > img { animation: none; }
+}
+
+/* Final page: a quiet stationery keepsake with a gentle path back to the shop. */
+.end-screen.letter-screen {
+  --screen-pad-top: clamp(54px, 8dvh, 72px);
+  --screen-pad-bottom-base: clamp(52px, 7dvh, 66px);
+}
+
+.end-screen .end-content {
+  height: 100%;
+  max-height: none;
+  justify-content: center;
+  gap: clamp(10px, 1.45dvh, 15px);
+  padding: clamp(2px, 0.5dvh, 6px) clamp(24px, 6.5vw, 34px) clamp(8px, 1.2dvh, 14px);
+  overflow: visible;
+}
+
+.end-stationery {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 352px);
+  padding: clamp(18px, 2.6dvh, 25px) clamp(22px, 6vw, 31px) clamp(17px, 2.4dvh, 23px);
+  border: 1px solid rgba(214, 132, 150, 0.3);
+  border-radius: 5px;
+  background:
+    linear-gradient(rgba(255, 252, 250, 0.86), rgba(255, 248, 247, 0.79)),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(214, 132, 150, 0.045) 25px 26px);
+  color: #7d3f4e;
+  overflow: hidden;
+}
+
+.end-stationery::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  z-index: -1;
+  border: 1px solid rgba(222, 151, 166, 0.2);
+  pointer-events: none;
+}
+
+.end-stationery::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.32;
+  background:
+    radial-gradient(circle at 10% 11%, rgba(229, 145, 164, 0.18), transparent 17%),
+    radial-gradient(circle at 91% 88%, rgba(138, 174, 148, 0.13), transparent 18%);
+  pointer-events: none;
+}
+
+.end-floral-mark {
+  display: block;
+  width: clamp(48px, min(13vw, 7dvh), 64px);
+  height: clamp(48px, min(13vw, 7dvh), 64px);
+  margin: 0 0 clamp(5px, 0.8dvh, 8px);
+  object-fit: contain;
+  animation: endFloralBreath 5.2s ease-in-out infinite;
+}
+
+.end-title {
+  margin: 0;
+  color: #713744;
+  font: 500 clamp(31px, min(8.5vw, 5.1dvh), 42px)/0.95 'Cormorant Garamond', serif;
+  letter-spacing: 0;
+}
+
+.end-title em {
+  color: #d6657c;
+  font-weight: 400;
+}
+
+.end-heart-divider {
+  display: grid;
+  grid-template-columns: minmax(45px, 1fr) auto minmax(45px, 1fr);
+  align-items: center;
+  gap: 9px;
+  width: min(86%, 230px);
+  margin: clamp(10px, 1.5dvh, 15px) auto clamp(8px, 1.2dvh, 12px);
+  color: #dc8297;
+}
+
+.end-heart-divider span,
+.end-signature-divider span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(215, 121, 143, 0.58));
+}
+
+.end-heart-divider span:last-child,
+.end-signature-divider span:last-child {
+  transform: rotate(180deg);
+}
+
+.end-heart-divider b {
+  font: 400 19px/1 Georgia, serif;
+}
+
+.end-message {
+  margin: 0;
+  color: #9f6070;
+  font: italic 400 clamp(14px, min(3.8vw, 2.25dvh), 17px)/1.42 'Cormorant Garamond', serif;
+  letter-spacing: 0;
+}
+
+.end-signature-divider {
+  display: grid;
+  grid-template-columns: minmax(48px, 1fr) auto minmax(48px, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: min(90%, 244px);
+  margin: clamp(11px, 1.7dvh, 16px) auto clamp(9px, 1.25dvh, 12px);
+}
+
+.end-signature-divider i {
+  width: 6px;
+  height: 6px;
+  border: 1px solid #dc8297;
+  transform: rotate(45deg);
+}
+
+.end-brand-signature {
+  display: grid;
+  justify-items: center;
+}
+
+.end-brand-signature small {
+  color: #bc7888;
+  font: 600 clamp(8px, min(2.2vw, 1.3dvh), 10px)/1.2 'Lora', serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.end-brand-signature strong {
+  margin-top: 3px;
+  color: #713744;
+  font: 500 clamp(22px, min(6vw, 3.25dvh), 28px)/1 'Cormorant Garamond', serif;
+}
+
+.end-brand-signature p {
+  margin: clamp(7px, 1dvh, 10px) 0 0;
+  color: #a66e7a;
+  font: italic 400 clamp(11px, min(3vw, 1.7dvh), 13px)/1.32 'Cormorant Garamond', serif;
+}
+
+.end-brand-signature a {
+  margin-top: clamp(7px, 1dvh, 10px);
+  color: #a4485e;
+  font: 500 clamp(11px, min(3.1vw, 1.7dvh), 13px)/1.2 'Cormorant Garamond', serif;
+  text-decoration-color: rgba(164, 72, 94, 0.42);
+  text-underline-offset: 4px;
+  transition: color 200ms ease;
+}
+
+.end-brand-signature a:hover,
+.end-brand-signature a:focus-visible {
+  color: #d05f78;
+  outline: none;
+}
+
+.end-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 0.9dvh, 9px);
+  width: min(100%, 320px);
+  margin: 0;
+}
+
+.end-read-again {
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(52px, 14vw, 68px) 1fr 20px;
+  align-items: center;
+  width: min(100%, 286px);
+  min-height: clamp(58px, 8dvh, 70px);
+  padding: 5px 14px 5px 8px;
+  border: 1px solid rgba(210, 116, 138, 0.42);
+  border-radius: 6px;
+  background: rgba(255, 249, 248, 0.8);
+  color: #853f50;
+  cursor: pointer;
+  overflow: hidden;
+  animation: endActionBreath 4.8s ease-in-out infinite;
+  transition: border-color 200ms ease, background-color 200ms ease, transform 200ms ease;
+}
+
+.end-read-again::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(219, 143, 160, 0.2);
+  pointer-events: none;
+}
+
+.end-read-again img {
+  z-index: 1;
+  width: 100%;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+.end-read-again span {
+  z-index: 1;
+  font: italic 500 clamp(17px, min(4.8vw, 2.6dvh), 21px)/1 'Cormorant Garamond', serif;
+}
+
+.end-read-again i {
+  z-index: 1;
+  color: #d56e86;
+  font: normal 19px/1 Georgia, serif;
+}
+
+.end-read-again:hover,
+.end-read-again:focus-visible {
+  border-color: rgba(197, 85, 112, 0.72);
+  background: rgba(255, 253, 251, 0.96);
+  outline: none;
+}
+
+.end-read-again:active {
+  transform: scale(0.985);
+}
+
+.end-keepsake-link {
+  display: grid;
+  grid-template-columns: 34px auto 34px;
+  align-items: center;
+  gap: 9px;
+  border: 0;
+  background: transparent;
+  color: #a96575;
+  cursor: pointer;
+  font: italic 400 clamp(12px, min(3.3vw, 1.9dvh), 14px)/1 'Cormorant Garamond', serif;
+  padding: 4px 8px;
+}
+
+.end-keepsake-link span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(215, 121, 143, 0.54));
+}
+
+.end-keepsake-link span:last-child {
+  transform: rotate(180deg);
+}
+
+.end-keepsake-link:hover,
+.end-keepsake-link:focus-visible {
+  color: #cd5f77;
+  outline: none;
+}
+
+@keyframes endFloralBreath {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.025); }
+}
+
+@keyframes endActionBreath {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+@media (max-height: 720px) {
+  .end-screen.letter-screen {
+    --screen-pad-top: 48px;
+    --screen-pad-bottom-base: 48px;
+  }
+
+  .end-screen .end-content {
+    gap: 7px;
+    padding-top: 0;
+    padding-bottom: 4px;
+  }
+
+  .end-stationery {
+    width: min(100%, 330px);
+    padding: 13px 20px 12px;
+  }
+
+  .end-floral-mark {
+    width: 43px;
+    height: 43px;
+    margin-bottom: 3px;
+  }
+
+  .end-title {
+    font-size: clamp(27px, 4.9dvh, 34px);
+  }
+
+  .end-heart-divider {
+    margin-block: 7px 6px;
+  }
+
+  .end-signature-divider {
+    margin-block: 8px 6px;
+  }
+
+  .end-brand-signature p {
+    margin-top: 5px;
+  }
+
+  .end-brand-signature a {
+    margin-top: 5px;
+  }
+
+  .end-read-again {
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 390px) {
+  .end-screen .end-content {
+    padding-inline: 20px;
+  }
+
+  .end-stationery {
+    padding-inline: 19px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .end-floral-mark,
+  .end-read-again {
+    animation: none;
+  }
+}
+
+/* Signature journey action -------------------------------------------------
+   Page-specific image buttons used different transparent canvases, which made
+   their visible artwork drift from the actual hit area. The reusable button
+   keeps one stable footprint while each screen controls only its spacing. */
+.letter-magic-action {
+  position: relative;
+  z-index: 140;
+  flex: 0 0 auto;
+  width: min(68vw, 278px);
+  min-width: 212px;
+  min-height: 56px;
+  margin: clamp(10px, 1.6dvh, 16px) auto 0;
+}
+
+.page1-magic-action {
+  margin-top: clamp(10px, 1.5dvh, 15px);
+}
+
+.page2-magic-action,
+.page4-open-magic-action {
+  margin-top: clamp(12px, 1.8dvh, 18px);
+}
+
+.page3-magic-action {
+  margin-top: clamp(8px, 1.2dvh, 12px);
+  margin-bottom: clamp(24px, 3.6dvh, 34px);
+}
+
+.page4-memories-magic-action {
+  margin-top: clamp(9px, 1.3dvh, 14px);
+}
+
+.page5-magic-action {
+  margin-top: clamp(16px, 2.3dvh, 24px);
+}
+
+.page6-magic-action {
+  width: min(60vw, 250px);
+  min-width: 204px;
+  min-height: 52px;
+  margin-top: clamp(7px, 1dvh, 11px);
+}
+
+.page7-magic-action,
+.page8-magic-action {
+  margin-top: clamp(14px, 2dvh, 22px);
+}
+
+.page9-magic-action {
+  width: min(66vw, 268px);
+  margin-top: clamp(10px, 1.5dvh, 16px);
+}
+
+@media (max-height: 720px) {
+  .letter-magic-action {
+    width: min(61vw, 246px);
+    min-width: 196px;
+    min-height: 50px;
+    margin-top: 7px;
+  }
+
+  .page3-magic-action {
+    margin-bottom: 27px;
+  }
+
+  .page5-magic-action,
+  .page7-magic-action,
+  .page8-magic-action {
+    margin-top: 9px;
+  }
+
+  .page6-magic-action {
+    width: min(56vw, 230px);
+    min-height: 48px;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 390px) {
+  .letter-magic-action {
+    width: min(76vw, 270px);
+    min-width: 200px;
+  }
+
+  .page6-magic-action {
+    width: min(70vw, 244px);
   }
 }
 </style>
