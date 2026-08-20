@@ -65,6 +65,7 @@ const activePetalMessage = computed(() => {
   if (activePetal.value === null) return ''
   return letter.value?.petal_messages?.[activePetal.value] || ''
 })
+const allPetalsRevealed = computed(() => revealedPetals.value.every(Boolean))
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -1002,7 +1003,7 @@ function skipAnimation() {
           </div>
           <div class="blooming-flower">&#127800;</div>
           <div class="letter-divider"><span></span>&#10022;<span></span></div>
-          <p class="letter-sub">Someone who loves you<br>has something to say</p>
+          <p class="letter-sub">Someone who cares about you<br>has something to share</p>
 
           <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
         </div>
@@ -1097,7 +1098,16 @@ function skipAnimation() {
             </Transition>
           </div>
 
-          <LetterMagicButton class="letter-magic-action page3-magic-action" label="Read the letter" @activate="nextScreen" />
+          <div class="page3-action-slot" aria-live="polite">
+            <Transition name="soft-fade">
+              <LetterMagicButton
+                v-if="allPetalsRevealed"
+                class="letter-magic-action page3-magic-action"
+                label="Read the letter"
+                @activate="nextScreen"
+              />
+            </Transition>
+          </div>
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1127,7 +1137,7 @@ function skipAnimation() {
             </div>
             <h2 class="page4-title">A letter<br><em>written just for you</em></h2>
             <div class="page4-divider"><span></span>&#10022;<span></span></div>
-            <p class="letter-sub">From someone who loves you deeply</p>
+            <p class="letter-sub">A thoughtful message made especially for you</p>
             <LetterMagicButton class="letter-magic-action page4-open-magic-action" label="Open letter" @activate="startLetterReveal" />
           </div>
 
@@ -1151,7 +1161,7 @@ function skipAnimation() {
             <Transition name="sender-reveal">
               <div v-if="senderVisible" class="sender-footer">
                 <div class="letter-divider"><span></span>✦<span></span></div>
-                <p class="letter-from">— With love, {{ letter.sender }}</p>
+                <p class="letter-from">— With warm wishes, {{ letter.sender }}</p>
                 <LetterMagicButton class="letter-magic-action page4-memories-magic-action" label="See memories" @activate="nextScreen" />
               </div>
             </Transition>
@@ -1170,7 +1180,7 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen5') }"
       >
         <div class="screen-content center">
-          <h2 class="letter-title">Some of my favorite<br><em>memories with you</em></h2>
+          <h2 class="letter-title">Some meaningful<br><em>moments to remember</em></h2>
           <div class="letter-divider"><span></span>✦<span></span></div>
 
           <div v-if="letter.memories && letter.memories.length > 0" class="memory-slideshow">
@@ -1258,7 +1268,7 @@ function skipAnimation() {
             <div class="bouquet-detail-row" aria-hidden="true">
               <span>Handcrafted</span>
               <span>QR keepsake</span>
-              <span>Made with love</span>
+              <span>Made with care</span>
             </div>
             <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
@@ -1362,10 +1372,10 @@ function skipAnimation() {
 
           <div class="quote-card">
             <blockquote class="letter-quote">
-              &ldquo;You are loved more<br>
-              than you know,<br>
+              &ldquo;You matter more<br>
+              than you may know,<br>
               more than words can say,<br>
-              more than any gift can hold.&rdquo;
+              and this moment was made for you.&rdquo;
             </blockquote>
           </div>
           <LetterMagicButton class="letter-magic-action page7-magic-action" label="Continue" @activate="nextScreen" />
@@ -1383,11 +1393,25 @@ function skipAnimation() {
       >
         <div class="screen-content center">
           <div class="sender-keepsake">
-            <span class="sender-kicker">Sent with care by</span>
-            <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
-            <h2 class="letter-title">From <em>{{ letter.sender }}</em></h2>
-            <div class="letter-divider"><span></span>✦<span></span></div>
-            <p class="letter-sub">This gift was crafted with love<br>and sent to you with all their heart</p>
+            <span class="sender-kicker">A keepsake from</span>
+
+            <div class="sender-seal" aria-hidden="true">
+              <span class="sender-seal-ring"></span>
+              <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
+              <i></i>
+            </div>
+
+            <h2 class="sender-name">{{ letter.sender }}</h2>
+
+            <div class="sender-divider" aria-hidden="true">
+              <span></span><b>&#10022;</b><span></span>
+            </div>
+
+            <p class="sender-note">
+              Thoughtfully chosen, carefully crafted,<br>
+              and sent especially for you.
+            </p>
+            <p class="sender-flourish">A moment worth keeping</p>
           </div>
           <LetterMagicButton class="letter-magic-action page8-magic-action" label="See your keepsake" @activate="nextScreen" />
         </div>
@@ -1405,7 +1429,7 @@ function skipAnimation() {
         <div class="screen-content center keepsake-content">
           <div class="keepsake-heading">
             <span>The story, kept for you</span>
-            <h2>Your little archive<br><em>of love</em></h2>
+            <h2>Your little archive<br><em>of meaningful moments</em></h2>
             <p>Untie any memory and return to the moment.</p>
           </div>
 
@@ -1416,7 +1440,7 @@ function skipAnimation() {
               <span class="keepsake-number" aria-hidden="true">01</span>
               <img src="/images/keepsake-letter.png" alt="" />
               <span class="keepsake-copy">
-                <small>Words from the heart</small>
+                <small>Words meant for you</small>
                 <strong>Open the letter</strong>
                 <em>Read it once more</em>
               </span>
@@ -1458,7 +1482,7 @@ function skipAnimation() {
             </button>
           </div>
 
-          <LetterMagicButton class="letter-magic-action page9-magic-action" label="Close with love" @activate="nextScreen" />
+          <LetterMagicButton class="letter-magic-action page9-magic-action" label="Close keepsake" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
           <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
@@ -1475,7 +1499,7 @@ function skipAnimation() {
           <section class="end-stationery" aria-labelledby="end-title">
             <img class="end-floral-mark" src="/images/page2_flower-trim.png" alt="" aria-hidden="true" />
 
-            <h2 id="end-title" class="end-title">You are<br><em>so loved</em></h2>
+            <h2 id="end-title" class="end-title">You are<br><em>deeply valued</em></h2>
 
             <div class="end-heart-divider" aria-hidden="true">
               <span></span>
@@ -1484,14 +1508,14 @@ function skipAnimation() {
             </div>
 
             <p class="end-message">
-              Keep this letter close to your heart.<br />
+              Keep this message close as a reminder.<br />
               Scan the QR anytime to revisit.
             </p>
 
             <div class="end-signature-divider" aria-hidden="true"><span></span><i></i><span></span></div>
 
             <div class="end-brand-signature">
-              <small>Crafted with love by</small>
+              <small>Crafted with care by</small>
               <strong>Stack Petals</strong>
               <p>Create a meaningful gift<br />for someone special.</p>
               <a href="https://stackoverpetals.shop" aria-label="Discover Stack Petals crafted gifts">
@@ -5510,27 +5534,158 @@ memories-screen,
 }
 
 .sender-keepsake {
-  gap: 10px;
+  gap: 0;
+  width: min(88vw, 372px);
+  padding: clamp(27px, 4.4dvh, 38px) clamp(24px, 6vw, 34px) clamp(25px, 4dvh, 34px);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.98), transparent 34%),
+    linear-gradient(155deg, rgba(255, 253, 252, 0.9), rgba(255, 242, 246, 0.67));
+  overflow: visible;
+}
+
+.sender-keepsake::after {
+  content: '';
+  position: absolute;
+  inset: 17px;
+  border: 1px solid rgba(214, 126, 146, 0.16);
+  border-radius: 15px;
+  background:
+    radial-gradient(ellipse at 4% 3%, rgba(229, 151, 170, 0.13), transparent 22%),
+    radial-gradient(ellipse at 96% 97%, rgba(229, 151, 170, 0.12), transparent 24%);
+  pointer-events: none;
 }
 
 .sender-kicker {
-  color: #C48090;
+  position: relative;
+  z-index: 2;
+  color: #b5687a;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+}
+
+.sender-seal {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 98px;
+  height: 98px;
+  margin: clamp(13px, 2dvh, 18px) 0 clamp(13px, 1.8dvh, 17px);
+}
+
+.sender-seal-ring {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(207, 99, 124, 0.3);
+  border-radius: 50%;
+  animation: senderSealBreath 4.2s ease-in-out infinite;
+}
+
+.sender-seal-ring::before,
+.sender-seal-ring::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d98297;
+  transform: translateX(-50%);
+}
+
+.sender-seal-ring::before { top: -3px; }
+.sender-seal-ring::after { bottom: -3px; }
+
+.sender-keepsake .sender-circle {
+  position: relative;
+  z-index: 2;
+  width: 76px;
+  height: 76px;
+  background:
+    radial-gradient(circle at 34% 25%, rgba(255,255,255,0.9), transparent 24%),
+    linear-gradient(145deg, #f7c7d2, #dc758b 58%, #c85c73);
+  border: 5px double rgba(255,255,255,0.82);
+  box-shadow: none;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 40px;
+  font-weight: 500;
+}
+
+.sender-seal > i {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 1px;
+  width: 40px;
+  height: 25px;
+  border-radius: 50%;
+  background: rgba(207, 99, 124, 0.13);
+  transform: translate(-50%, 45%);
+  filter: blur(5px);
+}
+
+.sender-name {
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  margin: 0;
+  color: #743847;
+  font: 500 clamp(30px, min(8vw, 4.5dvh), 42px)/1.05 'Cormorant Garamond', serif;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.sender-divider {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(52px, 1fr) auto minmax(52px, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: min(88%, 250px);
+  margin: clamp(15px, 2.3dvh, 21px) 0 clamp(14px, 2dvh, 18px);
+}
+
+.sender-divider span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(206, 102, 127, 0.62));
+}
+
+.sender-divider span:last-child {
+  transform: scaleX(-1);
+}
+
+.sender-divider b {
+  color: #df8da0;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.sender-note {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: #95586a;
+  font: italic 500 clamp(16px, min(4.6vw, 2.4dvh), 19px)/1.45 'Cormorant Garamond', serif;
+  text-align: center;
+}
+
+.sender-flourish {
+  position: relative;
+  z-index: 2;
+  margin: clamp(11px, 1.7dvh, 15px) 0 0;
+  color: #bd7a8b;
+  font: 500 9px/1.2 'Cormorant Garamond', serif;
   letter-spacing: 2px;
   text-transform: uppercase;
 }
 
-.sender-keepsake .sender-circle {
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255,255,255,0.84), transparent 26%),
-    linear-gradient(135deg, #F4C0CE, #D4687A);
-  border: 4px solid rgba(255,255,255,0.68);
-  box-shadow: 0 16px 30px rgba(212, 104, 122, 0.2);
-}
-
-.sender-keepsake .letter-title {
-  margin-top: 0;
+@keyframes senderSealBreath {
+  0%, 100% { transform: scale(1); opacity: 0.65; }
+  50% { transform: scale(1.055); opacity: 1; }
 }
 
 .end-card .end-flowers {
@@ -7132,7 +7287,8 @@ memories-screen,
 
 @media (prefers-reduced-motion: reduce) {
   .end-floral-mark,
-  .end-read-again {
+  .end-read-again,
+  .sender-seal-ring {
     animation: none;
   }
 }
@@ -7163,6 +7319,15 @@ memories-screen,
 .page3-magic-action {
   margin-top: clamp(8px, 1.2dvh, 12px);
   margin-bottom: clamp(24px, 3.6dvh, 34px);
+}
+
+.page3-action-slot {
+  position: relative;
+  z-index: 130;
+  display: grid;
+  place-items: start center;
+  flex: 0 0 clamp(86px, 11dvh, 104px);
+  width: 100%;
 }
 
 .page4-memories-magic-action {
