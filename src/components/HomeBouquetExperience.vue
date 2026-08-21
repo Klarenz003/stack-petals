@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   REVEAL_RESET_DELAY_MS,
+  clampToDocument,
   isTapGesture,
   viewportToDocumentPosition,
 } from '@/utils/homeBouquetInteraction'
@@ -52,25 +53,18 @@ function clearReturnTimers() {
 }
 
 function clampPosition(x: number, y: number) {
-  if (!phone.value || !scene.value) return { x, y }
-  const phoneWidth = phone.value.offsetWidth
-  const phoneHeight = phone.value.offsetHeight
-  const boundsElement = scene.value.closest<HTMLElement>('.hero') ?? scene.value
-  const boundsRect = boundsElement.getBoundingClientRect()
-  const bounds = viewportToDocumentPosition(
-    { x: boundsRect.left, y: boundsRect.top },
-    { x: window.scrollX, y: window.scrollY },
-  )
-  const inset = 8
-  const minX = bounds.x + inset
-  const minY = bounds.y + inset
-  const maxX = bounds.x + boundsRect.width - phoneWidth - inset
-  const maxY = bounds.y + boundsRect.height - phoneHeight - inset
+  if (!phone.value) return { x, y }
+  const root = document.documentElement
+  const body = document.body
 
-  return {
-    x: Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX)),
-    y: Math.min(Math.max(y, Math.min(minY, maxY)), Math.max(minY, maxY)),
-  }
+  return clampToDocument(
+    { x, y },
+    { width: phone.value.offsetWidth, height: phone.value.offsetHeight },
+    {
+      width: Math.max(root.scrollWidth, body.scrollWidth, window.innerWidth),
+      height: Math.max(root.scrollHeight, body.scrollHeight, window.innerHeight),
+    },
+  )
 }
 
 function setStartPosition(movePhone = !hasDragged.value) {
@@ -228,7 +222,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="scene" class="qr-experience" :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning, 'is-paused': !isInView }]">
-    <div class="experience-halo" aria-hidden="true"></div>
     <div class="bouquet-artwork">
       <img src="/images/home-experience/bouquet-qr-guide.png" alt="Blue handcrafted bouquet with a Stack Petals QR keychain and scanning instructions" draggable="false" />
       <span ref="qrHotspot" class="qr-hotspot" aria-hidden="true"></span>
@@ -242,7 +235,7 @@ onBeforeUnmount(() => {
       <div
         ref="phone"
         class="draggable-phone"
-        :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning, 'is-paused': !isInView }]"
+        :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning }]"
         :style="phoneStyle"
         :role="scanState === 'revealed' ? 'link' : 'application'"
         :aria-label="phoneAriaLabel"
@@ -298,7 +291,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .qr-experience { --rose:#cf7285; position:relative; width:min(100%,900px); aspect-ratio:1.34/1; overflow:visible; border-radius:26px; user-select:none; }
-.experience-halo { position:absolute; inset:5% 2% 3%; z-index:-1; border-radius:45%; background:radial-gradient(circle at 48% 48%,rgba(255,255,255,.96),rgba(242,218,224,.44) 54%,transparent 76%); filter:blur(9px); }
 .bouquet-artwork { position:absolute; left:-1%; bottom:-2%; height:105%; aspect-ratio:1138/1382; pointer-events:none; }
 .bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
 .qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
@@ -307,7 +299,6 @@ onBeforeUnmount(() => {
 .draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1),opacity .2s ease,visibility .2s ease; }
 .draggable-phone.is-dragging { cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
 .draggable-phone.scan-revealed:not(.is-dragging) { cursor:pointer; }
-.draggable-phone.is-paused:not(.is-dragging) { visibility:hidden; opacity:0; pointer-events:none; }
 .phone-frame { position:absolute; inset:0; z-index:3; display:block; width:100%; height:100%; object-fit:fill; pointer-events:none; }
 .phone-display { position:absolute; left:13.8%; top:2.3%; z-index:2; width:72.7%; height:94%; overflow:hidden; border-radius:12%/6.2%; background:transparent; }
 
