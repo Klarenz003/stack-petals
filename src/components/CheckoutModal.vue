@@ -846,8 +846,25 @@ watch(
 
         <div class="co-actions">
           <button class="co-btn-outline" @click="backFromPayment" :disabled="cart.isSubmittingOrder">← Back</button>
-          <button class="co-btn-primary" @click="submitOrder" :disabled="!cart.paymentProof || cart.isSubmittingOrder">
-            {{ cart.isSubmittingOrder ? 'Submitting...' : 'Submit Order →' }}
+          <button
+            class="co-btn-primary order-submit-button"
+            :class="{ 'is-animating': cart.isSubmittingOrder }"
+            @click="submitOrder"
+            :disabled="!cart.paymentProof || cart.isSubmittingOrder"
+          >
+            <span class="order-submit-text">Complete Order →</span>
+            <span class="order-submit-loader" aria-hidden="true">
+              <span class="submit-road-line submit-line-a"></span>
+              <span class="submit-road-line submit-line-b"></span>
+              <span class="submit-box"></span>
+              <span class="submit-truck">
+                <span class="submit-door submit-door-top"></span>
+                <span class="submit-door submit-door-bottom"></span>
+                <span class="submit-cargo"></span>
+                <span class="submit-cab"></span>
+                <span class="submit-window"></span>
+              </span>
+            </span>
           </button>
         </div>
       </div>
@@ -858,7 +875,26 @@ watch(
       </p>
 
       <div v-if="cart.checkoutStep === 5" class="checkout-body confirmation">
-        <div class="confirm-icon">🌸</div>
+        <div class="order-confirm-animation" aria-label="Order placed animation">
+          <div class="order-confirm-scene">
+            <div class="order-confirm-road">
+              <span class="road-line line-a"></span>
+              <span class="road-line line-b"></span>
+              <span class="road-line line-c"></span>
+              <span class="order-box"></span>
+              <div class="order-truck">
+                <span class="truck-door door-top"></span>
+                <span class="truck-door door-bottom"></span>
+                <span class="truck-cargo"></span>
+                <span class="truck-cab"></span>
+                <span class="truck-window"></span>
+                <span class="truck-wheel wheel-front"></span>
+                <span class="truck-wheel wheel-back"></span>
+              </div>
+            </div>
+          </div>
+          <p class="order-placed-label">Order Placed</p>
+        </div>
         <h2>Order Received!</h2>
         <p>Thank you, <strong>{{ cart.customer.name }}</strong>! Your order has been submitted successfully.</p>
         <div class="confirm-reference-card">
