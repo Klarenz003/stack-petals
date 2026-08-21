@@ -267,19 +267,17 @@ onBeforeUnmount(() => {
           </div>
 
           <div v-else key="keepsafe" class="keepsafe-screen">
-            <div class="keepsafe-brand"><span>&#10022;</span> STACK PETALS <span>&#10022;</span></div>
-            <header class="keepsafe-heading">
-              <small>The story, kept for you</small>
-              <h3>Your little archive<br /><em>of meaningful moments</em></h3>
-              <p>Visit any memory and return to the moment.</p>
-            </header>
-            <div class="keepsafe-grid">
-              <article class="keepsafe-tile wide"><img src="/images/keepsake-letter.png" alt="" /><span><small>Words meant for you</small><strong>Open the letter</strong><i>&rarr;</i></span></article>
-              <article class="keepsafe-tile"><img src="/images/b1.png" alt="" /><span><small>Held close</small><strong>Memories</strong></span></article>
-              <article class="keepsafe-tile"><img src="/images/keepsake-music.png" alt="" /><span><small>Your soundtrack</small><strong>Music playing</strong></span></article>
-              <article class="keepsafe-tile wide"><img src="/images/b3.png" alt="" /><span><small>Made especially for you</small><strong>Your gift</strong><i>&rarr;</i></span></article>
+            <img
+              class="keepsafe-page-image"
+              src="/images/home-experience/keepsafe-page.png"
+              alt="Stack Petals keepsafe preview"
+              draggable="false"
+            />
+            <div class="keepsafe-phone-brand" aria-hidden="true">
+              <span>&#10022;</span>
+              STACK PETALS
+              <span>&#10022;</span>
             </div>
-            <div class="keepsafe-close">Close keepsake <span>&rarr;</span></div>
           </div>
         </Transition>
       </div>
@@ -326,25 +324,26 @@ onBeforeUnmount(() => {
 .drag-hint span { padding:7px 12px; border:1px solid rgba(190,108,126,.27); border-radius:999px; background:rgba(255,250,249,.93); font:600 8px/1 Inter,sans-serif; letter-spacing:.04em; }
 .drag-hint i { width:22px; height:22px; margin-top:5px; border-right:1px solid #c46a7c; border-bottom:1px solid #c46a7c; transform:rotate(135deg); }
 
-.keepsafe-screen { position:absolute; inset:0; overflow:hidden; color:#78424e; background:linear-gradient(rgba(255,248,247,.82),rgba(255,235,239,.9)),url('/images/background.png') center/cover; }
-.keepsafe-brand { padding-top:11%; color:#b95d70; font:700 5px/1 Inter,sans-serif; letter-spacing:.16em; text-align:center; }
-.keepsafe-brand span { color:#dd8293; }
-.keepsafe-heading { padding:6px 7px 5px; text-align:center; }
-.keepsafe-heading small { font:700 4px/1 Inter,sans-serif; letter-spacing:.13em; text-transform:uppercase; }
-.keepsafe-heading h3 { margin:3px 0 2px; font:600 13px/.88 'Cormorant Garamond',serif; }
-.keepsafe-heading h3 em { color:#cf6578; font-weight:500; }
-.keepsafe-heading p { margin:0; font:italic 5px/1.1 'Cormorant Garamond',serif; }
-.keepsafe-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:0 6px; }
-.keepsafe-tile { position:relative; height:57px; overflow:hidden; border:1px solid rgba(192,104,122,.3); border-radius:5px; background:#fff8f7; }
-.keepsafe-tile img { display:block; width:100%; height:100%; object-fit:cover; }
-.keepsafe-tile>span { position:absolute; left:4px; right:4px; bottom:4px; padding:4px; border-radius:3px; background:rgba(255,248,247,.93); }
-.keepsafe-tile small { display:block; color:#b36b79; font:700 3.5px/1 Inter,sans-serif; letter-spacing:.07em; text-transform:uppercase; }
-.keepsafe-tile strong { display:block; margin-top:2px; font:600 7px/1 'Cormorant Garamond',serif; }
-.keepsafe-tile i { position:absolute; right:4px; top:50%; font-size:7px; transform:translateY(-50%); }
-.keepsafe-tile.wide { grid-column:1/-1; height:47px; }
-.keepsafe-tile.wide img { width:48%; }
-.keepsafe-tile.wide>span { left:43%; top:6px; bottom:6px; display:flex; flex-direction:column; justify-content:center; }
-.keepsafe-close { width:calc(100% - 18px); margin:4px auto 0; padding:5px; border:1px solid rgba(190,102,120,.35); border-radius:999px; background:rgba(255,249,248,.84); font:600 7px/1 'Cormorant Garamond',serif; text-align:center; }
+.keepsafe-screen { position:absolute; inset:0; overflow:hidden; background:#fceced; }
+.keepsafe-page-image { display:block; width:100%; height:100%; object-fit:cover; object-position:center; pointer-events:none; user-select:none; }
+.keepsafe-phone-brand {
+  position:absolute;
+  top:8.5%;
+  left:0;
+  right:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  color:#a94e61;
+  font:600 7px/1 'Cormorant Garamond',serif;
+  letter-spacing:.18em;
+  text-align:center;
+  text-shadow:0 1px 0 rgba(255,255,255,.9);
+  pointer-events:none;
+}
+.keepsafe-phone-brand span { color:#dd7187; font-size:5px; }
 .screen-reveal-enter-active,.screen-reveal-leave-active { transition:opacity .32s ease,transform .32s ease; }
 .screen-reveal-enter-from { opacity:0; transform:translateY(8px) scale(.985); }
 .screen-reveal-leave-to { opacity:0; transform:translateY(-5px) scale(1.01); }
