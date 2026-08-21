@@ -1,0 +1,322 @@
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+
+type ScanState = 'idle' | 'scanning' | 'detected' | 'revealed'
+
+const scene = ref<HTMLElement | null>(null)
+const phone = ref<HTMLElement | null>(null)
+const scannerWindow = ref<HTMLElement | null>(null)
+const qrHotspot = ref<HTMLElement | null>(null)
+const scanState = ref<ScanState>('idle')
+const hasDragged = ref(false)
+const isDragging = ref(false)
+const isReturning = ref(false)
+const isInView = ref(true)
+const position = reactive({ x: 0, y: 0 })
+const homePosition = reactive({ x: 0, y: 0 })
+const drag = reactive({ pointerId: -1, offsetX: 0, offsetY: 0 })
+let scanTimer: number | undefined
+let detectedTimer: number | undefined
+let returnTimer: number | undefined
+let returnTransitionTimer: number | undefined
+let layoutFrame: number | undefined
+let resizeObserver: ResizeObserver | undefined
+let intersectionObserver: IntersectionObserver | undefined
+
+const phoneStyle = computed(() => ({ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }))
+
+function clearScanTimers() {
+  window.clearTimeout(scanTimer)
+  window.clearTimeout(detectedTimer)
+  scanTimer = undefined
+  detectedTimer = undefined
+}
+
+function clearReturnTimers() {
+  window.clearTimeout(returnTimer)
+  window.clearTimeout(returnTransitionTimer)
+  returnTimer = undefined
+  returnTransitionTimer = undefined
+}
+
+function clampPosition(x: number, y: number) {
+  if (!scene.value || !phone.value) return { x, y }
+  const sceneRect = scene.value.getBoundingClientRect()
+  const phoneWidth = phone.value.offsetWidth
+  const phoneHeight = phone.value.offsetHeight
+  const inset = 8
+  const minX = inset - sceneRect.left
+  const minY = inset - sceneRect.top
+  const maxX = window.innerWidth - sceneRect.left - phoneWidth - inset
+  const maxY = window.innerHeight - sceneRect.top - phoneHeight - inset
+
+  return {
+    x: Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX)),
+    y: Math.min(Math.max(y, Math.min(minY, maxY)), Math.max(minY, maxY)),
+  }
+}
+
+function setStartPosition(movePhone = !hasDragged.value) {
+  if (!scene.value || !phone.value) return
+  const sceneRect = scene.value.getBoundingClientRect()
+  const isCompact = sceneRect.width < 650
+  const next = clampPosition(
+    isCompact ? sceneRect.width * 0.43 : sceneRect.width - phone.value.offsetWidth - 22,
+    sceneRect.height * (isCompact ? 0.1 : 0.12),
+  )
+  Object.assign(homePosition, next)
+  if (movePhone) Object.assign(position, next)
+}
+
+function returnPhoneHome() {
+  if (isDragging.value) return
+  isReturning.value = true
+  Object.assign(position, homePosition)
+  returnTransitionTimer = window.setTimeout(() => {
+    isReturning.value = false
+    returnTransitionTimer = undefined
+  }, 850)
+}
+
+function scheduleReturnHome() {
+  window.clearTimeout(returnTimer)
+  returnTimer = window.setTimeout(returnPhoneHome, 2000)
+}
+
+function intersectionRatio(a: DOMRect, b: DOMRect) {
+  const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
+  const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
+  return width * height / Math.max(1, Math.min(a.width * a.height, b.width * b.height))
+}
+
+function cancelPendingScan() {
+  if (scanState.value !== 'scanning') return
+  clearScanTimers()
+  scanState.value = 'idle'
+}
+
+function completeScan() {
+  scanState.value = 'detected'
+  detectedTimer = window.setTimeout(() => { scanState.value = 'revealed' }, 420)
+}
+
+function checkScannerOverlap() {
+  if (!scannerWindow.value || !qrHotspot.value || scanState.value === 'revealed') return
+  const ratio = intersectionRatio(scannerWindow.value.getBoundingClientRect(), qrHotspot.value.getBoundingClientRect())
+  if (ratio >= 0.34) {
+    if (scanState.value === 'idle') {
+      clearScanTimers()
+      scanState.value = 'scanning'
+      scanTimer = window.setTimeout(completeScan, 1250)
+    }
+  } else {
+    cancelPendingScan()
+  }
+}
+
+function onPointerDown(event: PointerEvent) {
+  if (!phone.value || !scene.value) return
+  event.preventDefault()
+  clearReturnTimers()
+  isReturning.value = false
+  hasDragged.value = true
+  isDragging.value = true
+  drag.pointerId = event.pointerId
+  const rect = phone.value.getBoundingClientRect()
+  drag.offsetX = event.clientX - rect.left
+  drag.offsetY = event.clientY - rect.top
+  phone.value.setPointerCapture(event.pointerId)
+}
+
+function onPointerMove(event: PointerEvent) {
+  if (!isDragging.value || !scene.value) return
+  event.preventDefault()
+  const rect = scene.value.getBoundingClientRect()
+  Object.assign(position, clampPosition(event.clientX - rect.left - drag.offsetX, event.clientY - rect.top - drag.offsetY))
+  checkScannerOverlap()
+}
+
+function finishDrag(event: PointerEvent) {
+  if (event.pointerId !== drag.pointerId) return
+  if (phone.value?.hasPointerCapture(event.pointerId)) phone.value.releasePointerCapture(event.pointerId)
+  isDragging.value = false
+  drag.pointerId = -1
+  checkScannerOverlap()
+  scheduleReturnHome()
+}
+
+function onResize() {
+  setStartPosition(!hasDragged.value || isReturning.value)
+  if (hasDragged.value && !isReturning.value) Object.assign(position, clampPosition(position.x, position.y))
+  checkScannerOverlap()
+}
+
+onMounted(async () => {
+  await nextTick()
+  setStartPosition(true)
+  layoutFrame = window.requestAnimationFrame(() => {
+    layoutFrame = window.requestAnimationFrame(onResize)
+  })
+  if (scene.value && 'ResizeObserver' in window) {
+    resizeObserver = new ResizeObserver(onResize)
+    resizeObserver.observe(scene.value)
+  }
+  if (scene.value && 'IntersectionObserver' in window) {
+    intersectionObserver = new IntersectionObserver(([entry]) => { isInView.value = entry?.isIntersecting ?? true }, { threshold: 0.08 })
+    intersectionObserver.observe(scene.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  clearScanTimers()
+  clearReturnTimers()
+  window.cancelAnimationFrame(layoutFrame ?? 0)
+  resizeObserver?.disconnect()
+  intersectionObserver?.disconnect()
+})
+</script>
+
+<template>
+  <div ref="scene" class="qr-experience" :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning, 'is-paused': !isInView }]">
+    <div class="experience-halo" aria-hidden="true"></div>
+    <div class="bouquet-artwork">
+      <img src="/images/home-experience/bouquet-qr-guide.png" alt="Blue handcrafted bouquet with a Stack Petals QR keychain and scanning instructions" draggable="false" />
+      <span ref="qrHotspot" class="qr-hotspot" aria-hidden="true"></span>
+    </div>
+
+    <div v-if="!hasDragged && scanState === 'idle'" class="drag-hint" aria-hidden="true">
+      <span>Drag the phone to the QR code</span><i></i>
+    </div>
+
+    <div
+      ref="phone"
+      class="draggable-phone"
+      :style="phoneStyle"
+      role="application"
+      aria-label="Draggable QR scanner phone. Move it over the QR code on the bouquet."
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="finishDrag"
+      @pointercancel="finishDrag"
+    >
+      <div class="phone-display">
+        <Transition name="screen-reveal" mode="out-in">
+          <div v-if="scanState !== 'revealed'" key="scanner" class="scanner-screen">
+            <div class="camera-grain" aria-hidden="true"></div>
+            <div class="scanner-topline"><span class="scanner-live-dot"></span> STACK PETALS SCANNER</div>
+            <div ref="scannerWindow" class="scanner-window">
+              <i class="corner top-left"></i><i class="corner top-right"></i>
+              <i class="corner bottom-left"></i><i class="corner bottom-right"></i>
+              <span class="scan-line" aria-hidden="true"></span><span class="scanner-reticle" aria-hidden="true"></span>
+            </div>
+            <div class="scanner-status" aria-live="polite">
+              <strong v-if="scanState === 'detected'">QR Code Detected</strong>
+              <strong v-else-if="scanState === 'scanning'">Reading your keepsake...</strong>
+              <strong v-else>Scan QR Code</strong>
+              <span v-if="scanState === 'idle'">Move phone over the QR tag</span>
+              <span v-else-if="scanState === 'scanning'">Hold steady for a moment</span>
+              <span v-else>Opening something special</span>
+            </div>
+          </div>
+
+          <div v-else key="keepsafe" class="keepsafe-screen">
+            <div class="keepsafe-brand"><span>&#10022;</span> STACK PETALS <span>&#10022;</span></div>
+            <header class="keepsafe-heading">
+              <small>The story, kept for you</small>
+              <h3>Your little archive<br /><em>of meaningful moments</em></h3>
+              <p>Visit any memory and return to the moment.</p>
+            </header>
+            <div class="keepsafe-grid">
+              <article class="keepsafe-tile wide"><img src="/images/keepsake-letter.png" alt="" /><span><small>Words meant for you</small><strong>Open the letter</strong><i>&rarr;</i></span></article>
+              <article class="keepsafe-tile"><img src="/images/b1.png" alt="" /><span><small>Held close</small><strong>Memories</strong></span></article>
+              <article class="keepsafe-tile"><img src="/images/keepsake-music.png" alt="" /><span><small>Your soundtrack</small><strong>Music playing</strong></span></article>
+              <article class="keepsafe-tile wide"><img src="/images/b3.png" alt="" /><span><small>Made especially for you</small><strong>Your gift</strong><i>&rarr;</i></span></article>
+            </div>
+            <div class="keepsafe-close">Close keepsake <span>&rarr;</span></div>
+          </div>
+        </Transition>
+      </div>
+      <img class="phone-frame" src="/images/home-experience/phone-frame.png" alt="" draggable="false" aria-hidden="true" />
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.qr-experience { --rose:#cf7285; position:relative; isolation:isolate; width:min(100%,900px); aspect-ratio:1.34/1; overflow:visible; border-radius:26px; user-select:none; }
+.experience-halo { position:absolute; inset:5% 2% 3%; z-index:-1; border-radius:45%; background:radial-gradient(circle at 48% 48%,rgba(255,255,255,.96),rgba(242,218,224,.44) 54%,transparent 76%); filter:blur(9px); }
+.bouquet-artwork { position:absolute; left:-1%; bottom:-2%; height:105%; aspect-ratio:1138/1382; pointer-events:none; }
+.bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
+.qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
+
+.draggable-phone { position:absolute; left:0; top:0; z-index:8; width:clamp(226px,31%,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); }
+.is-returning .draggable-phone { transition:transform .8s cubic-bezier(.22,.72,.24,1); }
+.is-dragging .draggable-phone { z-index:12; cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
+.phone-frame { position:absolute; inset:0; z-index:3; display:block; width:100%; height:100%; object-fit:fill; pointer-events:none; }
+.phone-display { position:absolute; left:13.8%; top:2.3%; z-index:2; width:72.7%; height:94%; overflow:hidden; border-radius:12%/6.2%; background:transparent; }
+
+.scanner-screen { position:absolute; inset:0; overflow:hidden; color:#fff; background:linear-gradient(180deg,rgba(10,15,20,.24),rgba(13,18,24,.12) 43%,rgba(8,12,17,.3)); box-shadow:inset 0 0 34px rgba(5,8,12,.28); backdrop-filter:saturate(.72) contrast(1.06) brightness(.8); -webkit-backdrop-filter:saturate(.72) contrast(1.06) brightness(.8); }
+.camera-grain { position:absolute; inset:0; opacity:.09; background-image:linear-gradient(90deg,transparent 49.5%,rgba(255,255,255,.09) 50%,transparent 50.5%),linear-gradient(transparent 49.5%,rgba(255,255,255,.06) 50%,transparent 50.5%); background-size:21px 21px; }
+.scanner-topline { position:absolute; left:0; right:0; top:8%; display:flex; align-items:center; justify-content:center; gap:5px; color:rgba(255,255,255,.72); font:600 5px/1 Inter,sans-serif; letter-spacing:.14em; }
+.scanner-live-dot { width:4px; height:4px; border-radius:50%; background:#e5899a; box-shadow:0 0 7px #e5899a; }
+.scanner-window { position:absolute; left:15%; top:36%; width:70%; aspect-ratio:1; border-radius:14px; background:rgba(255,255,255,.018); box-shadow:inset 0 0 0 1px rgba(255,255,255,.035); }
+.corner { position:absolute; width:23%; height:23%; border-color:#f4b3bf; border-style:solid; border-width:0; filter:drop-shadow(0 0 3px rgba(238,133,153,.7)); transition:border-color .2s ease,filter .2s ease,transform .2s ease; }
+.top-left { left:0; top:0; border-left-width:2px; border-top-width:2px; border-radius:10px 0 0; }
+.top-right { right:0; top:0; border-right-width:2px; border-top-width:2px; border-radius:0 10px 0 0; }
+.bottom-left { left:0; bottom:0; border-left-width:2px; border-bottom-width:2px; border-radius:0 0 0 10px; }
+.bottom-right { right:0; bottom:0; border-right-width:2px; border-bottom-width:2px; border-radius:0 0 10px; }
+.scan-line { position:absolute; left:7%; right:7%; top:9%; height:1px; background:linear-gradient(90deg,transparent,#f2a4b4 15% 85%,transparent); box-shadow:0 0 10px 2px rgba(237,123,145,.66); animation:scannerLine 2.1s ease-in-out infinite; }
+.scanner-reticle { position:absolute; left:50%; top:50%; width:5px; height:5px; border:1px solid rgba(255,255,255,.55); border-radius:50%; transform:translate(-50%,-50%); }
+.scanner-status { position:absolute; left:8%; right:8%; bottom:12%; text-align:center; }
+.scanner-status strong,.scanner-status span { display:block; }
+.scanner-status strong { font:600 10px/1.2 'Cormorant Garamond',serif; letter-spacing:.03em; }
+.scanner-status span { margin-top:4px; color:rgba(255,255,255,.58); font:500 5px/1.3 Inter,sans-serif; }
+.scan-scanning .corner,.scan-detected .corner { border-color:#ffd5dc; filter:drop-shadow(0 0 7px #ef8499); transform:scale(1.08); }
+.scan-scanning .scanner-screen,.scan-detected .scanner-screen { background:linear-gradient(180deg,rgba(10,15,20,.18),rgba(17,20,25,.06) 43%,rgba(8,12,17,.24)); }
+.scan-detected .scanner-window { animation:detectedPulse .42s ease both; }
+
+.drag-hint { position:absolute; right:3%; bottom:5%; z-index:9; display:grid; justify-items:center; color:#79525c; pointer-events:none; animation:hintFloat 2s ease-in-out infinite; }
+.drag-hint span { padding:7px 12px; border:1px solid rgba(190,108,126,.27); border-radius:999px; background:rgba(255,250,249,.93); font:600 8px/1 Inter,sans-serif; letter-spacing:.04em; }
+.drag-hint i { width:22px; height:22px; margin-top:5px; border-right:1px solid #c46a7c; border-bottom:1px solid #c46a7c; transform:rotate(135deg); }
+
+.keepsafe-screen { position:absolute; inset:0; overflow:hidden; color:#78424e; background:linear-gradient(rgba(255,248,247,.82),rgba(255,235,239,.9)),url('/images/background.png') center/cover; }
+.keepsafe-brand { padding-top:11%; color:#b95d70; font:700 5px/1 Inter,sans-serif; letter-spacing:.16em; text-align:center; }
+.keepsafe-brand span { color:#dd8293; }
+.keepsafe-heading { padding:6px 7px 5px; text-align:center; }
+.keepsafe-heading small { font:700 4px/1 Inter,sans-serif; letter-spacing:.13em; text-transform:uppercase; }
+.keepsafe-heading h3 { margin:3px 0 2px; font:600 13px/.88 'Cormorant Garamond',serif; }
+.keepsafe-heading h3 em { color:#cf6578; font-weight:500; }
+.keepsafe-heading p { margin:0; font:italic 5px/1.1 'Cormorant Garamond',serif; }
+.keepsafe-grid { display:grid; grid-template-columns:1fr 1fr; gap:3px; padding:0 6px; }
+.keepsafe-tile { position:relative; height:57px; overflow:hidden; border:1px solid rgba(192,104,122,.3); border-radius:5px; background:#fff8f7; }
+.keepsafe-tile img { display:block; width:100%; height:100%; object-fit:cover; }
+.keepsafe-tile>span { position:absolute; left:4px; right:4px; bottom:4px; padding:4px; border-radius:3px; background:rgba(255,248,247,.93); }
+.keepsafe-tile small { display:block; color:#b36b79; font:700 3.5px/1 Inter,sans-serif; letter-spacing:.07em; text-transform:uppercase; }
+.keepsafe-tile strong { display:block; margin-top:2px; font:600 7px/1 'Cormorant Garamond',serif; }
+.keepsafe-tile i { position:absolute; right:4px; top:50%; font-size:7px; transform:translateY(-50%); }
+.keepsafe-tile.wide { grid-column:1/-1; height:47px; }
+.keepsafe-tile.wide img { width:48%; }
+.keepsafe-tile.wide>span { left:43%; top:6px; bottom:6px; display:flex; flex-direction:column; justify-content:center; }
+.keepsafe-close { width:calc(100% - 18px); margin:4px auto 0; padding:5px; border:1px solid rgba(190,102,120,.35); border-radius:999px; background:rgba(255,249,248,.84); font:600 7px/1 'Cormorant Garamond',serif; text-align:center; }
+.screen-reveal-enter-active,.screen-reveal-leave-active { transition:opacity .32s ease,transform .32s ease; }
+.screen-reveal-enter-from { opacity:0; transform:translateY(8px) scale(.985); }
+.screen-reveal-leave-to { opacity:0; transform:translateY(-5px) scale(1.01); }
+.is-paused *,.is-paused *::before,.is-paused *::after { animation-play-state:paused!important; }
+
+@keyframes bouquetBreath { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-4px) scale(1.006)} }
+@keyframes scannerLine { 0%,100%{top:9%;opacity:.48} 50%{top:89%;opacity:1} }
+@keyframes detectedPulse { 0%,100%{background:rgba(255,255,255,.035)} 50%{background:rgba(239,132,153,.18)} }
+@keyframes hintFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+
+@media (max-width:620px) {
+  .qr-experience { width:min(calc(100vw - 40px),430px); aspect-ratio:.82/1; border-radius:18px; }
+  .bouquet-artwork { left:-3%; bottom:1%; width:79%; height:auto; aspect-ratio:1138/1382; }
+  .qr-hotspot { left:47.8%; top:73.2%; width:12%; }
+  .draggable-phone { width:clamp(168px,48%,186px); }
+  .drag-hint { right:2%; bottom:2%; }
+  .drag-hint span { font-size:6.5px; padding:6px 9px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .qr-experience *,.qr-experience *::before,.qr-experience *::after { animation:none!important; transition-duration:.01ms!important; }
+}
+</style>

@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import HomeBouquetExperience from '@/components/HomeBouquetExperience.vue'
 import type { Feature } from '@/types'
 
 const router = useRouter()
@@ -48,15 +49,16 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
   <div>
     <section class="hero">
       <div class="hero-left">
+        <span class="hero-kicker">More than flowers</span>
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
-        <p>Engineered with Precision and Crafted with Love.</p>
+        <p>Scan. Unlock. Feel the moment.</p>
         <div class="buttons">
-          <button class="primary" @click="router.push('/products')">Shop Products</button>
-          <button class="secondary" @click="router.push('/about')">Our Story</button>
+          <button class="primary" @click="router.push('/products')">Shop Signature Gifts</button>
+          <button class="secondary" @click="router.push('/process')">Explore Experience</button>
         </div>
       </div>
       <div class="hero-right">
-        <img src="/images/bouquet-main.png" alt="Stack Petals gift" />
+        <HomeBouquetExperience />
       </div>
     </section>
 

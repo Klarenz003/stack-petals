@@ -1003,7 +1003,7 @@ function skipAnimation() {
           </div>
           <div class="blooming-flower">&#127800;</div>
           <div class="letter-divider"><span></span>&#10022;<span></span></div>
-          <p class="letter-sub">Someone who cares about you<br>has something to share</p>
+          <p class="letter-sub">Someone who admires you<br>has something to share</p>
 
           <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
         </div>
