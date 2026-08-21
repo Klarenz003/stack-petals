@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import {
+  REVEAL_RESET_DELAY_MS,
+  isTapGesture,
+  viewportToDocumentPosition,
+} from '@/utils/homeBouquetInteraction'
 
 type ScanState = 'idle' | 'scanning' | 'detected' | 'revealed'
 
@@ -15,9 +20,10 @@ const isInView = ref(true)
 const isAtHome = ref(true)
 const position = reactive({ x: 0, y: 0 })
 const homePosition = reactive({ x: 0, y: 0 })
-const drag = reactive({ pointerId: -1, offsetX: 0, offsetY: 0 })
+const drag = reactive({ pointerId: -1, offsetX: 0, offsetY: 0, startX: 0, startY: 0 })
 let scanTimer: number | undefined
 let detectedTimer: number | undefined
+let revealedResetTimer: number | undefined
 let returnTimer: number | undefined
 let returnTransitionTimer: number | undefined
 let layoutFrame: number | undefined
@@ -25,12 +31,17 @@ let resizeObserver: ResizeObserver | undefined
 let intersectionObserver: IntersectionObserver | undefined
 
 const phoneStyle = computed(() => ({ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }))
+const phoneAriaLabel = computed(() => scanState.value === 'revealed'
+  ? 'Stack Petals keepsafe opened. Tap to visit the Stack Petals process page.'
+  : 'Draggable QR scanner phone. Move it over the QR code on the bouquet.')
 
 function clearScanTimers() {
   window.clearTimeout(scanTimer)
   window.clearTimeout(detectedTimer)
+  window.clearTimeout(revealedResetTimer)
   scanTimer = undefined
   detectedTimer = undefined
+  revealedResetTimer = undefined
 }
 
 function clearReturnTimers() {
@@ -41,14 +52,20 @@ function clearReturnTimers() {
 }
 
 function clampPosition(x: number, y: number) {
-  if (!phone.value) return { x, y }
+  if (!phone.value || !scene.value) return { x, y }
   const phoneWidth = phone.value.offsetWidth
   const phoneHeight = phone.value.offsetHeight
+  const boundsElement = scene.value.closest<HTMLElement>('.hero') ?? scene.value
+  const boundsRect = boundsElement.getBoundingClientRect()
+  const bounds = viewportToDocumentPosition(
+    { x: boundsRect.left, y: boundsRect.top },
+    { x: window.scrollX, y: window.scrollY },
+  )
   const inset = 8
-  const minX = inset
-  const minY = inset
-  const maxX = window.innerWidth - phoneWidth - inset
-  const maxY = window.innerHeight - phoneHeight - inset
+  const minX = bounds.x + inset
+  const minY = bounds.y + inset
+  const maxX = bounds.x + boundsRect.width - phoneWidth - inset
+  const maxY = bounds.y + boundsRect.height - phoneHeight - inset
 
   return {
     x: Math.min(Math.max(x, Math.min(minX, maxX)), Math.max(minX, maxX)),
@@ -60,12 +77,17 @@ function setStartPosition(movePhone = !hasDragged.value) {
   if (!scene.value || !phone.value) return
   const sceneRect = scene.value.getBoundingClientRect()
   const isCompact = sceneRect.width < 650
-  const next = clampPosition(
-    isCompact
+  const viewportPosition = {
+    x: isCompact
       ? sceneRect.right - phone.value.offsetWidth - 2
       : sceneRect.right - phone.value.offsetWidth - 22,
-    sceneRect.top + sceneRect.height * (isCompact ? 0.06 : 0.12),
+    y: sceneRect.top + sceneRect.height * (isCompact ? 0.06 : 0.12),
+  }
+  const documentPosition = viewportToDocumentPosition(
+    viewportPosition,
+    { x: window.scrollX, y: window.scrollY },
   )
+  const next = clampPosition(documentPosition.x, documentPosition.y)
   Object.assign(homePosition, next)
   if (movePhone) Object.assign(position, next)
 }
@@ -100,7 +122,19 @@ function cancelPendingScan() {
 
 function completeScan() {
   scanState.value = 'detected'
-  detectedTimer = window.setTimeout(() => { scanState.value = 'revealed' }, 420)
+  detectedTimer = window.setTimeout(() => {
+    scanState.value = 'revealed'
+    detectedTimer = undefined
+    revealedResetTimer = window.setTimeout(() => {
+      scanState.value = 'idle'
+      revealedResetTimer = undefined
+    }, REVEAL_RESET_DELAY_MS)
+  }, 840)
+}
+
+function openProcessPage() {
+  if (scanState.value !== 'revealed') return
+  window.location.assign('https://stackoverpetals.shop/process')
 }
 
 function checkScannerOverlap() {
@@ -129,33 +163,40 @@ function onPointerDown(event: PointerEvent) {
   const rect = phone.value.getBoundingClientRect()
   drag.offsetX = event.clientX - rect.left
   drag.offsetY = event.clientY - rect.top
+  drag.startX = event.clientX
+  drag.startY = event.clientY
   phone.value.setPointerCapture(event.pointerId)
 }
 
 function onPointerMove(event: PointerEvent) {
   if (!isDragging.value) return
   event.preventDefault()
-  Object.assign(position, clampPosition(event.clientX - drag.offsetX, event.clientY - drag.offsetY))
+  const next = viewportToDocumentPosition(
+    { x: event.clientX - drag.offsetX, y: event.clientY - drag.offsetY },
+    { x: window.scrollX, y: window.scrollY },
+  )
+  Object.assign(position, clampPosition(next.x, next.y))
   checkScannerOverlap()
 }
 
 function finishDrag(event: PointerEvent) {
   if (event.pointerId !== drag.pointerId) return
+  const shouldOpenProcess = scanState.value === 'revealed' && isTapGesture(
+    { x: drag.startX, y: drag.startY },
+    { x: event.clientX, y: event.clientY },
+  )
   if (phone.value?.hasPointerCapture(event.pointerId)) phone.value.releasePointerCapture(event.pointerId)
   isDragging.value = false
   drag.pointerId = -1
   checkScannerOverlap()
   scheduleReturnHome()
+  if (shouldOpenProcess) openProcessPage()
 }
 
 function onResize() {
   setStartPosition(isAtHome.value || isReturning.value)
   if (!isAtHome.value && !isReturning.value) Object.assign(position, clampPosition(position.x, position.y))
   checkScannerOverlap()
-}
-
-function onScroll() {
-  if (isAtHome.value && !isDragging.value) setStartPosition(true)
 }
 
 onMounted(async () => {
@@ -173,7 +214,6 @@ onMounted(async () => {
     intersectionObserver.observe(scene.value)
   }
   window.addEventListener('resize', onResize, { passive: true })
-  window.addEventListener('scroll', onScroll, { passive: true })
 })
 
 onBeforeUnmount(() => {
@@ -183,7 +223,6 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   intersectionObserver?.disconnect()
   window.removeEventListener('resize', onResize)
-  window.removeEventListener('scroll', onScroll)
 })
 </script>
 
@@ -205,12 +244,14 @@ onBeforeUnmount(() => {
         class="draggable-phone"
         :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning, 'is-paused': !isInView }]"
         :style="phoneStyle"
-        role="application"
-        aria-label="Draggable QR scanner phone. Move it over the QR code on the bouquet."
+        :role="scanState === 'revealed' ? 'link' : 'application'"
+        :aria-label="phoneAriaLabel"
+        tabindex="0"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="finishDrag"
         @pointercancel="finishDrag"
+        @keydown.enter.prevent="openProcessPage"
       >
       <div class="phone-display">
         <Transition name="screen-reveal" mode="out-in">
@@ -262,9 +303,11 @@ onBeforeUnmount(() => {
 .bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
 .qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
 
-.draggable-phone { position:fixed; left:0; top:0; z-index:5000; width:clamp(226px,16vw,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); }
-.draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1); }
+.draggable-phone { position:absolute; left:0; top:0; z-index:5000; width:clamp(226px,16vw,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .2s ease,visibility .2s ease; }
+.draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1),opacity .2s ease,visibility .2s ease; }
 .draggable-phone.is-dragging { cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
+.draggable-phone.scan-revealed:not(.is-dragging) { cursor:pointer; }
+.draggable-phone.is-paused:not(.is-dragging) { visibility:hidden; opacity:0; pointer-events:none; }
 .phone-frame { position:absolute; inset:0; z-index:3; display:block; width:100%; height:100%; object-fit:fill; pointer-events:none; }
 .phone-display { position:absolute; left:13.8%; top:2.3%; z-index:2; width:72.7%; height:94%; overflow:hidden; border-radius:12%/6.2%; background:transparent; }
 
