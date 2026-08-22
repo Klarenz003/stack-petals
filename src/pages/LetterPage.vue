@@ -3,6 +3,8 @@ import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import { supabase } from '@/supabaseClient'
+import { preloadImageSources } from '@/utils/imagePreloader'
+import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -235,11 +237,11 @@ async function loadLetter() {
   } else {
     await loadBouquetImage(data.order_id)
   }
-  void preloadLetterAssetsInBackground(data)
-  await preloadInitialLetterAssets()
+  await preloadInitialLetterAssets(data)
   await waitForMinimumLoadingTime(loadingStartedAt)
   loading.value = false
   stopLoadingTextShuffle()
+  void preloadLetterAssetsInBackground(data)
   scheduleMeaningfulLetterOpen()
   startMemoryTimer()
   void startDefaultMusic()
@@ -295,61 +297,25 @@ function normalizeImageSrc(src: string) {
   return `/${src}`
 }
 
-function preloadImage(src: string, onLoaded?: () => void) {
-  return new Promise<void>((resolve) => {
-    let settled = false
-    const finish = () => {
-      if (settled) return
-      settled = true
-      onLoaded?.()
-      resolve()
-    }
+async function preloadInitialLetterAssets(activeLetter: Letter) {
+  const criticalAssets = getLetterCriticalImageSources({
+    bouquetImage: normalizeImageSrc(bouquetImage.value),
+    memories: (activeLetter.memories || []).map(normalizeImageSrc),
+    anglePhotos: activeLetter.angle_photos,
+  })
+  loadingLoaded.value = 0
+  loadingTotal.value = Math.max(criticalAssets.length, 1)
 
-    if (!src) {
-      finish()
-      return
-    }
-
-    const img = new Image()
-    img.onload = async () => {
-      try {
-        await img.decode()
-      } catch {
-        // Some browsers resolve onload before decode is available. The image is still cached.
-      }
-      finish()
-    }
-    img.onerror = finish
-    img.loading = 'eager'
-    img.decoding = 'async'
-    img.src = normalizeImageSrc(src)
+  await preloadImageSources(criticalAssets, {
+    concurrency: 4,
+    onProgress: progress => {
+      loadingLoaded.value = Math.min(progress.completed, loadingTotal.value)
+    },
   })
 }
 
-async function preloadInBatches(srcs: string[], batchSize = 6, onLoaded?: () => void) {
-  const uniqueSrcs = [...new Set(srcs.filter(Boolean))]
-  for (let i = 0; i < uniqueSrcs.length; i += batchSize) {
-    await Promise.all(uniqueSrcs.slice(i, i + batchSize).map(src => preloadImage(src, onLoaded)))
-  }
-}
-
-async function preloadInitialLetterAssets() {
-  const bouquetAssets = [bouquetImage.value]
-
-  loadingLoaded.value = 0
-  loadingTotal.value = Math.max(bouquetAssets.filter(Boolean).length, 1)
-
-  const markLoaded = () => {
-    loadingLoaded.value = Math.min(loadingLoaded.value + 1, loadingTotal.value)
-  }
-
-  await preloadInBatches(bouquetAssets, 1, markLoaded)
-}
-
 async function preloadLetterAssetsInBackground(activeLetter: Letter) {
-  const memoryAssets = activeLetter.memories || []
   await preloadAngleFrames(activeLetter)
-  if (memoryAssets.length > 0) await preloadInBatches(memoryAssets, 4)
 }
 
 function loadAngleFrame(src: string) {

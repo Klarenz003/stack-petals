@@ -12,6 +12,7 @@ import CheckoutModal from '@/components/CheckoutModal.vue'
 import BouquetPreviewModal from '@/components/BouquetPreviewModal.vue'
 import CartNotification from '@/components/CartNotification.vue'
 import PetalCodeBackground from '@/components/PetalCodeBackground.vue'
+import AppLoadingScreen from '@/components/AppLoadingScreen.vue'
 
 useCanvas()
 
@@ -20,6 +21,26 @@ const preview = usePreviewStore()
 const route   = useRoute()
 
 const isLetterPage = computed(() => route.name === 'letter')
+const STARTUP_LOADER_KEY = 'stack-petals:startup-ready:v1'
+const startupAssets = [
+  '/images/background.png',
+  '/images/logo.png',
+  '/images/cart-icon.png',
+  '/images/home-experience/bouquet-qr-guide.png',
+  '/images/home-experience/phone-frame.png',
+  '/images/home-experience/keepsafe-page.png',
+  '/images/engineered-icon.png',
+  '/images/crafted-icon.png',
+  '/images/delivered-icon.png',
+]
+const showStartupLoader = ref(
+  !isLetterPage.value && sessionStorage.getItem(STARTUP_LOADER_KEY) !== 'ready',
+)
+
+function finishStartupLoading() {
+  sessionStorage.setItem(STARTUP_LOADER_KEY, 'ready')
+  showStartupLoader.value = false
+}
 
 // 'slide-left' when going forward, 'slide-right' when going back
 const transitionName = ref('slide-left')
@@ -35,6 +56,12 @@ watch(
 </script>
 
 <template>
+  <AppLoadingScreen
+    v-if="showStartupLoader"
+    :assets="startupAssets"
+    @ready="finishStartupLoading"
+  />
+
   <template v-if="!isLetterPage">
     <canvas id="circuit-canvas"></canvas>
     <canvas id="petal-canvas"></canvas>
