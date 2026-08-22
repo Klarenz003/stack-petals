@@ -298,6 +298,66 @@ nav a.router-link-active::after {
 
 .hero-left h1 span { color: #d8a5a7; }
 .hero-left p { margin-top: 30px; font-size: clamp(1rem, 3vw, 1.6rem); color: #444; }
+.hero-left .hero-tagline {
+  max-width: 500px;
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  line-height: 1.55;
+}
+
+.hero-left .buttons {
+  align-items: center;
+  gap: 18px;
+}
+
+.hero-primary {
+  min-width: 150px;
+  padding: 15px 28px;
+}
+
+.hero-process-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 2px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: #765158;
+  cursor: pointer;
+  font: 600 15px/1.2 'Inter', sans-serif;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.hero-process-link:hover {
+  border-color: #c48b8d;
+  color: #9d5261;
+  transform: translateX(2px);
+}
+
+.hero-process-link:focus-visible {
+  outline: 2px solid #5f8872;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.hero-capabilities {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+  color: #8d7377;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.hero-capabilities i {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #d8a5a7;
+}
 .hero-right {
   flex: 1.15 1 560px;
   display: flex;
@@ -674,25 +734,25 @@ nav a.router-link-active::after {
 /* ── Feature Bar ────────────────────────────────────────────── */
 
 .feature-bar {
-  width: 80%;
-  margin: -30px auto 0;
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(25px);
-  padding: 25px;
-  border-radius: 25px;
+  width: min(920px, 86%);
+  margin: -18px auto 0;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px);
+  padding: 16px 24px;
+  border: 1px solid rgba(216, 165, 167, 0.2);
+  border-radius: 16px;
   display: flex;
   justify-content: space-around;
   flex-wrap: wrap;
   gap: 20px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.08);
   position: relative;
   z-index: 1;
 }
 
-.feature { display: flex; align-items: center; gap: 15px; }
-.feature img { width: 40px; height: 40px; object-fit: cover; border-radius: 50%; }
-.feature strong { display: block; font-size: 18px; }
-.feature span { font-size: 14px; color: #666; }
+.feature { display: flex; align-items: center; gap: 10px; }
+.feature img { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; }
+.feature strong { display: block; font-size: 14px; }
+.feature span { font-size: 12px; color: #766e6a; }
 
 
 /* â”€â”€ Home Experience â”€â”€ */
@@ -781,21 +841,6 @@ nav a.router-link-active::after {
   color: #655c58;
   font-size: 14px;
   line-height: 1.65;
-}
-
-.experience-actions {
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 28px;
-  flex-wrap: wrap;
-}
-
-.compact-primary,
-.compact-secondary {
-  min-height: 48px;
-  padding: 14px 24px;
-  font-size: 15px;
 }
 
 .home-trust-strip {
@@ -4968,6 +5013,8 @@ input, textarea, [contenteditable="true"] {
     max-width: 700px;
   }
   .buttons { justify-content: center; }
+  .hero-left .hero-tagline { margin-inline: auto; }
+  .hero-capabilities { justify-content: center; }
   nav { gap: 20px; }
   .hero-right {
     flex-basis: auto;
@@ -5094,7 +5141,7 @@ input, textarea, [contenteditable="true"] {
   .hero { padding: 30px 5%; gap: 28px; }
   .buttons { flex-direction: column; align-items: center; }
   .primary, .secondary { width: 220px; }
-  .feature-bar { width: 95%; }
+  .feature-bar { width: 92%; }
   .home-experience {
     margin-top: 56px;
     width: 92%;
@@ -5166,15 +5213,14 @@ input, textarea, [contenteditable="true"] {
   }
 
   .hero-left .buttons {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     margin: 22px auto 0;
-    width: min(100%, 300px);
+    width: min(100%, 260px);
   }
 
-  .hero-left .buttons .primary,
-  .hero-left .buttons .secondary {
+  .hero-left .buttons .hero-primary {
     align-items: center;
     display: inline-flex;
     font-size: 0.9rem;
@@ -5185,6 +5231,18 @@ input, textarea, [contenteditable="true"] {
     padding: 10px 9px;
     white-space: normal;
     width: 100%;
+  }
+
+  .hero-process-link {
+    justify-content: center;
+    min-height: 38px;
+  }
+
+  .hero-capabilities {
+    gap: 8px;
+    justify-content: center;
+    margin: 16px auto 0;
+    max-width: 330px;
   }
 
   .hero-right {
@@ -5351,14 +5409,6 @@ input, textarea, [contenteditable="true"] {
   .feature { flex-direction: column; text-align: center; }
   .experience-grid {
     grid-template-columns: 1fr;
-  }
-  .experience-actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .compact-primary,
-  .compact-secondary {
-    width: 100%;
   }
   .home-trust-strip {
     align-items: stretch;

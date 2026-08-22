@@ -77,6 +77,16 @@
   color: var(--sp-text-soft);
 }
 
+:root[data-theme='dark'] .hero-process-link,
+:root[data-theme='dark'] .hero-capabilities {
+  color: var(--sp-text-soft);
+}
+
+:root[data-theme='dark'] .hero-process-link:hover {
+  border-color: var(--sp-pink-strong);
+  color: var(--sp-pink-strong);
+}
+
 :root[data-theme='dark'] .feature-bar,
 :root[data-theme='dark'] .home-experience,
 :root[data-theme='dark'] .home-trust-strip,

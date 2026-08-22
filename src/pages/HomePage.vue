@@ -51,10 +51,18 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       <div class="hero-left">
         <span class="hero-kicker">More than flowers</span>
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
-        <p>Scan. Unlock. Feel the moment.</p>
+        <p class="hero-tagline">Engineered with Precision, Crafted with Love.</p>
         <div class="buttons">
-          <button class="primary" @click="router.push('/products')">Shop Signature Gifts</button>
-          <button class="secondary" @click="router.push('/process')">Explore Experience</button>
+          <button class="primary hero-primary" @click="router.push('/products')">Shop Gifts</button>
+          <button class="hero-process-link" @click="router.push('/process')">
+            See how it works <span aria-hidden="true">&rarr;</span>
+          </button>
+        </div>
+        <div class="hero-capabilities" aria-label="QR keepsake features">
+          <span>Message</span><i aria-hidden="true"></i>
+          <span>Memories</span><i aria-hidden="true"></i>
+          <span>Music</span><i aria-hidden="true"></i>
+          <span>360&deg; View</span>
         </div>
       </div>
       <div class="hero-right">
@@ -89,10 +97,6 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
         </article>
       </div>
 
-      <div class="experience-actions">
-        <button class="primary compact-primary" @click="router.push('/process')">See How It Works</button>
-        <button class="secondary compact-secondary" @click="router.push('/gallery')">View Gallery</button>
-      </div>
     </section>
 
     <section class="home-trust-strip" aria-label="Stack Petals benefits">
