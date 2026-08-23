@@ -1,150 +1,344 @@
 <script setup lang="ts">
-const steps = [
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { gsap } from 'gsap'
+import {
+  ArrowRight,
+  Box,
+  CheckCircle2,
+  Flower2,
+  Gift,
+  Heart,
+  Images,
+  MessageSquareText,
+  Music2,
+  PackageCheck,
+  QrCode,
+  Rotate3D,
+  ScanLine,
+  Sparkles,
+  Store,
+  Truck,
+  WalletCards,
+} from 'lucide-vue-next'
+
+const orderSteps = [
   {
-    title: 'Pick Crafted Flowers You Love',
-    desc: 'Browse our curated digital catalog and choose the handcrafted flower piece that perfectly speaks to your occasion.',
+    title: 'Choose your crafted gift',
+    desc: 'Browse the collection, check availability, and select the piece that fits the moment.',
+    icon: Gift,
   },
   {
-    title: 'Place Your Order & Submit Payment',
-    desc: 'Input your details, customize your recipient\'s virtual message, and complete your secure checkout using GCash or Maya.',
+    title: 'Personalize the experience',
+    desc: 'Add the recipient, letter, petal messages, photo memories, and a song suggestion.',
+    icon: Heart,
   },
   {
-    title: 'Payment Review',
-    desc: 'Our system processes your order, and our team quickly verifies your payment screenshot to initialize the fulfillment process.',
+    title: 'Complete checkout',
+    desc: 'Choose pickup or delivery, submit your payment proof, and keep your order reference.',
+    icon: WalletCards,
   },
   {
-    title: 'Crafting the Details',
-    desc: 'Applying technical precision to artisan crafting, we carefully hand-create each detail from scratch to build a beautiful, lasting base.',
+    title: 'We craft and prepare',
+    desc: 'After payment review, we create the flowers by hand and prepare the private QR keepsake.',
+    icon: Flower2,
   },
   {
-    title: 'Preparing Your Crafted Flowers',
-    desc: 'Our team thoughtfully composes every petal, stem, and detail with deep care, keeping your design and aesthetic preferences in mind.',
-  },
-  {
-    title: 'Careful Packaging & Shipping',
-    desc: 'We securely pack and wrap your crafted flowers, seamlessly integrate your custom QR code tag, and ship it out so it arrives at your doorstep exactly on time.',
+    title: 'Receive it your way',
+    desc: 'Collect it from Stack Petals or follow your delivery status using Track Order.',
+    icon: PackageCheck,
   },
 ]
 
 const experienceFeatures = [
   {
-    title: 'Handcrafted Artistry',
-    icon: '01',
-    image: '/images/craftedflowers.jpg',
-    imageAlt: 'Handcrafted Stack Petals flower arrangement',
-    desc: 'Every flower is carefully made by hand, giving the gift a lasting physical piece they can keep.',
+    id: 'scan',
+    title: 'Scan the QR',
+    eyebrow: 'The invitation',
+    desc: 'The keepsake begins with a private QR tag attached to the crafted gift.',
+    icon: ScanLine,
+    image: '/images/home-experience/bouquet-qr-guide.png',
+    imageAlt: 'Stack Petals bouquet with QR tag and scanning guide',
   },
   {
-    title: 'The Virtual Message',
-    icon: '02',
+    id: 'letter',
+    title: 'Read the letter',
+    eyebrow: 'Words made personal',
+    desc: 'A private message unfolds into a gentle, page-by-page experience.',
+    icon: MessageSquareText,
     video: '/videos/letter.MP4',
-    videoLabel: 'Preview of the virtual message experience',
-    desc: 'A private QR code opens a personalized message made for the recipient.',
+    videoLabel: 'Preview of the Stack Petals virtual letter',
   },
   {
-    title: 'Photo Memories',
-    icon: '03',
+    id: 'memories',
+    title: 'Revisit memories',
+    eyebrow: 'Photos held close',
+    desc: 'Meaningful photos become a small gallery the recipient can return to anytime.',
+    icon: Images,
     video: '/videos/photo_memories.mp4',
-    videoLabel: 'Preview of loved one photo memories inside the letter experience',
-    desc: 'Add meaningful photos of loved ones so the letter page feels personal, familiar, and sweet.',
+    videoLabel: 'Preview of photo memories in the letter experience',
   },
   {
-    title: 'Background Music',
-    icon: '04',
-    visualClass: 'process-music-photo',
-    desc: 'Choose soft background music to make the message, memories, and 360 view feel cinematic.',
+    id: 'music',
+    title: 'Play the soundtrack',
+    eyebrow: 'A song for the moment',
+    desc: 'Music gives the letter and memories their own atmosphere and emotion.',
+    icon: Music2,
+    image: '/images/keepsake-music.png',
+    imageAlt: 'Stack Petals keepsake music preview',
   },
   {
-    title: 'Interactive 360 View',
-    icon: '05',
+    id: 'view360',
+    title: 'Explore every angle',
+    eyebrow: 'The crafted gift, preserved',
+    desc: 'When available, the 360 view lets the recipient revisit the finished piece from every side.',
+    icon: Rotate3D,
     video: '/videos/360view.mp4',
-    videoLabel: 'Preview of the interactive 360 flower view',
-    desc: 'Let them revisit the crafted flowers from every angle after receiving the gift.',
+    videoLabel: 'Preview of the interactive 360 degree crafted flower view',
   },
 ]
+
+const selectedExperience = ref(experienceFeatures[0].id)
+const musicScene = ref<HTMLElement | null>(null)
+let musicAnimation: gsap.Context | null = null
+
+const activeExperience = computed(
+  () => experienceFeatures.find((feature) => feature.id === selectedExperience.value) ?? experienceFeatures[0],
+)
+
+const stopMusicAnimation = () => {
+  musicAnimation?.revert()
+  musicAnimation = null
+}
+
+const animateMusicScene = async () => {
+  stopMusicAnimation()
+  if (selectedExperience.value !== 'music') return
+
+  await nextTick()
+  if (!musicScene.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+  musicAnimation = gsap.context(() => {
+    gsap.to('.process-music-record', {
+      rotation: 360,
+      duration: 8,
+      ease: 'none',
+      repeat: -1,
+    })
+
+    gsap.to('.process-music-glow', {
+      scale: 1.08,
+      opacity: 0.72,
+      duration: 1.8,
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+    })
+
+    gsap.to('.process-music-tonearm', {
+      rotation: 27,
+      duration: 2.4,
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+    })
+
+    gsap.fromTo(
+      '.process-music-bar',
+      { scaleY: 0.24, transformOrigin: '50% 100%' },
+      {
+        scaleY: (index) => [0.62, 0.92, 0.48, 1, 0.7, 0.88, 0.55, 0.78][index % 8],
+        duration: 0.64,
+        ease: 'sine.inOut',
+        stagger: { each: 0.08, repeat: -1, yoyo: true },
+      },
+    )
+
+    gsap.to('.process-music-note', {
+      keyframes: [
+        { y: 8, opacity: 0, scale: 0.72 },
+        { y: -18, opacity: 0.78, scale: 1 },
+        { y: -58, opacity: 0, scale: 0.86 },
+      ],
+      x: (index) => (index % 2 === 0 ? 12 : -12),
+      duration: 3.2,
+      ease: 'sine.out',
+      stagger: { each: 0.72, repeat: -1 },
+    })
+  }, musicScene.value)
+}
+
+watch(selectedExperience, animateMusicScene, { flush: 'post' })
+onBeforeUnmount(stopMusicAnimation)
 </script>
 
 <template>
-  <div class="page-section">
+  <main class="page-section process-page-refined">
+    <section class="page-hero process-intro" aria-labelledby="process-page-title">
+      <span class="process-kicker"><Sparkles :size="15" /> From craft to keepsake</span>
+      <h1 id="process-page-title">How Stack Petals <span>works</span></h1>
+      <p>Choose a handcrafted gift, make the experience personal, and let one QR code hold the message, memories, music, and more.</p>
+      <nav class="process-quick-path" aria-label="Process overview">
+        <span><Gift :size="18" /> Choose</span>
+        <ArrowRight :size="15" aria-hidden="true" />
+        <span><Heart :size="18" /> Personalize</span>
+        <ArrowRight :size="15" aria-hidden="true" />
+        <span><Flower2 :size="18" /> We craft</span>
+        <ArrowRight :size="15" aria-hidden="true" />
+        <span><QrCode :size="18" /> They unlock</span>
+      </nav>
+    </section>
 
-    <!-- Hero -->
-    <div class="page-hero">
-      <h1>How it <span>Works</span></h1>
-      <p>From handcrafted flowers to a private QR experience, every order is designed to feel personal from the first scan.</p>
-    </div>
-
-    <!-- Section 1 — The Experience -->
-    <div class="process-section process-showcase-section">
-      <div class="process-section-header">
-        <span class="process-section-num">1</span>
-        <h2>The Stack Petals Experience</h2>
-      </div>
-      <p class="process-section-sub">More than a product. It is a handcrafted keepsake with a digital heart.</p>
-      <p class="process-section-desc">
-        Every crafted flower piece we create is a fusion of physical craftsmanship and digital innovation.
-        When you send a Stack Petals arrangement, your loved one receives an interactive experience
-        that bridges the physical and digital worlds:
-      </p>
-
-      <div class="process-features">
-        <div v-for="feature in experienceFeatures" :key="feature.title" class="process-feature">
-          <div
-            v-if="feature.video"
-            class="process-feature-photo process-feature-video"
-          >
-            <video
-              :aria-label="feature.videoLabel"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="metadata"
-            >
-              <source :src="feature.video" type="video/mp4" />
-            </video>
-          </div>
-          <div
-            v-else-if="feature.visualClass === 'process-music-photo'"
-            class="process-feature-photo process-music-photo"
-            aria-hidden="true"
-          >
-            <div class="music-visual">
-              <span class="music-note">music</span>
-              <span class="music-wave"></span>
-              <span class="music-wave"></span>
-              <span class="music-wave"></span>
-            </div>
-          </div>
-          <div v-else class="process-feature-photo">
-            <img :src="feature.image" :alt="feature.imageAlt" loading="lazy" decoding="async" />
-          </div>
-          <span class="feature-dot">{{ feature.icon }}</span>
-          <div class="process-feature-copy">
-            <strong>{{ feature.title }}</strong>
-            <p>{{ feature.desc }}</p>
-          </div>
+    <section class="process-journey-band" aria-labelledby="order-journey-title">
+      <div class="process-section-heading">
+        <div>
+          <span class="process-section-label">Journey one</span>
+          <h2 id="order-journey-title">How your gift is made</h2>
         </div>
+        <p>Five clear stages from your first choice to pickup or delivery.</p>
       </div>
-    </div>
 
-    <!-- Section 2 — Ordering Process -->
-    <div class="process-section">
-      <div class="process-section-header">
-        <span class="process-section-num">2</span>
-        <h2>Our Seamless Ordering Process</h2>
-      </div>
-      <p class="process-section-sub">From code to craft — engineered with precision at every step.</p>
-
-      <div class="process-steps">
-        <div v-for="(step, i) in steps" :key="i" class="process-step">
-          <div class="process-num">{{ i + 1 }}</div>
-          <div class="process-body">
+      <ol class="process-order-timeline">
+        <li v-for="(step, index) in orderSteps" :key="step.title">
+          <div class="process-step-marker">
+            <component :is="step.icon" :size="21" stroke-width="1.7" />
+            <span>{{ String(index + 1).padStart(2, '0') }}</span>
+          </div>
+          <div>
             <h3>{{ step.title }}</h3>
             <p>{{ step.desc }}</p>
           </div>
+        </li>
+      </ol>
+
+      <div class="process-fulfillment-split">
+        <article>
+          <Store :size="23" />
+          <div>
+            <h3>Pickup at Stack Petals</h3>
+            <p>No shipping fee. Your order tracker changes to ready for pickup when the gift is prepared.</p>
+          </div>
+        </article>
+        <article>
+          <Truck :size="23" />
+          <div>
+            <h3>Doorstep delivery</h3>
+            <p>The delivery fee is calculated from the barangay, city or municipality, and province entered at checkout.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="process-recipient-band" aria-labelledby="recipient-journey-title">
+      <div class="process-section-heading">
+        <div>
+          <span class="process-section-label">Journey two</span>
+          <h2 id="recipient-journey-title">What they unlock</h2>
+        </div>
+        <p>Select a chapter to preview the experience. Only the chosen media is loaded.</p>
+      </div>
+
+      <div class="process-experience-layout">
+        <div class="process-experience-tabs" role="tablist" aria-label="Recipient experience previews">
+          <button
+            v-for="(feature, index) in experienceFeatures"
+            :key="feature.id"
+            type="button"
+            role="tab"
+            :aria-selected="selectedExperience === feature.id"
+            :class="{ active: selectedExperience === feature.id }"
+            @click="selectedExperience = feature.id"
+          >
+            <span class="process-tab-number">{{ String(index + 1).padStart(2, '0') }}</span>
+            <component :is="feature.icon" :size="21" stroke-width="1.6" />
+            <span>
+              <small>{{ feature.eyebrow }}</small>
+              <strong>{{ feature.title }}</strong>
+            </span>
+          </button>
+        </div>
+
+        <div class="process-media-stage" role="tabpanel">
+          <Transition name="process-media" mode="out-in" @after-enter="animateMusicScene">
+            <div :key="activeExperience.id" class="process-media-inner">
+              <video
+                v-if="activeExperience.video"
+                :aria-label="activeExperience.videoLabel"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="auto"
+                disablepictureinpicture
+              >
+                <source :src="activeExperience.video" type="video/mp4" />
+              </video>
+              <div
+                v-else-if="activeExperience.id === 'music'"
+                ref="musicScene"
+                class="process-music-visual"
+                role="img"
+                aria-label="A romantic animated record and music visualizer"
+              >
+                <div class="process-music-notes" aria-hidden="true">
+                  <Music2 v-for="note in 4" :key="note" class="process-music-note" :size="22" />
+                </div>
+                <div class="process-music-player" aria-hidden="true">
+                  <span class="process-music-glow"></span>
+                  <div class="process-music-record">
+                    <span class="process-record-groove groove-one"></span>
+                    <span class="process-record-groove groove-two"></span>
+                    <span class="process-record-label"><Flower2 :size="29" stroke-width="1.35" /></span>
+                  </div>
+                  <div class="process-music-tonearm"><span></span></div>
+                </div>
+                <div class="process-music-copy">
+                  <span>Now playing</span>
+                  <strong>A song chosen for this moment</strong>
+                  <div class="process-music-equalizer" aria-hidden="true">
+                    <i v-for="bar in 8" :key="bar" class="process-music-bar"></i>
+                  </div>
+                  <p><Music2 :size="16" /> Softly playing inside the keepsake</p>
+                </div>
+              </div>
+              <img
+                v-else
+                :src="activeExperience.image"
+                :alt="activeExperience.imageAlt"
+                decoding="async"
+              />
+              <div class="process-media-caption">
+                <span>{{ activeExperience.eyebrow }}</span>
+                <h3>{{ activeExperience.title }}</h3>
+                <p>{{ activeExperience.desc }}</p>
+              </div>
+            </div>
+          </Transition>
         </div>
       </div>
-    </div>
+    </section>
 
-  </div>
+    <section class="process-expectations" aria-labelledby="expectations-title">
+      <div>
+        <span class="process-section-label">Before you order</span>
+        <h2 id="expectations-title">Made thoughtfully, never rushed</h2>
+      </div>
+      <ul>
+        <li><CheckCircle2 :size="19" /> Available stock can be reserved briefly during payment.</li>
+        <li><CheckCircle2 :size="19" /> Pre-order preparation follows the product's stated preparation days.</li>
+        <li><CheckCircle2 :size="19" /> Delivery dates depend on available daily slots.</li>
+        <li><CheckCircle2 :size="19" /> Your receipt and order reference let you track every update.</li>
+      </ul>
+    </section>
+
+    <section class="process-final-cta">
+      <div>
+        <Box :size="28" stroke-width="1.5" />
+        <span>Ready to make one meaningful?</span>
+        <h2>Choose the gift. We will craft the moment around it.</h2>
+      </div>
+      <RouterLink to="/shop" class="process-shop-link">
+        Create your gift <ArrowRight :size="18" />
+      </RouterLink>
+    </section>
+  </main>
 </template>

@@ -349,3 +349,77 @@
 :root[data-theme='dark'] .about-experience-list li,
 :root[data-theme='dark'] .about-team-list article { border-color: var(--sp-border); }
 :root[data-theme='dark'] .about-cta-link { color: #fff; }
+
+/* Process page */
+:root[data-theme='dark'] .process-journey-band,
+:root[data-theme='dark'] .process-expectations {
+  border-color: var(--sp-border);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+:root[data-theme='dark'] .process-recipient-band {
+  background: transparent;
+}
+
+:root[data-theme='dark'] .process-section-heading h2,
+:root[data-theme='dark'] .process-expectations h2,
+:root[data-theme='dark'] .process-order-timeline h3,
+:root[data-theme='dark'] .process-fulfillment-split h3,
+:root[data-theme='dark'] .process-experience-tabs button,
+:root[data-theme='dark'] .process-media-caption h3 {
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] .process-section-heading > p,
+:root[data-theme='dark'] .process-order-timeline p,
+:root[data-theme='dark'] .process-fulfillment-split p,
+:root[data-theme='dark'] .process-media-caption p,
+:root[data-theme='dark'] .process-expectations li,
+:root[data-theme='dark'] .process-quick-path span {
+  color: var(--sp-text-soft);
+}
+
+:root[data-theme='dark'] .process-order-timeline::before,
+:root[data-theme='dark'] .process-fulfillment-split,
+:root[data-theme='dark'] .process-experience-tabs,
+:root[data-theme='dark'] .process-experience-tabs button,
+:root[data-theme='dark'] .process-experience-tabs button:first-child,
+:root[data-theme='dark'] .process-expectations li,
+:root[data-theme='dark'] .process-media-caption,
+:root[data-theme='dark'] .process-media-stage {
+  border-color: var(--sp-border);
+}
+
+:root[data-theme='dark'] .process-step-marker,
+:root[data-theme='dark'] .process-media-caption,
+:root[data-theme='dark'] .process-quick-path span {
+  background: var(--sp-surface);
+}
+
+:root[data-theme='dark'] .process-media-stage {
+  background: #1f1a1c;
+}
+
+:root[data-theme='dark'] .process-music-visual {
+  background:
+    radial-gradient(circle at 25% 50%, rgba(194, 111, 132, 0.16), transparent 31%),
+    linear-gradient(145deg, #251f22 0%, #302529 52%, #202a25 100%);
+}
+
+:root[data-theme='dark'] .process-music-copy,
+:root[data-theme='dark'] .process-music-copy strong {
+  color: var(--sp-text);
+}
+
+:root[data-theme='dark'] .process-music-copy p {
+  color: var(--sp-text-soft);
+}
+
+:root[data-theme='dark'] .process-experience-tabs button:hover,
+:root[data-theme='dark'] .process-experience-tabs button.active {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+:root[data-theme='dark'] .process-final-cta {
+  background: #476b58;
+}
