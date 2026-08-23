@@ -19,6 +19,7 @@ const isDragging = ref(false)
 const isReturning = ref(false)
 const isInView = ref(true)
 const isAtHome = ref(true)
+const isPhonePositioned = ref(false)
 const position = reactive({ x: 0, y: 0 })
 const homePosition = reactive({ x: 0, y: 0 })
 const drag = reactive({ pointerId: -1, offsetX: 0, offsetY: 0, startX: 0, startY: 0 })
@@ -197,7 +198,10 @@ onMounted(async () => {
   await nextTick()
   setStartPosition(true)
   layoutFrame = window.requestAnimationFrame(() => {
-    layoutFrame = window.requestAnimationFrame(onResize)
+    onResize()
+    layoutFrame = window.requestAnimationFrame(() => {
+      isPhonePositioned.value = true
+    })
   })
   if (scene.value && 'ResizeObserver' in window) {
     resizeObserver = new ResizeObserver(onResize)
@@ -242,7 +246,7 @@ onBeforeUnmount(() => {
       <div
         ref="phone"
         class="draggable-phone"
-        :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning }]"
+        :class="[`scan-${scanState}`, { 'is-positioned': isPhonePositioned, 'is-dragging': isDragging, 'is-returning': isReturning }]"
         :style="phoneStyle"
         :role="scanState === 'revealed' ? 'link' : 'application'"
         :aria-label="phoneAriaLabel"
@@ -300,7 +304,8 @@ onBeforeUnmount(() => {
 .bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
 .qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
 
-.draggable-phone { position:absolute; left:0; top:0; z-index:5000; width:clamp(226px,16vw,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .2s ease,visibility .2s ease; }
+.draggable-phone { position:absolute; left:0; top:0; z-index:5000; width:clamp(226px,16vw,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; visibility:hidden; opacity:0; pointer-events:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .18s ease; }
+.draggable-phone.is-positioned { visibility:visible; opacity:1; pointer-events:auto; }
 .draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1),opacity .2s ease,visibility .2s ease; }
 .draggable-phone.is-dragging { cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
 .draggable-phone.scan-revealed:not(.is-dragging) { cursor:pointer; }
