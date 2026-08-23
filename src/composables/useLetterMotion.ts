@@ -58,7 +58,7 @@ const SELECTORS: Record<number, SceneSelectors> = {
   },
   6: {
     intro: '.quote-flower-wrap, .quote-kicker, .quote-divider',
-    title: '.letter-quote',
+    title: '.quote-line',
     hero: '.quote-card',
     detail: '',
     action: '.page7-magic-action',
@@ -239,8 +239,8 @@ export function useLetterMotion(options: LetterMotionOptions) {
       case 6:
         fromTo(tl, intro, { autoAlpha: 0, y: -travel, scale: 0.88 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.62, stagger: 0.09 }, 0.08)
         fromTo(tl, hero, { autoAlpha: 0, scaleY: 0.72, transformOrigin: '50% 0%' }, { autoAlpha: 1, scaleY: 1, duration: 0.75, ease: 'power3.out' }, 0.32)
-        fromTo(tl, title, { autoAlpha: 0, y: travel, filter: mobile ? 'none' : 'blur(4px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.82 }, 0.48)
-        fromTo(tl, action, { autoAlpha: 0, scale: 0.92 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: 'back.out(1.45)' }, 0.78)
+        fromTo(tl, title, { autoAlpha: 0, y: travel, filter: mobile ? 'none' : 'blur(4px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: 0.7, stagger: 0.12 }, 0.48)
+        fromTo(tl, action, { autoAlpha: 0, scale: 0.92 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: 'back.out(1.45)' }, 0.94)
         break
 
       case 7:

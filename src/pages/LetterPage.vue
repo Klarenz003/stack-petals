@@ -1344,10 +1344,9 @@ function skipAnimation() {
 
           <div class="quote-card">
             <blockquote class="letter-quote">
-              &ldquo;You matter more<br>
-              than you may know,<br>
-              more than words can say,<br>
-              and this moment was made for you.&rdquo;
+              <span class="quote-line quote-line-primary">&ldquo;You matter more than you may know,</span>
+              <span class="quote-line">more than words can say,</span>
+              <span class="quote-line">and this moment was made for you.&rdquo;</span>
             </blockquote>
           </div>
           <LetterMagicButton class="letter-magic-action page7-magic-action" label="Continue" @activate="nextScreen" />
@@ -6156,8 +6155,8 @@ memories-screen,
   align-items: center !important;
   justify-content: center !important;
   height: 100% !important;
-  gap: clamp(8px, 1.2dvh, 14px) !important;
-  padding: 0 clamp(18px, 5vw, 32px) clamp(12px, 1.8dvh, 22px) !important;
+  gap: clamp(7px, 1dvh, 12px) !important;
+  padding: clamp(2px, 0.5dvh, 6px) clamp(18px, 5vw, 32px) clamp(12px, 1.8dvh, 22px) !important;
 }
 
 .quote-screen .quote-logo {
@@ -6191,7 +6190,7 @@ memories-screen,
 
 .quote-flower-wrap {
   position: relative;
-  width: min(23vw, 118px, 15dvh);
+  width: min(27vw, 132px, 17dvh);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -6202,10 +6201,10 @@ memories-screen,
 .quote-flower-wrap::before {
   content: '';
   position: absolute;
-  inset: 8%;
+  inset: 5%;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(255,255,255,0.82), rgba(255,220,228,0.24) 62%, transparent 72%);
+    radial-gradient(circle, rgba(255,255,255,0.76), rgba(255,220,228,0.18) 62%, transparent 74%);
 }
 
 .quote-flower-img {
@@ -6220,7 +6219,7 @@ memories-screen,
   margin: 0;
   color: #8A3D4E;
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(19px, min(5vw, 3dvh), 29px);
+  font-size: clamp(18px, min(4.7vw, 2.8dvh), 27px);
   font-style: italic;
   line-height: 1.05;
   text-align: center;
@@ -6233,7 +6232,7 @@ memories-screen,
   gap: 9px;
   width: min(58vw, 230px);
   color: #D76A82;
-  margin: clamp(2px, 0.5dvh, 6px) auto clamp(4px, 0.8dvh, 8px);
+  margin: clamp(1px, 0.3dvh, 4px) auto clamp(3px, 0.6dvh, 7px);
 }
 
 .quote-divider span {
@@ -6249,17 +6248,17 @@ memories-screen,
 
 .quote-screen .quote-card {
   position: relative;
-  width: min(100%, 520px, 72cqw);
-  min-height: clamp(145px, 22dvh, 230px);
+  width: min(100%, 520px, 76cqw);
+  min-height: clamp(140px, 20dvh, 214px);
   display: grid;
   place-items: center;
-  padding: clamp(22px, 4dvh, 36px) clamp(22px, 6vw, 46px);
+  padding: clamp(20px, 3.4dvh, 32px) clamp(22px, 6vw, 46px);
   overflow: hidden;
-  border: 1px solid rgba(246, 205, 213, 0.78);
+  border: 1px solid rgba(225, 153, 169, 0.42);
   border-radius: clamp(24px, 5vw, 38px);
   background:
-    radial-gradient(circle at 50% 10%, rgba(255,255,255,0.82), transparent 48%),
-    linear-gradient(145deg, rgba(255, 244, 247, 0.82), rgba(255, 217, 226, 0.54));
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.82), transparent 52%),
+    linear-gradient(145deg, rgba(255, 247, 249, 0.86), rgba(255, 222, 230, 0.52));
   box-shadow: none !important;
 }
 
@@ -6273,18 +6272,7 @@ memories-screen,
 }
 
 .quote-screen .quote-card::after {
-  content: '';
-  position: absolute;
-  inset: auto 14px 12px auto;
-  width: clamp(48px, 12vw, 86px);
-  height: clamp(48px, 12vw, 86px);
-  opacity: 0.62;
-  background:
-    radial-gradient(ellipse at 30% 78%, transparent 0 42%, rgba(255,255,255,0.9) 44% 48%, transparent 50%),
-    radial-gradient(ellipse at 60% 70%, transparent 0 42%, rgba(255,255,255,0.86) 44% 48%, transparent 50%),
-    linear-gradient(135deg, transparent 46%, rgba(255,255,255,0.82) 47% 50%, transparent 51%);
-  transform: rotate(-18deg);
-  pointer-events: none;
+  content: none;
 }
 
 .quote-screen .letter-quote {
@@ -6292,12 +6280,12 @@ memories-screen,
   z-index: 1;
   margin: 0;
   padding: 0;
-  color: #87384A;
+  color: #7C3547;
   font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(24px, min(6.8vw, 4.2dvh), 42px);
+  font-size: clamp(23px, min(6.2vw, 3.9dvh), 39px);
   font-style: italic;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.12;
   letter-spacing: 0;
   text-align: center;
 }
@@ -6440,17 +6428,21 @@ memories-screen,
 
 @media (max-height: 720px) {
   .quote-screen .quote-flower-wrap {
-    width: min(18vw, 92px, 12dvh);
+    width: min(20vw, 102px, 13dvh);
   }
 
   .quote-screen .quote-card {
     min-height: clamp(122px, 19dvh, 170px);
-    padding-block: clamp(18px, 3dvh, 26px);
+    padding-block: clamp(16px, 2.6dvh, 23px);
   }
 
   .quote-screen .letter-quote {
-    font-size: clamp(22px, min(5.8vw, 3.6dvh), 34px);
-    line-height: 1.34;
+    font-size: clamp(21px, min(5.5vw, 3.4dvh), 32px);
+    line-height: 1.1;
+  }
+
+  .quote-screen .page7-magic-action {
+    margin-top: clamp(5px, 0.8dvh, 9px);
   }
 }
 
@@ -7361,6 +7353,24 @@ memories-screen,
   .page6-magic-action {
     width: min(70vw, 244px);
   }
+}
+
+.quote-screen .quote-line {
+  display: block;
+  text-wrap: balance;
+}
+
+.quote-screen .quote-line + .quote-line {
+  margin-top: 0.16em;
+}
+
+.quote-screen .quote-line-primary {
+  color: #713043;
+}
+
+.quote-screen .page7-magic-action {
+  width: min(64vw, 270px, 68cqw);
+  margin-top: clamp(10px, 1.5dvh, 17px);
 }
 
 /* Premium chapter motion ---------------------------------------------------
