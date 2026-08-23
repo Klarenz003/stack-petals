@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { gsap } from 'gsap'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
@@ -750,7 +751,7 @@ function applyMomentum(timestamp = performance.now()) {
 }
 
 // ── Background ─────────────────────────────────────────────────────
-  function screenBg(screenKey: string): string {
+function screenBg(screenKey: string): string {
   const custom = letter.value?.backgrounds?.[screenKey]
   const gradients: Record<string, string> = {
     screen1: 'rgba(255,240,243,0.3)',
@@ -768,6 +769,105 @@ function applyMomentum(timestamp = performance.now()) {
     return custom
   }
   return overlay
+}
+
+// ── Chapter choreography ──────────────────────────────────────────
+let chapterTimeline: gsap.core.Timeline | null = null
+
+function animateCurrentChapter(element: Element) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+  chapterTimeline?.kill()
+
+  const root = element as HTMLElement
+  const chapterItems = Array.from(
+    root.querySelectorAll<HTMLElement>('.screen-content > *'),
+  ).filter((item) => !item.classList.contains('falling-petals'))
+  const trailPetals = Array.from(
+    root.querySelectorAll<HTMLElement>('.chapter-petal-trail span'),
+  )
+
+  const direction = currentScreen.value % 2 === 0 ? -1 : 1
+  chapterTimeline = gsap.timeline({ defaults: { overwrite: 'auto' } })
+
+  chapterTimeline.fromTo(
+    trailPetals,
+    {
+      autoAlpha: 0,
+      x: (index) => direction * (-52 - index * 18),
+      y: (index) => -18 + index * 13,
+      rotation: (index) => direction * (-28 + index * 17),
+      scale: 0.65,
+    },
+    {
+      autoAlpha: 0.52,
+      x: (index) => direction * (48 + index * 15),
+      y: (index) => 22 + index * 18,
+      rotation: (index) => direction * (46 + index * 22),
+      scale: 1,
+      duration: 1.05,
+      stagger: 0.055,
+      ease: 'power2.out',
+    },
+    0,
+  ).to(trailPetals, { autoAlpha: 0, duration: 0.34, stagger: 0.035 }, 0.76)
+
+  chapterTimeline.fromTo(
+    chapterItems,
+    { autoAlpha: 0, y: 15, filter: 'blur(2px)' },
+    {
+      autoAlpha: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      duration: 0.66,
+      stagger: 0.075,
+      ease: 'power3.out',
+      clearProps: 'filter',
+    },
+    0.08,
+  )
+
+  if (currentScreen.value === 5) {
+    const stage = root.querySelector<HTMLElement>('.bouquet-stage')
+    const photo = root.querySelector<HTMLElement>('.bouquet-main-photo')
+    const halo = root.querySelector<HTMLElement>('.bouquet-halo')
+    const details = root.querySelectorAll<HTMLElement>(
+      '.bouquet-tag, .bouquet-plaque, .bouquet-detail-row, .btn-360, .bouquet-note',
+    )
+
+    if (stage) {
+      chapterTimeline.fromTo(
+        stage,
+        { scale: 0.82, y: 24, rotation: -1.4 },
+        { scale: 1, y: 0, rotation: 0, duration: 1.05, ease: 'back.out(1.28)' },
+        0.14,
+      )
+    }
+    if (halo) {
+      chapterTimeline.fromTo(
+        halo,
+        { autoAlpha: 0, scale: 0.72 },
+        { autoAlpha: 1, scale: 1, duration: 1.15, ease: 'power2.out' },
+        0.2,
+      )
+    }
+    if (photo) {
+      chapterTimeline.fromTo(
+        photo,
+        { autoAlpha: 0, scale: 0.92 },
+        { autoAlpha: 1, scale: 1, duration: 0.82, ease: 'power2.out' },
+        0.42,
+      )
+    }
+    if (details.length) {
+      chapterTimeline.fromTo(
+        details,
+        { autoAlpha: 0, y: 10 },
+        { autoAlpha: 1, y: 0, duration: 0.46, stagger: 0.07, ease: 'power2.out' },
+        0.62,
+      )
+    }
+  }
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────
@@ -796,6 +896,8 @@ watch(currentAngle, () => {
 })
 
 onUnmounted(() => {
+  chapterTimeline?.kill()
+  chapterTimeline = null
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
   window.removeEventListener('resize', renderAngleFrame)
@@ -947,8 +1049,11 @@ function skipAnimation() {
         <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
       </button>
 
-      <Transition :name="slideDirection" mode="out-in">
+      <Transition :name="slideDirection" mode="out-in" appear @enter="animateCurrentChapter">
         <div :key="currentScreen" class="letter-screen-wrapper">
+          <div class="chapter-petal-trail" aria-hidden="true">
+            <span v-for="petal in 5" :key="petal"></span>
+          </div>
 
       <!-- ── SCREEN 1 — Welcome ─────────────────────────────────── -->
       <div
@@ -7351,6 +7456,261 @@ memories-screen,
 
   .page6-magic-action {
     width: min(70vw, 244px);
+  }
+}
+
+/* Premium chapter motion ---------------------------------------------------
+   The trail is a lightweight overlay; it never participates in layout and
+   disappears entirely for visitors who prefer reduced motion. */
+.letter-screen-wrapper {
+  position: relative;
+  isolation: isolate;
+}
+
+.chapter-petal-trail {
+  position: absolute;
+  inset: 0;
+  z-index: 190;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.chapter-petal-trail span {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: clamp(11px, 3cqw, 18px);
+  aspect-ratio: 0.72;
+  border: 1px solid rgba(223, 130, 151, 0.24);
+  border-radius: 78% 22% 72% 28% / 82% 34% 66% 18%;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.78), transparent 30%),
+    linear-gradient(145deg, rgba(255, 227, 234, 0.92), rgba(221, 117, 142, 0.66));
+  opacity: 0;
+  transform-origin: 68% 86%;
+  will-change: transform, opacity;
+}
+
+.chapter-petal-trail span:nth-child(2) { top: 39%; left: 39%; }
+.chapter-petal-trail span:nth-child(3) { top: 49%; left: 58%; }
+.chapter-petal-trail span:nth-child(4) { top: 59%; left: 44%; }
+.chapter-petal-trail span:nth-child(5) { top: 68%; left: 55%; }
+
+/* GSAP now supplies the transition flourish, so the old white sparkle veil
+   is disabled. This keeps chapter changes soft instead of flashing. */
+:is(
+  .magic-bloom-enter-active,
+  .magic-petals-enter-active,
+  .magic-envelope-enter-active,
+  .magic-memories-enter-active,
+  .magic-spotlight-enter-active,
+  .magic-reminder-enter-active,
+  .magic-signature-enter-active,
+  .magic-keepsake-enter-active,
+  .magic-finale-enter-active
+)::after {
+  display: none !important;
+}
+
+/* Canonical Page 6 layout --------------------------------------------------
+   Keep every row in normal flow. The preview must not shrink independently
+   from its fixed-aspect image or its following rows will overlap the gift. */
+.bouquet-screen .screen-content.center {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  box-sizing: border-box;
+  padding: clamp(56px, 6.8dvh, 68px) clamp(18px, 5cqw, 28px)
+    clamp(52px, 6.2dvh, 60px) !important;
+  gap: clamp(3px, 0.45dvh, 5px) !important;
+  overflow: hidden !important;
+}
+
+.bouquet-screen .letter-title {
+  margin: 0 !important;
+  font-size: clamp(25px, min(7cqw, 4.4dvh), 33px) !important;
+  line-height: 1.02 !important;
+}
+
+.bouquet-screen .bouquet-intro {
+  margin: 0 auto !important;
+  font-size: clamp(10px, min(2.9cqw, 1.45dvh), 13px) !important;
+  line-height: 1.3 !important;
+}
+
+.bouquet-screen .letter-divider {
+  width: min(70%, 280px);
+  margin: clamp(2px, 0.35dvh, 4px) auto !important;
+}
+
+.bouquet-screen .bouquet-preview {
+  display: grid !important;
+  grid-template-rows: auto auto auto auto auto !important;
+  justify-items: center;
+  align-items: center;
+  align-content: start;
+  flex: 0 0 auto !important;
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+  min-height: auto !important;
+  max-height: none !important;
+  gap: clamp(3px, 0.48dvh, 5px) !important;
+  overflow: visible !important;
+}
+
+.bouquet-screen .bouquet-tag {
+  min-height: 22px !important;
+  padding-inline: 15px !important;
+  background: rgba(255, 249, 250, 0.76);
+  box-shadow: none;
+}
+
+.bouquet-screen .bouquet-stage {
+  position: relative !important;
+  width: min(72cqw, 29dvh, 300px) !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  min-height: auto !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  flex: none !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: clamp(14px, 3.8cqw, 20px);
+  background: rgba(255, 249, 250, 0.24);
+  animation: none !important;
+}
+
+.bouquet-screen .bouquet-main-photo {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: clamp(14px, 3.8cqw, 20px);
+  box-shadow: none;
+  object-fit: contain !important;
+  filter: saturate(1.04);
+  transform: none;
+}
+
+.bouquet-screen :is(
+  .bouquet-halo,
+  .bouquet-glass,
+  .bouquet-shine,
+  .bouquet-sparkles,
+  .bouquet-pedestal
+) {
+  display: none !important;
+}
+
+.bouquet-screen .bouquet-plaque {
+  position: static !important;
+  inset: auto !important;
+  transform: none !important;
+  width: min(92%, 300px);
+  margin: 0 !important;
+  padding-block: clamp(5px, 0.65dvh, 7px);
+  box-shadow: none;
+}
+
+.bouquet-screen .bouquet-detail-row {
+  position: static !important;
+  transform: none !important;
+  gap: 5px;
+  width: min(100%, 320px);
+  margin: 0 !important;
+}
+
+.bouquet-screen .bouquet-detail-row span {
+  min-width: 0;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+.bouquet-screen .btn-360,
+.bouquet-screen .bouquet-note {
+  position: static !important;
+  transform: none !important;
+  margin: 2px auto 0 !important;
+}
+
+.bouquet-screen .page6-magic-action {
+  display: grid;
+  flex: 0 0 clamp(48px, 6dvh, 54px);
+  width: min(60cqw, 250px);
+  min-width: 204px;
+  min-height: 48px;
+  margin-top: clamp(5px, 0.7dvh, 8px) !important;
+  margin-bottom: 0 !important;
+}
+
+/* A medium-height desktop window is the easiest place for the final action
+   to be clipped. Reserve its row first, then scale only the gift artwork. */
+@media (max-height: 920px) {
+  .bouquet-screen .screen-content.center {
+    padding-top: clamp(50px, 6dvh, 58px) !important;
+    padding-bottom: clamp(48px, 5.8dvh, 54px) !important;
+    gap: 3px !important;
+  }
+
+  .bouquet-screen .bouquet-stage {
+    width: min(70cqw, 27dvh, 268px) !important;
+  }
+
+  .bouquet-screen .bouquet-note {
+    line-height: 1.2 !important;
+  }
+}
+
+@keyframes bouquetPremiumHalo {
+  0%, 100% { transform: scale(0.97); opacity: 0.72; }
+  50% { transform: scale(1.025); opacity: 0.9; }
+}
+
+@media (max-height: 720px) {
+  .bouquet-screen .screen-content.center {
+    justify-content: center !important;
+    padding-top: clamp(44px, 6.2dvh, 50px) !important;
+    padding-bottom: clamp(44px, 6.2dvh, 50px) !important;
+    gap: 2px !important;
+  }
+
+  .bouquet-screen .bouquet-stage {
+    width: min(66cqw, 25dvh, 224px) !important;
+  }
+
+  .bouquet-screen .bouquet-detail-row span {
+    padding-block: 3px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  .bouquet-screen .bouquet-stage {
+    width: min(72cqw, 28dvh, 260px) !important;
+  }
+
+  .bouquet-screen .bouquet-detail-row span {
+    padding-inline: 7px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 390px) and (max-height: 720px) {
+  .bouquet-screen .bouquet-stage {
+    width: min(68cqw, 24dvh, 214px) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-petal-trail {
+    display: none;
+  }
+
+  .bouquet-screen .bouquet-halo {
+    animation: none;
   }
 }
 </style>
