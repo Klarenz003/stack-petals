@@ -223,13 +223,20 @@ onBeforeUnmount(() => {
 <template>
   <div ref="scene" class="qr-experience" :class="[`scan-${scanState}`, { 'is-dragging': isDragging, 'is-returning': isReturning, 'is-paused': !isInView }]">
     <div class="bouquet-artwork">
-      <img src="/images/home-experience/bouquet-qr-guide.png" alt="Blue handcrafted bouquet with a Stack Petals QR keychain and scanning instructions" draggable="false" />
+      <img src="/images/home-experience/bouquet-qr-guide.png" alt="Blue handcrafted bouquet with a Stack Petals QR keychain and scanning instructions" draggable="false" fetchpriority="high" />
       <span ref="qrHotspot" class="qr-hotspot" aria-hidden="true"></span>
     </div>
 
     <div v-if="!hasDragged && scanState === 'idle'" class="drag-hint" aria-hidden="true">
-      <span>Drag the phone to the QR code</span><i></i>
+      <span>Drag phone over QR</span><i></i>
     </div>
+
+    <Transition name="scan-success">
+      <div v-if="scanState === 'revealed'" class="scan-success-note" aria-live="polite">
+        <strong>Keepsake unlocked</strong>
+        <span>Tap the phone to explore</span>
+      </div>
+    </Transition>
 
     <Teleport to="body">
       <div
@@ -323,6 +330,12 @@ onBeforeUnmount(() => {
 .drag-hint { position:absolute; right:3%; bottom:5%; z-index:9; display:grid; justify-items:center; color:#79525c; pointer-events:none; animation:hintFloat 2s ease-in-out infinite; }
 .drag-hint span { padding:7px 12px; border:1px solid rgba(190,108,126,.27); border-radius:999px; background:rgba(255,250,249,.93); font:600 8px/1 Inter,sans-serif; letter-spacing:.04em; }
 .drag-hint i { width:22px; height:22px; margin-top:5px; border-right:1px solid #c46a7c; border-bottom:1px solid #c46a7c; transform:rotate(135deg); }
+.scan-success-note { position:absolute; right:2%; bottom:5%; z-index:9; min-width:156px; padding:10px 13px; border:1px solid rgba(95,136,114,.3); border-radius:12px; background:rgba(250,255,252,.94); color:#466b59; text-align:center; pointer-events:none; }
+.scan-success-note strong,.scan-success-note span { display:block; }
+.scan-success-note strong { font:700 11px/1.2 Inter,sans-serif; }
+.scan-success-note span { margin-top:3px; color:#7b6b6d; font:500 8px/1.2 Inter,sans-serif; }
+.scan-success-enter-active,.scan-success-leave-active { transition:opacity .28s ease,transform .28s ease; }
+.scan-success-enter-from,.scan-success-leave-to { opacity:0; transform:translateY(8px) scale(.96); }
 
 .keepsafe-screen { position:absolute; inset:0; overflow:hidden; background:#fceced; }
 .keepsafe-page-image { display:block; width:100%; height:100%; object-fit:cover; object-position:center; pointer-events:none; user-select:none; }

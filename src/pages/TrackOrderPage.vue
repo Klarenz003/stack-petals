@@ -1,45 +1,30 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { supabase } from '@/supabaseClient'
-
-type TrackedOrder = {
-  id: string
-  created_at?: string
-  customer_name?: string
-  email?: string
-  phone?: string
-  address?: string
-  delivery_date?: string
-  items?: Array<{ name: string; quantity: number; price: string }>
-  total?: string
-  payment_method?: string
-  status?: string
-  delivery_method?: string
-}
-
-type StatusHistory = {
-  id: string
-  status: string
-  label: string
-  note?: string
-  created_at?: string
-}
+import { ChevronDown, ChevronUp, ExternalLink, Printer } from 'lucide-vue-next'
+import OrderReceiptCard from '@/components/OrderReceiptCard.vue'
+import {
+  formatPhoneDisplay,
+  lookupCustomerOrder,
+  normalizeOrderReference,
+  normalizePhilippinePhone,
+  type CustomerOrder,
+  type CustomerOrderHistory,
+} from '@/services/orderLookup'
 
 const route = useRoute()
 const router = useRouter()
-const initialReference = typeof route.query.ref === 'string' ? route.query.ref : ''
-const reference = ref(initialReference)
+const reference = ref(typeof route.query.ref === 'string' ? route.query.ref : '')
 const phone = ref('')
 const loading = ref(false)
 const error = ref('')
-const order = ref<TrackedOrder | null>(null)
-const history = ref<StatusHistory[]>([])
+const order = ref<CustomerOrder | null>(null)
+const history = ref<CustomerOrderHistory[]>([])
+const historyOpen = ref(false)
+const receiptOpen = ref(false)
 
-const normalizedPhone = computed(() => phone.value.replace(/\D/g, '').slice(0, 11))
-const normalizedReference = computed(() =>
-  reference.value.trim().replace(/^SP-/i, '').toLowerCase()
-)
+const normalizedPhone = computed(() => normalizePhilippinePhone(phone.value))
+const normalizedReference = computed(() => normalizeOrderReference(reference.value))
 const normalizedStatus = computed(() => order.value?.status?.toLowerCase() || 'pending')
 const isPickupOrder = computed(() => {
   const method = order.value?.delivery_method?.toLowerCase() || ''
@@ -54,28 +39,23 @@ const timelineStatus = computed(() => {
   return status
 })
 const needsSupport = computed(() => ['issue', 'rejected'].includes(normalizedStatus.value))
+const visibleHistory = computed(() => historyOpen.value ? history.value : history.value.slice(-2))
+const lastUpdated = computed(() => {
+  const date = history.value[history.value.length - 1]?.created_at || order.value?.created_at
+  return date ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(date)) : ''
+})
 
 const statusLabel = computed(() => {
   if (isPickupOrder.value) {
     const pickupLabels: Record<string, string> = {
-      ready: 'Ready for pickup',
-      out_for_delivery: 'Ready for pickup',
-      delivered: 'Picked up',
+      ready: 'Ready for pickup', out_for_delivery: 'Ready for pickup', delivered: 'Picked up',
     }
-
     if (pickupLabels[normalizedStatus.value]) return pickupLabels[normalizedStatus.value]
   }
-
   const labels: Record<string, string> = {
-    pending: 'Payment under review',
-    confirmed: 'Payment confirmed',
-    preparing: 'Preparing order',
-    ready: 'Ready for delivery',
-    out_for_delivery: 'Out for delivery',
-    delivered: 'Delivered',
-    preorder: 'Moved to pre-order',
-    pre_order: 'Moved to pre-order',
-    issue: 'Please contact us',
+    pending: 'Payment under review', confirmed: 'Payment confirmed', preparing: 'Preparing order',
+    ready: 'Ready for delivery', out_for_delivery: 'Out for delivery', delivered: 'Delivered',
+    preorder: 'Moved to pre-order', pre_order: 'Moved to pre-order', issue: 'Please contact us',
     rejected: 'Payment issue',
   }
   return labels[normalizedStatus.value] || normalizedStatus.value.replace(/_/g, ' ')
@@ -88,10 +68,8 @@ const statusHelpText = computed(() => {
       out_for_delivery: 'Your order is ready for pickup at Stack Petals.',
       delivered: 'Your order has been picked up. Thank you for choosing Stack Petals.',
     }
-
     if (pickupMessages[normalizedStatus.value]) return pickupMessages[normalizedStatus.value]
   }
-
   const messages: Record<string, string> = {
     pending: 'We received your order and are reviewing your payment proof.',
     confirmed: 'Your payment has been confirmed. Your order is now in our queue.',
@@ -109,84 +87,59 @@ const statusHelpText = computed(() => {
 
 const timeline = computed(() => {
   const steps = isPickupOrder.value ? [
-    { key: 'pending', label: 'Order received' },
-    { key: 'confirmed', label: 'Payment confirmed' },
-    { key: 'preparing', label: 'Preparing order' },
-    { key: 'ready', label: 'Ready for pickup' },
+    { key: 'pending', label: 'Order received' }, { key: 'confirmed', label: 'Payment confirmed' },
+    { key: 'preparing', label: 'Preparing order' }, { key: 'ready', label: 'Ready for pickup' },
     { key: 'delivered', label: 'Picked up' },
   ] : [
-    { key: 'pending', label: 'Order received' },
-    { key: 'confirmed', label: 'Payment confirmed' },
-    { key: 'preparing', label: 'Preparing order' },
-    { key: 'ready', label: 'Ready' },
-    { key: 'out_for_delivery', label: 'Out for delivery' },
-    { key: 'delivered', label: 'Delivered' },
+    { key: 'pending', label: 'Order received' }, { key: 'confirmed', label: 'Payment confirmed' },
+    { key: 'preparing', label: 'Preparing order' }, { key: 'ready', label: 'Ready' },
+    { key: 'out_for_delivery', label: 'Out for delivery' }, { key: 'delivered', label: 'Delivered' },
   ]
-  const currentIndex = steps.findIndex(step => step.key === timelineStatus.value)
+  const foundIndex = steps.findIndex(step => step.key === timelineStatus.value)
+  const currentIndex = foundIndex === -1 ? 0 : foundIndex
   return steps.map((step, index) => ({
     ...step,
-    active: currentIndex === -1 ? index === 0 : index <= currentIndex,
+    complete: index <= currentIndex,
+    current: index === currentIndex,
+    mobileVisible: index === currentIndex || index === Math.min(currentIndex + 1, steps.length - 1),
   }))
 })
 
 function formatPhoneInput(event: Event) {
   const input = event.target as HTMLInputElement
-  const digits = input.value.replace(/\D/g, '').slice(0, 11)
-  phone.value = digits
-  input.value = formatPhoneDisplay(digits)
-}
-
-function formatPhoneDisplay(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 4) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 4)} ${digits.slice(4)}`
-  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7)}`
+  phone.value = normalizePhilippinePhone(input.value)
+  input.value = formatPhoneDisplay(phone.value)
 }
 
 async function trackOrder() {
   error.value = ''
   order.value = null
   history.value = []
-
+  historyOpen.value = false
+  receiptOpen.value = false
   if (!normalizedReference.value || !/^09\d{9}$/.test(normalizedPhone.value)) {
     error.value = 'Enter your order reference and valid 11-digit phone number.'
     return
   }
-
   loading.value = true
-  const { data, error: fetchError } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('id', normalizedReference.value)
-    .eq('phone', normalizedPhone.value)
-    .maybeSingle()
-
-  loading.value = false
-
-  if (fetchError) {
+  try {
+    const result = await lookupCustomerOrder(reference.value, phone.value)
+    if (!result) {
+      error.value = 'No order matched that reference and phone number.'
+      return
+    }
+    order.value = result.order
+    history.value = result.history
+  } catch {
     error.value = 'We could not check that order right now. Please try again.'
-    return
+  } finally {
+    loading.value = false
   }
-
-  if (!data) {
-    error.value = 'No order matched that reference and phone number.'
-    return
-  }
-
-  order.value = data
-
-  const { data: historyData } = await supabase
-    .from('order_status_history')
-    .select('*')
-    .eq('order_id', data.id)
-    .order('created_at', { ascending: true })
-
-  history.value = historyData || []
 }
 
-function viewReceipt() {
-  if (!order.value) return
-  router.push({ path: '/receipt', query: { ref: `SP-${order.value.id}` } })
+function printReceipt() { window.print() }
+function openPrintView() {
+  if (order.value) router.push({ path: '/receipt', query: { ref: `SP-${order.value.id}` } })
 }
 </script>
 
@@ -194,89 +147,96 @@ function viewReceipt() {
   <div class="page-section track-page">
     <div class="page-hero">
       <h1>Track <span>Order</span></h1>
-      <p>Check where your handcrafted order is, from payment review to delivery day.</p>
+      <p>Check your handcrafted order from payment review to pickup or delivery.</p>
     </div>
 
     <div class="track-shell">
       <form class="track-form" @submit.prevent="trackOrder">
         <div class="track-form-intro">
-          <span>Order Lookup</span>
+          <span>Order lookup</span>
           <h2>Find your Stack Petals order</h2>
           <p>Use the same phone number you entered during checkout.</p>
         </div>
-
         <label>Order Reference
           <input v-model="reference" type="text" placeholder="SP-..." autocomplete="off" />
         </label>
-
         <label>Phone Number
-          <input
-            :value="formatPhoneDisplay(phone)"
-            type="tel"
-            inputmode="numeric"
-            placeholder="09XX XXX XXXX"
-            maxlength="13"
-            @input="formatPhoneInput"
-          />
+          <input :value="formatPhoneDisplay(phone)" type="tel" inputmode="numeric" placeholder="09XX XXX XXXX"
+            maxlength="13" @input="formatPhoneInput" />
         </label>
-
         <p v-if="error" class="field-error">{{ error }}</p>
         <button class="primary track-submit" type="submit" :disabled="loading">
-          {{ loading ? 'Checking...' : 'Check Status' }}
+          {{ loading ? 'Checking...' : 'Check status' }}
         </button>
       </form>
 
       <div v-if="order" class="track-result">
         <div class="track-result-header">
           <div>
-            <span>Current Status</span>
+            <span>Current status</span>
             <h2>{{ statusLabel }}</h2>
             <p>{{ statusHelpText }}</p>
+            <small v-if="lastUpdated">Updated {{ lastUpdated }}</small>
           </div>
           <strong>SP-{{ order.id }}</strong>
         </div>
 
-        <div class="track-timeline">
-          <div v-for="step in timeline" :key="step.key" :class="['track-step', { active: step.active }]">
-            <span></span>
-            <p>{{ step.label }}</p>
+        <div class="track-timeline" :aria-label="`Current order status: ${statusLabel}`">
+          <div v-for="step in timeline" :key="step.key"
+            :class="['track-step', { active: step.complete, current: step.current, 'mobile-visible': step.mobileVisible }]">
+            <span></span><p>{{ step.label }}</p>
           </div>
         </div>
 
-        <div v-if="history.length" class="track-history">
-          <h3>Status Updates</h3>
-          <div v-for="item in history" :key="item.id" class="track-history-item">
-            <span></span>
-            <div>
-              <strong>{{ item.label }}</strong>
-              <p v-if="item.note">{{ item.note }}</p>
-              <small>{{ item.created_at ? new Date(item.created_at).toLocaleString('en-PH') : '' }}</small>
-            </div>
+        <section v-if="history.length" class="track-history">
+          <div class="track-section-heading">
+            <h3>Status updates</h3>
+            <button v-if="history.length > 2" type="button" @click="historyOpen = !historyOpen">
+              {{ historyOpen ? 'Show latest' : `View all ${history.length}` }}
+              <ChevronUp v-if="historyOpen" :size="15" aria-hidden="true" />
+              <ChevronDown v-else :size="15" aria-hidden="true" />
+            </button>
           </div>
-        </div>
+          <div v-for="item in visibleHistory" :key="item.id" class="track-history-item">
+            <span></span>
+            <div><strong>{{ item.label }}</strong><p v-if="item.note">{{ item.note }}</p>
+              <small>{{ item.created_at ? new Date(item.created_at).toLocaleString('en-PH') : '' }}</small></div>
+          </div>
+        </section>
 
         <div :class="['track-support-card', { alert: needsSupport }]">
-          <div>
-            <span>{{ needsSupport ? 'Needs attention' : 'Keep your proof safe' }}</span>
-            <p>
-              {{ needsSupport
-                ? 'If your payment proof needs review, contact Stack Petals with your order reference.'
-                : 'You can save your receipt anytime and use this page to check future updates.' }}
-            </p>
-          </div>
+          <div><span>{{ needsSupport ? 'Needs attention' : 'Keep your proof safe' }}</span>
+            <p>{{ needsSupport ? 'Contact Stack Petals with your order reference so we can help.'
+              : 'Open or save your receipt here. You will not need to enter your details again.' }}</p></div>
           <div class="track-result-actions">
-            <button class="co-btn-outline" @click="viewReceipt">View Receipt</button>
-            <RouterLink class="co-btn-primary" to="/contact">Contact Us</RouterLink>
+            <button class="co-btn-outline" type="button" @click="receiptOpen = !receiptOpen">
+              {{ receiptOpen ? 'Hide receipt' : 'View receipt' }}
+            </button>
+            <RouterLink class="co-btn-primary" to="/contact">Contact us</RouterLink>
           </div>
         </div>
 
-        <div class="track-details">
-          <div><span>Name</span><strong>{{ order.customer_name }}</strong></div>
-          <div><span>{{ isPickupOrder ? 'Pickup Date' : 'Delivery Date' }}</span><strong>{{ order.delivery_date }}</strong></div>
-          <div><span>{{ isPickupOrder ? 'Pickup Location' : 'Delivery Address' }}</span><strong>{{ order.address }}</strong></div>
-          <div><span>Payment Method</span><strong>{{ order.payment_method }}</strong></div>
-          <div><span>Total</span><strong>{{ order.total }}</strong></div>
-        </div>
+        <Transition name="receipt-reveal">
+          <div v-if="receiptOpen" class="track-inline-receipt">
+            <OrderReceiptCard :order="order" compact>
+              <template #actions>
+                <button class="co-btn-primary" type="button" @click="printReceipt"><Printer :size="17" /> Save as PDF</button>
+                <button class="co-btn-outline" type="button" @click="openPrintView"><ExternalLink :size="17" /> Print view</button>
+              </template>
+            </OrderReceiptCard>
+          </div>
+        </Transition>
+
+        <details class="track-details-disclosure">
+          <summary>Order details</summary>
+          <div class="track-details">
+            <div><span>Name</span><strong>{{ order.customer_name }}</strong></div>
+            <div><span>{{ isPickupOrder ? 'Pickup date' : 'Delivery date' }}</span><strong>{{ order.delivery_date }}</strong></div>
+            <div><span>{{ isPickupOrder ? 'Pickup location' : 'Delivery address' }}</span><strong>{{ order.address }}</strong></div>
+            <div><span>Payment method</span><strong>{{ order.payment_method }}</strong></div>
+            <div><span>Total</span><strong>{{ order.total }}</strong></div>
+          </div>
+        </details>
       </div>
     </div>
   </div>

@@ -277,17 +277,14 @@ async function loadBouquetImage(orderId: string) {
   if (!orderId) return
 
   const { data, error } = await supabase
-    .from('orders')
-    .select('items')
-    .eq('id', orderId)
-    .single()
+    .rpc('get_published_letter_order_items', { p_order_id: orderId })
 
   if (error) {
     console.warn('Bouquet image could not be loaded:', error)
     return
   }
 
-  const firstItem = Array.isArray(data?.items) ? data.items[0] : null
+  const firstItem = Array.isArray(data) ? data[0] : null
   if (firstItem?.image) bouquetImage.value = normalizeImageSrc(firstItem.image)
 }
 

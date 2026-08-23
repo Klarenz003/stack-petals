@@ -78,8 +78,23 @@
 }
 
 :root[data-theme='dark'] .hero-process-link,
-:root[data-theme='dark'] .hero-capabilities {
+:root[data-theme='dark'] .hero-capabilities,
+:root[data-theme='dark'] .hero-occasion,
+:root[data-theme='dark'] .home-testimonial p {
   color: var(--sp-text-soft);
+}
+
+:root[data-theme='dark'] .home-testimonial {
+  border-color: var(--sp-border);
+}
+
+:root[data-theme='dark'] .home-testimonial small {
+  color: var(--sp-text-muted);
+}
+
+:root[data-theme='dark'] .featured-view-all {
+  border-color: var(--sp-border-strong);
+  color: var(--sp-primary);
 }
 
 :root[data-theme='dark'] .hero-process-link:hover {

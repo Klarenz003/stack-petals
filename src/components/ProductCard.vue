@@ -23,6 +23,8 @@ function handleAddToCart(product: Product, event: MouseEvent) {
       <img
         :src="product.image"
         :alt="product.name"
+        loading="lazy"
+        decoding="async"
       />
       <div v-if="product.badge" class="card-badge">{{ product.badge }}</div>
     </div>
