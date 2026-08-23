@@ -1,8 +1,8 @@
 ﻿<script setup lang="ts">
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { gsap } from 'gsap'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
+import { useLetterMotion } from '@/composables/useLetterMotion'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
@@ -69,6 +69,10 @@ const activePetalMessage = computed(() => {
   return letter.value?.petal_messages?.[activePetal.value] || ''
 })
 const allPetalsRevealed = computed(() => revealedPetals.value.every(Boolean))
+const { animateChapter: animateCurrentChapter, destroy: destroyLetterMotion } = useLetterMotion({
+  getScreen: () => currentScreen.value,
+  isReverse: () => slideDirection.value === 'magic-back',
+})
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -771,105 +775,6 @@ function screenBg(screenKey: string): string {
   return overlay
 }
 
-// ── Chapter choreography ──────────────────────────────────────────
-let chapterTimeline: gsap.core.Timeline | null = null
-
-function animateCurrentChapter(element: Element) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-
-  chapterTimeline?.kill()
-
-  const root = element as HTMLElement
-  const chapterItems = Array.from(
-    root.querySelectorAll<HTMLElement>('.screen-content > *'),
-  ).filter((item) => !item.classList.contains('falling-petals'))
-  const trailPetals = Array.from(
-    root.querySelectorAll<HTMLElement>('.chapter-petal-trail span'),
-  )
-
-  const direction = currentScreen.value % 2 === 0 ? -1 : 1
-  chapterTimeline = gsap.timeline({ defaults: { overwrite: 'auto' } })
-
-  chapterTimeline.fromTo(
-    trailPetals,
-    {
-      autoAlpha: 0,
-      x: (index) => direction * (-52 - index * 18),
-      y: (index) => -18 + index * 13,
-      rotation: (index) => direction * (-28 + index * 17),
-      scale: 0.65,
-    },
-    {
-      autoAlpha: 0.52,
-      x: (index) => direction * (48 + index * 15),
-      y: (index) => 22 + index * 18,
-      rotation: (index) => direction * (46 + index * 22),
-      scale: 1,
-      duration: 1.05,
-      stagger: 0.055,
-      ease: 'power2.out',
-    },
-    0,
-  ).to(trailPetals, { autoAlpha: 0, duration: 0.34, stagger: 0.035 }, 0.76)
-
-  chapterTimeline.fromTo(
-    chapterItems,
-    { autoAlpha: 0, y: 15, filter: 'blur(2px)' },
-    {
-      autoAlpha: 1,
-      y: 0,
-      filter: 'blur(0px)',
-      duration: 0.66,
-      stagger: 0.075,
-      ease: 'power3.out',
-      clearProps: 'filter',
-    },
-    0.08,
-  )
-
-  if (currentScreen.value === 5) {
-    const stage = root.querySelector<HTMLElement>('.bouquet-stage')
-    const photo = root.querySelector<HTMLElement>('.bouquet-main-photo')
-    const halo = root.querySelector<HTMLElement>('.bouquet-halo')
-    const details = root.querySelectorAll<HTMLElement>(
-      '.bouquet-tag, .bouquet-plaque, .bouquet-detail-row, .btn-360, .bouquet-note',
-    )
-
-    if (stage) {
-      chapterTimeline.fromTo(
-        stage,
-        { scale: 0.82, y: 24, rotation: -1.4 },
-        { scale: 1, y: 0, rotation: 0, duration: 1.05, ease: 'back.out(1.28)' },
-        0.14,
-      )
-    }
-    if (halo) {
-      chapterTimeline.fromTo(
-        halo,
-        { autoAlpha: 0, scale: 0.72 },
-        { autoAlpha: 1, scale: 1, duration: 1.15, ease: 'power2.out' },
-        0.2,
-      )
-    }
-    if (photo) {
-      chapterTimeline.fromTo(
-        photo,
-        { autoAlpha: 0, scale: 0.92 },
-        { autoAlpha: 1, scale: 1, duration: 0.82, ease: 'power2.out' },
-        0.42,
-      )
-    }
-    if (details.length) {
-      chapterTimeline.fromTo(
-        details,
-        { autoAlpha: 0, y: 10 },
-        { autoAlpha: 1, y: 0, duration: 0.46, stagger: 0.07, ease: 'power2.out' },
-        0.62,
-      )
-    }
-  }
-}
-
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => {
   syncVisibleViewportHeight()
@@ -896,8 +801,7 @@ watch(currentAngle, () => {
 })
 
 onUnmounted(() => {
-  chapterTimeline?.kill()
-  chapterTimeline = null
+  destroyLetterMotion()
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
   window.removeEventListener('resize', renderAngleFrame)
