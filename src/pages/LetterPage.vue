@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
+import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
@@ -73,6 +74,18 @@ const { animateChapter: animateCurrentChapter, destroy: destroyLetterMotion } = 
   getScreen: () => currentScreen.value,
   isReverse: () => slideDirection.value === 'magic-back',
 })
+const {
+  animatePetalReveal,
+  animateEnvelopeOpening,
+  animateMemoryChapterEntrance,
+  animateMemoryChange,
+  animateBouquetChapterEntrance,
+  animateReminderChapterEntrance,
+  animateSenderChapterEntrance,
+  animateKeepsakeChapterEntrance,
+  animateFinalChapterEntrance,
+  destroy: destroyLetterMicroMotion,
+} = useLetterMicroMotion()
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -543,11 +556,13 @@ function onMouseUp(e: MouseEvent) {
 }
 
 // ── Petal Reveal ───────────────────────────────────────────────────
-function revealPetal(i: number) {
+async function revealPetal(i: number) {
   markLetterEngaged()
   revealedPetals.value[i] = true
   activePetal.value = i
   petalSparkleKey.value += 1
+  await nextTick()
+  animatePetalReveal(i, allPetalsRevealed.value)
 }
 
 // ── Memory Slideshow ───────────────────────────────────────────────
@@ -564,19 +579,27 @@ function startMemoryTimer() {
   }, 3000)
 }
 
-function nextMemory() {
+async function nextMemory() {
   if (!letter.value || letter.value.memories.length <= 1) return
   currentMemory.value = (currentMemory.value + 1) % letter.value.memories.length
+  await nextTick()
+  animateMemoryChange(1)
 }
 
-function prevMemory() {
+async function prevMemory() {
   if (!letter.value || letter.value.memories.length <= 1) return
   currentMemory.value = (currentMemory.value - 1 + letter.value.memories.length) % letter.value.memories.length
+  await nextTick()
+  animateMemoryChange(-1)
 }
 
-function goToMemory(index: number) {
+async function goToMemory(index: number) {
+  if (index === currentMemory.value) return
+  const direction: 1 | -1 = index > currentMemory.value ? 1 : -1
   currentMemory.value = index
   startMemoryTimer()
+  await nextTick()
+  animateMemoryChange(direction)
 }
 
 function onMemoryTouchStart(e: TouchEvent) {
@@ -802,6 +825,7 @@ watch(currentAngle, () => {
 
 onUnmounted(() => {
   destroyLetterMotion()
+  destroyLetterMicroMotion()
   if (memoryTimer.value) clearInterval(memoryTimer.value)
   stopLoadingTextShuffle()
   window.removeEventListener('resize', renderAngleFrame)
@@ -813,7 +837,6 @@ onUnmounted(() => {
   removeMusicUnlockListener()
   stopAngleHold()
   stopAngleMomentum()
-  if (envelopeTimer) clearTimeout(envelopeTimer)
   stopSoftMusic()
 })
 
@@ -822,53 +845,72 @@ const letterRevealed = ref(false)
 const displayedText = ref('')
 const isTyping = ref(false)
 let typeInterval: number | null = null
-let envelopeTimer: number | null = null
 
-function startLetterReveal() {
+async function startLetterReveal() {
   if (envelopeOpening.value || letterRevealed.value) return
   envelopeOpening.value = true
+  await nextTick()
 
-  envelopeTimer = window.setTimeout(() => {
-    letterRevealed.value = true
-    envelopeOpening.value = false
-    isTyping.value = true
-    displayedText.value = ''
-    senderVisible.value = false
+  try {
+    await animateEnvelopeOpening()
+  } catch {
+    // The letter should still open if a browser interrupts the decorative animation.
+  }
 
-    const fullText = letter.value?.message || ''
-    let i = 0
+  if (currentScreen.value !== 3 || !envelopeOpening.value) return
 
-    typeInterval = window.setInterval(() => {
-      if (i < fullText.length) {
-        displayedText.value += fullText[i]
-        i++
-      } else {
-        isTyping.value = false
-        if (typeInterval) {
-          clearInterval(typeInterval)
-          typeInterval = null
-        }
-        setTimeout(() => {
-          senderVisible.value = true
-        }, 600)
+  letterRevealed.value = true
+  envelopeOpening.value = false
+  isTyping.value = true
+  displayedText.value = ''
+  senderVisible.value = false
+
+  const fullText = letter.value?.message || ''
+  let i = 0
+
+  typeInterval = window.setInterval(() => {
+    if (i < fullText.length) {
+      displayedText.value += fullText[i]
+      i++
+    } else {
+      isTyping.value = false
+      if (typeInterval) {
+        clearInterval(typeInterval)
+        typeInterval = null
       }
-    }, 35)
-    envelopeTimer = null
-  }, 900)
+      setTimeout(() => {
+        senderVisible.value = true
+      }, 600)
+    }
+  }, 35)
 }
 
 watch(() => currentScreen.value, (screen) => {
   if (letter.value && !loading.value) void trackCurrentLetterScreen(screen)
+  if (screen === 4) {
+    void nextTick().then(() => animateMemoryChapterEntrance())
+  }
+  if (screen === 5) {
+    void nextTick().then(() => animateBouquetChapterEntrance())
+  }
+  if (screen === 6) {
+    void nextTick().then(() => animateReminderChapterEntrance())
+  }
+  if (screen === 7) {
+    void nextTick().then(() => animateSenderChapterEntrance())
+  }
+  if (screen === 8) {
+    void nextTick().then(() => animateKeepsakeChapterEntrance())
+  }
+  if (screen === 9) {
+    void nextTick().then(() => animateFinalChapterEntrance())
+  }
   if (screen !== 3) {
     letterRevealed.value = false
     displayedText.value = ''
     isTyping.value = false
     senderVisible.value = false
     envelopeOpening.value = false
-    if (envelopeTimer) {
-      clearTimeout(envelopeTimer)
-      envelopeTimer = null
-    }
     if (typeInterval) {
       clearInterval(typeInterval)
       typeInterval = null
@@ -1020,7 +1062,7 @@ function skipAnimation() {
 
           <div class="petals-flower">
             <img src="/images/6petals.png" alt="" class="flower-svg flower-image" />
-            <div :key="petalSparkleKey" class="petal-sparkle-burst" aria-hidden="true">
+            <div :key="petalSparkleKey" class="petal-sparkle-burst anime-driven" aria-hidden="true">
               <span></span>
               <span></span>
               <span></span>
@@ -1102,10 +1144,15 @@ function skipAnimation() {
 
         <div class="screen-content center">
           <!-- Before reveal -->
-          <div v-if="!letterRevealed" class="letter-reveal-wrap" :class="{ opening: envelopeOpening }">
+          <div v-if="!letterRevealed" class="letter-reveal-wrap" :class="{ 'anime-opening': envelopeOpening }">
             <div class="page4-envelope-stage" aria-hidden="true">
               <img src="/images/page4_circle.png" alt="" class="page4-circle" />
               <img src="/images/page4_envelope-clean.png" alt="" class="page4-envelope" />
+              <span class="page4-seal-flare"></span>
+              <span class="page4-light-ribbon"></span>
+              <span class="page4-opening-sparkles">
+                <span v-for="sparkle in 8" :key="sparkle"></span>
+              </span>
             </div>
             <h2 class="page4-title">A letter<br><em>written just for you</em></h2>
             <div class="page4-divider"><span></span>&#10022;<span></span></div>
@@ -1177,6 +1224,10 @@ function skipAnimation() {
                 decoding="async"
                 loading="eager"
               />
+              <span class="memory-photo-glint" aria-hidden="true"></span>
+              <span class="memory-reveal-sparkles" aria-hidden="true">
+                <span v-for="sparkle in 6" :key="sparkle"></span>
+              </span>
             </div>
             <div class="memory-dots">
               <span
@@ -1222,9 +1273,7 @@ function skipAnimation() {
               <div class="bouquet-glass"></div>
               <div class="bouquet-shine"></div>
               <div class="bouquet-sparkles" aria-hidden="true">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span v-for="sparkle in 8" :key="sparkle"></span>
               </div>
               <img
                 :src="bouquetImage"
@@ -1338,6 +1387,9 @@ function skipAnimation() {
         <div class="screen-content center">
           <div class="quote-flower-wrap" aria-hidden="true">
             <img src="/images/page2_flower-trim.png" alt="" class="quote-flower-img" />
+            <span class="quote-sparkles">
+              <span v-for="i in 8" :key="i"></span>
+            </span>
           </div>
           <p class="quote-kicker">A little reminder...</p>
           <div class="quote-divider"><span></span><i>&#10048;</i><span></span></div>
@@ -1368,6 +1420,9 @@ function skipAnimation() {
 
             <div class="sender-seal" aria-hidden="true">
               <span class="sender-seal-ring"></span>
+              <span class="sender-sparkles">
+                <span v-for="i in 7" :key="i"></span>
+              </span>
               <div class="sender-circle">{{ letter.sender?.charAt(0) }}</div>
               <i></i>
             </div>
@@ -1409,6 +1464,7 @@ function skipAnimation() {
 
             <button class="keepsake-tile keepsake-letter" @click="goToScreen(3)">
               <span class="keepsake-number" aria-hidden="true">01</span>
+              <span class="keepsake-letter-halo" aria-hidden="true"></span>
               <img src="/images/keepsake-letter.png" alt="" />
               <span class="keepsake-copy">
                 <small>Words meant for you</small>
@@ -1431,9 +1487,18 @@ function skipAnimation() {
               </span>
             </button>
 
-            <button class="keepsake-tile keepsake-music" :class="{ active: musicPlaying }" @click.stop="toggleMusic">
+            <button
+              class="keepsake-tile keepsake-music"
+              :class="{ active: musicPlaying }"
+              :aria-pressed="musicPlaying"
+              @click.stop="toggleMusic"
+            >
               <span class="keepsake-number" aria-hidden="true">03</span>
+              <span class="keepsake-music-orbit" aria-hidden="true"></span>
               <img src="/images/keepsake-music.png" alt="" />
+              <span class="keepsake-equalizer" aria-hidden="true">
+                <i></i><i></i><i></i><i></i>
+              </span>
               <span class="keepsake-copy">
                 <small>Your soundtrack</small>
                 <strong>{{ musicPlaying ? 'Music playing' : 'Play the music' }}</strong>
@@ -1468,9 +1533,14 @@ function skipAnimation() {
       >
         <div class="screen-content center end-content">
           <section class="end-stationery" aria-labelledby="end-title">
-            <img class="end-floral-mark" src="/images/page2_flower-trim.png" alt="" aria-hidden="true" />
+            <div class="end-floral-stage" aria-hidden="true">
+              <img class="end-floral-mark" src="/images/page2_flower-trim.png" alt="" />
+            </div>
 
-            <h2 id="end-title" class="end-title">You are<br><em>deeply valued</em></h2>
+            <h2 id="end-title" class="end-title">
+              <span class="end-title-line">You are</span>
+              <em class="end-title-line">deeply valued</em>
+            </h2>
 
             <div class="end-heart-divider" aria-hidden="true">
               <span></span>
@@ -2992,6 +3062,58 @@ memories-screen,
   box-shadow: 0 12px 24px rgba(122, 58, 74, 0.14);
 }
 
+.memory-photo-glint {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 38%;
+  width: 28%;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 22%,
+    rgba(255, 250, 247, 0.72) 50%,
+    rgba(255, 255, 255, 0.08) 78%,
+    transparent 100%
+  );
+  clip-path: inset(0 round 4px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-135%) skewX(-12deg);
+  will-change: opacity, transform;
+}
+
+.memory-reveal-sparkles {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.memory-reveal-sparkles span {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: rgba(255, 250, 244, 0.96);
+  clip-path: polygon(50% 0%, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0% 50%, 39% 38%);
+  filter: drop-shadow(0 0 4px rgba(212, 104, 122, 0.48));
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.2);
+  will-change: opacity, transform;
+}
+
+.memory-reveal-sparkles span:nth-child(even) {
+  width: 5px;
+  height: 5px;
+  background: rgba(232, 180, 192, 0.96);
+}
+
 .memory-slide {
   position: absolute;
   inset: 0;
@@ -3063,6 +3185,13 @@ memories-screen,
   font-size: clamp(12px, min(3.4vw, 1.8dvh), 13px);
   font-style: italic;
   line-height: 1.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-photo-glint,
+  .memory-reveal-sparkles {
+    display: none;
+  }
 }
 
 /* ── Bouquet Preview ──────────────────────────────────────────────── */
@@ -4890,12 +5019,13 @@ memories-screen,
   width: 100%;
 }
 
-.letter-reveal-wrap.opening .page4-envelope {
-  animation: envelopeOpen 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+.letter-reveal-wrap.anime-opening {
+  pointer-events: none;
 }
 
-.letter-reveal-wrap.opening .page4-circle {
-  animation: sealRelease 0.72s ease both;
+.letter-reveal-wrap.anime-opening .page4-envelope,
+.letter-reveal-wrap.anime-opening .page4-circle {
+  animation: none;
 }
 
 .page4-envelope-stage {
@@ -4926,6 +5056,58 @@ memories-screen,
   animation: envelopePulse 2.3s ease-in-out infinite;
   pointer-events: none;
   user-select: none;
+}
+
+.page4-seal-flare,
+.page4-light-ribbon,
+.page4-opening-sparkles {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+}
+
+.page4-seal-flare {
+  width: 44%;
+  aspect-ratio: 1;
+  margin: -22% 0 0 -22%;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.96) 0 8%,
+    rgba(255, 211, 222, 0.68) 22%,
+    rgba(238, 137, 162, 0.18) 50%,
+    transparent 72%
+  );
+  mix-blend-mode: screen;
+}
+
+.page4-light-ribbon {
+  width: 82%;
+  height: 2px;
+  margin-left: -41%;
+  opacity: 0;
+  transform-origin: center;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.96), transparent);
+  box-shadow: 0 0 14px rgba(224, 104, 137, 0.52);
+}
+
+.page4-opening-sparkles {
+  width: 0;
+  height: 0;
+}
+
+.page4-opening-sparkles span {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  width: 6px;
+  height: 6px;
+  opacity: 0;
+  border-radius: 50% 0 50% 0;
+  background: #fff7f8;
+  box-shadow: 0 0 8px rgba(214, 98, 128, 0.72);
 }
 
 .page4-title {
@@ -5596,6 +5778,48 @@ memories-screen,
   background: rgba(207, 99, 124, 0.13);
   transform: translate(-50%, 45%);
   filter: blur(5px);
+}
+
+.sender-sparkles {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.sender-sparkles span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 7px;
+  height: 7px;
+  background: #df8299;
+  clip-path: polygon(50% 0, 61% 38%, 100% 50%, 61% 62%, 50% 100%, 39% 62%, 0 50%, 39% 38%);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.sender-sparkles span:nth-child(even) {
+  width: 5px;
+  height: 5px;
+  background: #f0b5c2;
+}
+
+.sender-screen :is(
+  .sender-keepsake,
+  .sender-kicker,
+  .sender-seal,
+  .sender-circle,
+  .sender-name,
+  .sender-divider,
+  .sender-note,
+  .sender-flourish,
+  .page8-magic-action
+) {
+  will-change: transform, opacity, filter;
 }
 
 .sender-name {
@@ -6519,6 +6743,18 @@ memories-screen,
   animation: petalSparklePop 920ms ease-out both;
 }
 
+.petal-message-screen .petal-sparkle-burst.anime-driven span {
+  animation: none;
+  will-change: transform, opacity;
+}
+
+.petal-message-screen .petal-symbol {
+  display: grid;
+  place-items: center;
+  transform-origin: center;
+  will-change: transform;
+}
+
 .petal-message-screen .petal-sparkle-burst span:nth-child(1) { left: 50%; top: 22%; animation-delay: 0ms; }
 .petal-message-screen .petal-sparkle-burst span:nth-child(2) { left: 76%; top: 40%; animation-delay: 70ms; }
 .petal-message-screen .petal-sparkle-burst span:nth-child(3) { left: 70%; top: 67%; animation-delay: 130ms; }
@@ -6845,13 +7081,52 @@ memories-screen,
   min-height: clamp(92px, 12.6dvh, 108px);
 }
 
+.keepsake-letter {
+  background:
+    linear-gradient(90deg, rgba(249, 224, 229, 0.82) 0 43%, rgba(255, 250, 250, 0.88) 43% 100%),
+    repeating-linear-gradient(0deg, transparent 0 12px, rgba(204, 119, 139, 0.04) 13px);
+}
+
+.keepsake-letter::before {
+  position: absolute;
+  z-index: 2;
+  top: 17px;
+  bottom: 17px;
+  left: 43%;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(191, 94, 116, 0.28), transparent);
+  content: '';
+  pointer-events: none;
+}
+
+.keepsake-letter-halo {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 22%;
+  width: 84px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(213, 120, 143, 0.18);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.86), rgba(239, 188, 199, 0.12) 58%, transparent 60%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .keepsake-letter > img {
-  top: -15%;
-  bottom: -15%;
-  left: -1%;
-  width: 49%;
-  height: 130%;
+  top: -18%;
+  bottom: -18%;
+  left: -2%;
+  width: 51%;
+  height: 136%;
   object-fit: contain;
+  transform: rotate(-2deg);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.keepsake-letter:hover > img,
+.keepsake-letter:focus-visible > img {
+  transform: translateY(-2px) rotate(0deg) scale(1.035);
 }
 
 .keepsake-letter .keepsake-copy,
@@ -6862,6 +7137,18 @@ memories-screen,
   left: 43%;
   justify-content: center;
   padding-right: 30px;
+}
+
+.keepsake-letter .keepsake-copy {
+  left: 46%;
+  border: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.keepsake-letter .keepsake-copy strong {
+  margin-top: 4px;
+  font-size: clamp(17px, 4.15vw, 21px);
 }
 
 .keepsake-memory > img {
@@ -6878,16 +7165,81 @@ memories-screen,
 }
 
 .keepsake-music {
-  background: linear-gradient(145deg, rgba(255, 241, 243, 0.9), rgba(245, 222, 226, 0.82));
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 76% 24%, rgba(96, 53, 68, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(255, 244, 246, 0.94), rgba(239, 215, 222, 0.86));
+}
+
+.keepsake-music::before {
+  position: absolute;
+  z-index: 0;
+  top: -28px;
+  right: -21px;
+  width: 126px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #e69aac 0 5%, #fff8f8 6% 10%, #64404c 11% 14%, transparent 15%),
+    repeating-radial-gradient(circle, rgba(80, 47, 58, 0.76) 0 2px, rgba(104, 65, 78, 0.72) 3px 5px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  content: '';
+  opacity: 0.78;
+  pointer-events: none;
 }
 
 .keepsake-music > img {
-  top: -12%;
-  right: -10%;
-  width: 86%;
-  height: 88%;
+  top: -17%;
+  right: -14%;
+  width: 98%;
+  height: 96%;
   object-fit: contain;
-  transition: transform 600ms ease;
+  transform: rotate(-2deg);
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.keepsake-music-orbit {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 13px;
+  width: 38px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 245, 247, 0.76);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(112, 66, 81, 0.09);
+  pointer-events: none;
+}
+
+.keepsake-equalizer {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  right: 17px;
+  display: flex;
+  height: 28px;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 260ms ease;
+  pointer-events: none;
+}
+
+.keepsake-equalizer i {
+  display: block;
+  width: 2px;
+  height: 7px;
+  border-radius: 99px;
+  background: #fff8f8;
+  transform-origin: center;
+}
+
+.keepsake-music .keepsake-copy {
+  right: 7px;
+  bottom: 7px;
+  left: 7px;
+  border-color: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 248, 249, 0.92);
 }
 
 .keepsake-music.active {
@@ -6899,6 +7251,20 @@ memories-screen,
   animation: keepsakeMusicSway 3.8s ease-in-out infinite;
 }
 
+.keepsake-music.active::before {
+  animation: keepsakeRecordSpin 5.5s linear infinite;
+}
+
+.keepsake-music.active .keepsake-equalizer { opacity: 1; }
+
+.keepsake-music.active .keepsake-equalizer i {
+  animation: keepsakeEqualizer 700ms ease-in-out infinite alternate;
+}
+
+.keepsake-music.active .keepsake-equalizer i:nth-child(2) { animation-delay: -480ms; }
+.keepsake-music.active .keepsake-equalizer i:nth-child(3) { animation-delay: -220ms; }
+.keepsake-music.active .keepsake-equalizer i:nth-child(4) { animation-delay: -610ms; }
+
 .keepsake-gift > img {
   inset: 0 auto 0 0;
   width: 47%;
@@ -6909,8 +7275,16 @@ memories-screen,
 }
 
 @keyframes keepsakeMusicSway {
-  0%, 100% { transform: rotate(-1.5deg); }
-  50% { transform: rotate(1.5deg); }
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-2px) rotate(0.5deg); }
+}
+
+@keyframes keepsakeRecordSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes keepsakeEqualizer {
+  to { transform: scaleY(2.4); }
 }
 
 @media (max-height: 720px) {
@@ -6924,7 +7298,11 @@ memories-screen,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .keepsake-music.active > img { animation: none; }
+  .keepsake-letter > img,
+  .keepsake-music > img { transition: none; }
+  .keepsake-music.active > img,
+  .keepsake-music.active::before,
+  .keepsake-music.active .keepsake-equalizer i { animation: none; }
 }
 
 /* Final page: a quiet stationery keepsake with a gentle path back to the shop. */
@@ -6985,9 +7363,18 @@ memories-screen,
   display: block;
   width: clamp(48px, min(13vw, 7dvh), 64px);
   height: clamp(48px, min(13vw, 7dvh), 64px);
-  margin: 0 0 clamp(5px, 0.8dvh, 8px);
+  margin: 0;
   object-fit: contain;
   animation: endFloralBreath 5.2s ease-in-out infinite;
+}
+
+.end-floral-stage {
+  display: grid;
+  place-items: center;
+  width: fit-content;
+  margin: 0 0 clamp(5px, 0.8dvh, 8px);
+  transform-origin: center;
+  will-change: transform, opacity;
 }
 
 .end-title {
@@ -6998,8 +7385,14 @@ memories-screen,
 }
 
 .end-title em {
+  display: block;
   color: #d6657c;
   font-weight: 400;
+}
+
+.end-title-line {
+  display: block;
+  will-change: transform, opacity, filter;
 }
 
 .end-heart-divider {
@@ -7211,6 +7604,9 @@ memories-screen,
   .end-floral-mark {
     width: 43px;
     height: 43px;
+  }
+
+  .end-floral-stage {
     margin-bottom: 3px;
   }
 
@@ -7512,11 +7908,34 @@ memories-screen,
 .bouquet-screen :is(
   .bouquet-halo,
   .bouquet-glass,
-  .bouquet-shine,
-  .bouquet-sparkles,
   .bouquet-pedestal
 ) {
   display: none !important;
+}
+
+.bouquet-screen .bouquet-shine {
+  display: block !important;
+  opacity: 0;
+  z-index: 2;
+}
+
+.bouquet-screen .bouquet-sparkles {
+  position: absolute;
+  inset: 0;
+  display: block !important;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.bouquet-screen .bouquet-sparkles span {
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  margin: -3px 0 0 -3px;
+  opacity: 0;
+  animation: none !important;
 }
 
 .bouquet-screen .bouquet-plaque {
@@ -7618,12 +8037,57 @@ memories-screen,
   }
 }
 
+/* Page 7 micro-motion keeps its geometry stable while Anime.js reveals it. */
+.quote-screen .quote-flower-wrap {
+  isolation: isolate;
+  animation: none;
+}
+
+.quote-screen .quote-flower-wrap::before {
+  animation: reminderHaloBreath 4.8s ease-in-out 1.7s infinite;
+}
+
+.quote-screen .quote-sparkles {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 2;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.quote-screen .quote-sparkles span {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: clamp(4px, 1.2vw, 7px);
+  aspect-ratio: 1;
+  border-radius: 50% 0 50% 0;
+  background: linear-gradient(135deg, #fff8fa 12%, #e7899f 72%);
+  opacity: 0;
+  transform-origin: center;
+}
+
+.quote-screen .quote-card,
+.quote-screen .quote-line,
+.quote-screen .page7-magic-action {
+  will-change: transform, opacity;
+}
+
+@keyframes reminderHaloBreath {
+  0%, 100% { transform: scale(0.96); opacity: 0.55; }
+  50% { transform: scale(1.045); opacity: 0.86; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chapter-petal-trail {
     display: none;
   }
 
   .bouquet-screen .bouquet-halo {
+    animation: none;
+  }
+
+  .quote-screen .quote-flower-wrap::before {
     animation: none;
   }
 }
