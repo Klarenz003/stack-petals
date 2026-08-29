@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { Images, MessageCircleHeart, Music2, QrCode, Rotate3D } from 'lucide-vue-next'
 import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
 import HomeBouquetExperience from '@/components/HomeBouquetExperience.vue'
@@ -8,10 +9,6 @@ import type { Feature } from '@/types'
 
 const router = useRouter()
 const products = useProductsStore()
-
-const occasions = ['someone special', 'family', 'friends', 'celebrations']
-const activeOccasion = ref(0)
-let occasionTimer: number | undefined
 
 const featuredProducts = computed(() => products.featuredProducts.slice(0, 4))
 const seasonalTheme = computed(() => {
@@ -24,12 +21,7 @@ const seasonalTheme = computed(() => {
 
 onMounted(() => {
   products.fetchProducts()
-  occasionTimer = window.setInterval(() => {
-    activeOccasion.value = (activeOccasion.value + 1) % occasions.length
-  }, 3200)
 })
-
-onBeforeUnmount(() => window.clearInterval(occasionTimer))
 
 const features: Feature[] = [
   { label: 'Engineered', sub: 'with Precision', icon: '/images/engineered-icon.png' },
@@ -37,27 +29,12 @@ const features: Feature[] = [
   { label: 'Delivered',  sub: 'with Care',      icon: '/images/delivered-icon.png'  },
 ]
 
-const experienceCards = [
-  {
-    label: 'Virtual Message',
-    text: 'A private QR letter opens with your words, photos, and soft romantic motion.',
-    icon: '01',
-  },
-  {
-    label: 'Photo Memories',
-    text: 'Add meaningful photos of loved ones so the gift feels personal, not generic.',
-    icon: '02',
-  },
-  {
-    label: '360 View',
-    text: 'Let them revisit the crafted flowers from every angle after delivery.',
-    icon: '03',
-  },
-  {
-    label: 'Music Touch',
-    text: 'Pair the letter with a song to make the moment feel more cinematic.',
-    icon: '04',
-  },
+const experienceSteps = [
+  { label: 'Scan QR', icon: QrCode },
+  { label: 'Read Message', icon: MessageCircleHeart },
+  { label: 'View Memories', icon: Images },
+  { label: 'Play Music', icon: Music2 },
+  { label: 'Explore 360\u00b0', icon: Rotate3D },
 ]
 
 const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or delivery', 'Pre-order ready']
@@ -70,12 +47,6 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
         <span class="hero-kicker">{{ seasonalTheme.label }}</span>
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
         <p class="hero-tagline">Engineered with Precision, Crafted with Love.</p>
-        <p class="hero-occasion">
-          A personal keepsake for
-          <Transition name="occasion-swap" mode="out-in">
-            <strong :key="occasions[activeOccasion]">{{ occasions[activeOccasion] }}</strong>
-          </Transition>
-        </p>
         <div class="buttons">
           <button class="primary hero-primary" @click="router.push('/products')">Shop Gifts</button>
           <button class="hero-process-link" @click="router.push('/process')">
@@ -104,36 +75,7 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       </div>
     </div>
 
-    <section class="home-experience">
-      <div class="home-section-heading">
-        <span>Signature Experience</span>
-        <h2>A crafted gift with a digital heart.</h2>
-        <p>
-          Each Stack Petals piece can unlock a private QR experience made for the person receiving it.
-        </p>
-      </div>
-
-      <div class="experience-grid">
-        <article v-for="item in experienceCards" :key="item.label" class="experience-card">
-          <span>{{ item.icon }}</span>
-          <h3>{{ item.label }}</h3>
-          <p>{{ item.text }}</p>
-        </article>
-      </div>
-
-    </section>
-
-    <section class="home-trust-strip" aria-label="Stack Petals benefits">
-      <span v-for="item in trustItems" :key="item">{{ item }}</span>
-    </section>
-
-    <aside class="home-testimonial" aria-label="The Stack Petals promise">
-      <span aria-hidden="true">&ldquo;</span>
-      <p>A gift they can hold today, then scan, hear, and revisit whenever the moment calls.</p>
-      <small>The Stack Petals experience</small>
-    </aside>
-
-    <section class="products" id="products">
+    <section class="products home-featured-products" id="products">
       <div class="home-section-heading product-heading">
         <span>Shop Favorites</span>
         <h2>Featured Products</h2>
@@ -144,6 +86,41 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       <button v-if="products.featuredProducts.length > featuredProducts.length" class="featured-view-all" @click="router.push('/products')">
         View all gifts <span aria-hidden="true">&rarr;</span>
       </button>
+    </section>
+
+    <section class="home-experience">
+      <div class="home-section-heading">
+        <span>Signature Experience</span>
+        <h2>One scan, a whole story.</h2>
+        <p>
+          A private keepsake unfolds naturally, one meaningful chapter at a time.
+        </p>
+      </div>
+
+      <div class="experience-journey" aria-label="The Stack Petals QR experience">
+        <div v-for="(item, index) in experienceSteps" :key="item.label" class="experience-step">
+          <span class="experience-step-number">0{{ index + 1 }}</span>
+          <span class="experience-step-icon"><component :is="item.icon" :size="22" stroke-width="1.6" /></span>
+          <strong>{{ item.label }}</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="home-promise" aria-label="The Stack Petals promise">
+      <div class="home-promise-copy">
+        <span aria-hidden="true">&ldquo;</span>
+        <p>A gift they can hold today, then scan, hear, and revisit whenever the moment calls.</p>
+        <small>The Stack Petals experience</small>
+      </div>
+      <div class="home-promise-trust" aria-label="Stack Petals benefits">
+        <span v-for="item in trustItems" :key="item">{{ item }}</span>
+      </div>
+    </section>
+
+    <section class="home-closing-cta">
+      <span>Made to be remembered</span>
+      <h2>Create something they can keep.</h2>
+      <button class="primary" @click="router.push('/products')">Choose a gift</button>
     </section>
   </div>
 </template>
