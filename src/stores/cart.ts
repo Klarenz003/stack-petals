@@ -3,10 +3,12 @@ import { supabase } from '@/supabaseClient'
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep, Product } from '@/types'
+import { useMarketStore } from '@/stores/market'
 
 const CHECKOUT_RECOVERY_KEY = 'stack-petals-checkout-recovery'
 
 export const useCartStore = defineStore('cart', () => {
+  const market = useMarketStore()
   // ── State ──────────────────────────────────────────────────────
   const cartItems = ref<CartItem[]>([])
   const cartOpen = ref(false)
@@ -44,6 +46,7 @@ export const useCartStore = defineStore('cart', () => {
     barangay: '',
     city: '',
     province: '',
+    postalCode: '',
     addressLat: null,
     addressLng: null,
     addressPlaceId: '',
@@ -154,8 +157,8 @@ export const useCartStore = defineStore('cart', () => {
     }, 0)
   })
 
-  function formatPeso(amount: number) {
-    return `\u20b1${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  function formatMoney(amount: number) {
+    return market.formatMoney(amount)
   }
 
   function toRadians(degrees: number) {
@@ -243,8 +246,8 @@ export const useCartStore = defineStore('cart', () => {
     return 'Luzon provincial / farther area'
   })
 
-  const cartSubtotal = computed(() => formatPeso(itemSubtotalAmount.value))
-  const cartTotal = computed(() => formatPeso(itemSubtotalAmount.value + shippingFee.value))
+  const cartSubtotal = computed(() => formatMoney(itemSubtotalAmount.value))
+  const cartTotal = computed(() => formatMoney(itemSubtotalAmount.value + shippingFee.value))
   const deliveryDateFull = computed(() => deliveryDateCapacity.value.isFull)
   const hasPreOrderItems = computed(() => cartItems.value.some(item => item.preOrder))
   const preOrderPrepDays = computed(() => {
@@ -331,7 +334,8 @@ export const useCartStore = defineStore('cart', () => {
     isCheckingDeliveryDate.value = true
     try {
       const { data, error } = await withTimeout(
-        supabase.rpc('get_delivery_date_availability', {
+        supabase.rpc('get_market_delivery_date_availability', {
+          p_market_code: market.code,
           p_delivery_date: date,
         }),
         8000,
@@ -375,7 +379,8 @@ export const useCartStore = defineStore('cart', () => {
   function getStockReservationToken() {
     if (stockReservationToken) return stockReservationToken
 
-    const stored = localStorage.getItem('stack-petals-stock-reservation-token')
+    const tokenKey = `stack-petals-stock-reservation-token:${market.code}`
+    const stored = localStorage.getItem(tokenKey)
     if (stored) {
       stockReservationToken = stored
       return stockReservationToken
@@ -384,14 +389,14 @@ export const useCartStore = defineStore('cart', () => {
     stockReservationToken = crypto.randomUUID
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`
-    localStorage.setItem('stack-petals-stock-reservation-token', stockReservationToken)
+    localStorage.setItem(tokenKey, stockReservationToken)
     return stockReservationToken
   }
 
   function reservableItems() {
     return cartItems.value
       .filter(item => !item.preOrder && item.id && item.quantity > 0)
-      .map(item => ({ product_id: item.id, quantity: item.quantity }))
+      .map(item => ({ market_product_id: item.id, quantity: item.quantity }))
   }
 
   function hasActiveStockReservation() {
@@ -424,7 +429,8 @@ export const useCartStore = defineStore('cart', () => {
     isReservingStock.value = true
     try {
       const { data, error } = await withTimeout(
-        supabase.rpc('reserve_cart_stock', {
+        supabase.rpc('reserve_market_cart_stock', {
+          p_market_code: market.code,
           p_session_token: getStockReservationToken(),
           p_items: items,
           p_minutes: 15,
@@ -470,7 +476,7 @@ export const useCartStore = defineStore('cart', () => {
   async function releaseStockReservation() {
     if (!stockReservationExpiresAt.value) return
     try {
-      const { error } = await supabase.rpc('release_stock_reservation', {
+      const { error } = await supabase.rpc('release_market_stock_reservation', {
         p_session_token: getStockReservationToken(),
       })
       if (error) console.error('Stock reservation release failed:', error)
@@ -484,7 +490,7 @@ export const useCartStore = defineStore('cart', () => {
   async function commitStockReservation() {
     if (!stockReservationExpiresAt.value) return
     try {
-      const { error } = await supabase.rpc('commit_stock_reservation', {
+      const { error } = await supabase.rpc('commit_market_stock_reservation', {
         p_session_token: getStockReservationToken(),
       })
       if (error) console.error('Stock reservation commit failed:', error)
@@ -571,6 +577,10 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   function openCheckout() {
+    if (market.code === 'CA') {
+      showNotification('Canada checkout is being prepared. Please contact the Canada store to order.')
+      return
+    }
     cartOpen.value = false
     checkoutStep.value = 1
   }
@@ -634,7 +644,7 @@ export const useCartStore = defineStore('cart', () => {
     confirmedTotal.value = cartTotal.value
 
     // 1. Upload payment proof to Supabase Storage
-    const fileName = `proof-${Date.now()}.jpg`
+    const fileName = `${market.code.toLowerCase()}/proof-${Date.now()}.jpg`
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('proofs')
       .upload(fileName, paymentProof.value)
@@ -644,7 +654,7 @@ export const useCartStore = defineStore('cart', () => {
       customer.value.note,
       hasPreOrderItems.value ? `Order type: Pre-order (estimated prep time: ${preOrderPrepDays.value} day${preOrderPrepDays.value === 1 ? '' : 's'})` : '',
       `Fulfillment: ${customer.value.deliveryMethod === 'pickup' ? 'Pick up' : 'Delivery'}`,
-      `Shipping: ${shippingLabel.value} (${formatPeso(shippingFee.value)})`,
+      `Shipping: ${shippingLabel.value} (${formatMoney(shippingFee.value)})`,
       customer.value.landmark ? `Landmark: ${customer.value.landmark}` : '',
       customer.value.barangay ? `Barangay: ${customer.value.barangay}` : '',
       customer.value.city ? `City/Municipality: ${customer.value.city}` : '',
@@ -673,11 +683,16 @@ export const useCartStore = defineStore('cart', () => {
         preOrder: !!i.preOrder,
         prepDays: i.prepDays ?? 5,
         deliveryRestrictions: i.deliveryRestrictions || '',
+        marketProductId: i.id,
+        productId: i.baseProductId,
+        marketCode: market.code,
       })),
       total:          confirmedTotal.value,
       payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
       proof_url:      uploadData.path,
       status:         hasPreOrderItems.value ? 'preorder' : 'pending',
+      market_code:    market.code,
+      currency_code:  market.current.currency,
     }).select('id')
       .single()
     if (error) throw error
@@ -731,7 +746,7 @@ export const useCartStore = defineStore('cart', () => {
             note:           orderNote,
             items:          cartItems.value,
             subtotal:       cartSubtotal.value,
-            shipping_fee:   formatPeso(shippingFee.value),
+            shipping_fee:   formatMoney(shippingFee.value),
             shipping_zone:  shippingLabel.value,
             total:          cartTotal.value,
             payment_method: paymentMethod.value === 'gcash' ? 'GCash' : 'Maya',
@@ -790,6 +805,7 @@ export const useCartStore = defineStore('cart', () => {
       barangay: '',
       city: '',
       province: '',
+      postalCode: '',
       addressLat: null,
       addressLng: null,
       addressPlaceId: '',

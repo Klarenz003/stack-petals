@@ -32,14 +32,14 @@ Deno.serve(async req => {
 
     const { data: adminProfile, error: adminProfileError } = await adminClient
       .from('investor_profiles')
-      .select('role')
+      .select('role, admin_market')
       .eq('id', userData.user.id)
       .maybeSingle()
 
     if (adminProfileError) throw adminProfileError
 
-    if (adminProfile?.role !== 'admin') {
-      return json({ error: 'Only investor admins can create investor access.' }, 403)
+    if (adminProfile?.role !== 'admin' || adminProfile.admin_market !== 'ALL') {
+      return json({ error: 'Only the Stack Petals owner can create account access.' }, 403)
     }
 
     const body = await req.json()
@@ -47,10 +47,15 @@ Deno.serve(async req => {
     const email = String(body.email || '').trim().toLowerCase()
     const phone = String(body.phone || '').trim()
     const password = String(body.password || '')
+    const accountType = body.accountType === 'admin' ? 'admin' : 'investor'
+    const adminMarket = accountType === 'admin' ? String(body.adminMarket || '').toUpperCase() : null
 
     if (!fullName) return json({ error: 'Investor name is required.' }, 400)
     if (!email) return json({ error: 'Investor email is required.' }, 400)
     if (password.length < 8) return json({ error: 'Password must be at least 8 characters.' }, 400)
+    if (accountType === 'admin' && !['PH', 'CA'].includes(adminMarket || '')) {
+      return json({ error: 'Choose Philippines or Canada for this admin account.' }, 400)
+    }
 
     const { data: createdUser, error: createUserError } = await adminClient.auth.admin.createUser({
       email,
@@ -59,6 +64,8 @@ Deno.serve(async req => {
       user_metadata: {
         full_name: fullName,
         phone,
+        account_type: accountType,
+        admin_market: adminMarket,
       },
     })
 
@@ -70,7 +77,8 @@ Deno.serve(async req => {
       full_name: fullName,
       email,
       phone,
-      role: 'investor',
+      role: accountType,
+      admin_market: adminMarket,
       updated_at: new Date().toISOString(),
     })
 

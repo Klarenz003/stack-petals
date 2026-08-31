@@ -200,6 +200,47 @@ html { scrollbar-width: thin; scrollbar-color: #c48b8d #fdf0ef; }
   white-space: nowrap;
 }
 
+.market-switcher {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--sp-border);
+  border-radius: 8px;
+  color: var(--sp-primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 5px;
+  min-height: 38px;
+  padding: 0 8px;
+}
+
+.market-switcher select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--sp-text);
+  cursor: pointer;
+  font: 650 12px/1.2 'Inter', sans-serif;
+  max-width: 92px;
+  outline: 0;
+  padding: 7px 14px 7px 2px;
+}
+
+.market-switcher:focus-within {
+  border-color: var(--sp-primary);
+  box-shadow: 0 0 0 3px rgba(95, 136, 114, 0.12);
+}
+
+.sr-only {
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .site-header > nav a {
   text-decoration: none;
   color: var(--sp-text);
@@ -5321,6 +5362,12 @@ input, textarea, [contenteditable="true"] {
     max-width: 150px;
   }
 
+  .market-switcher {
+    margin-left: auto;
+    position: relative;
+    z-index: 303;
+  }
+
   .nav-toggle {
     display: inline-flex;
     position: relative;
@@ -5516,6 +5563,25 @@ input, textarea, [contenteditable="true"] {
   .contact-form,
   .contact-info {
     padding: 26px;
+  }
+}
+
+@media (max-width: 420px) {
+  .site-header {
+    gap: 8px;
+  }
+
+  .site-header .logo img {
+    max-width: 126px;
+  }
+
+  .market-switcher {
+    padding-inline: 7px;
+  }
+
+  .market-switcher select {
+    max-width: 38px;
+    padding-right: 0;
   }
 }
 

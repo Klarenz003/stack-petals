@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { MapPin } from 'lucide-vue-next'
+import { useMarketStore, type MarketCode } from '@/stores/market'
+import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
 const router = useRouter()
+const market = useMarketStore()
+const cart = useCartStore()
 const menuOpen = ref(false)
 
 const closeMenu = () => {
@@ -12,6 +17,19 @@ const closeMenu = () => {
 
 const handleEscape = (event: KeyboardEvent) => {
   if (event.key === 'Escape') closeMenu()
+}
+
+function changeMarket(event: Event) {
+  const nextMarket = (event.target as HTMLSelectElement).value as MarketCode
+  if (nextMarket === market.code) return
+
+  if (cart.cartItems.length && !window.confirm('Changing stores will clear your current cart. Continue?')) {
+    ;(event.target as HTMLSelectElement).value = market.code
+    return
+  }
+
+  if (cart.cartItems.length) cart.finishCheckout()
+  market.setMarket(nextMarket)
 }
 
 watch(menuOpen, (isOpen) => {
@@ -36,6 +54,15 @@ onBeforeUnmount(() => {
     <div class="logo" @click="router.push('/')">
       <img src="/images/logo.png" alt="Stack Petals" />
     </div>
+
+    <label class="market-switcher">
+      <MapPin :size="16" stroke-width="1.8" aria-hidden="true" />
+      <span class="sr-only">Shopping region</span>
+      <select :value="market.code" aria-label="Shopping region" @change="changeMarket">
+        <option value="PH">Philippines</option>
+        <option value="CA">Canada</option>
+      </select>
+    </label>
 
     <button
       class="nav-toggle"

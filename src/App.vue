@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCanvas } from '@/composables/useCanvas'
 import { useCartStore } from '@/stores/cart'
 import { usePreviewStore } from '@/stores/preview'
+import { useMarketStore } from '@/stores/market'
 import { routeOrder } from '@/router'
 import TheHeader from '@/components/TheHeader.vue'
 import TheFooter from '@/components/TheFooter.vue'
@@ -18,6 +19,7 @@ useCanvas()
 
 const cart    = useCartStore()
 const preview = usePreviewStore()
+const market  = useMarketStore()
 const route   = useRoute()
 
 const isLetterPage = computed(() => route.name === 'letter')
@@ -36,6 +38,8 @@ const startupAssets = [
 const showStartupLoader = ref(
   !isLetterPage.value && sessionStorage.getItem(STARTUP_LOADER_KEY) !== 'ready',
 )
+
+onMounted(() => market.detectMarket())
 
 function finishStartupLoading() {
   sessionStorage.setItem(STARTUP_LOADER_KEY, 'ready')
