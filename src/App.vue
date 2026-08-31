@@ -14,6 +14,7 @@ import BouquetPreviewModal from '@/components/BouquetPreviewModal.vue'
 import CartNotification from '@/components/CartNotification.vue'
 import PetalCodeBackground from '@/components/PetalCodeBackground.vue'
 import AppLoadingScreen from '@/components/AppLoadingScreen.vue'
+import SiteChatbot from '@/components/SiteChatbot.vue'
 
 useCanvas()
 
@@ -81,6 +82,7 @@ watch(
     <CartSidebar />
     <CheckoutModal />
     <CartNotification />
+    <SiteChatbot />
     <TheHeader />
 
     <Transition name="preview">
