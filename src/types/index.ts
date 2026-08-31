@@ -2,6 +2,9 @@
 
 export interface Product {
   id?: string
+  baseProductId?: string
+  marketCode?: 'PH' | 'CA'
+  currencyCode?: 'PHP' | 'CAD'
   name: string
   price: string
   originalPrice?: string
@@ -32,6 +35,7 @@ export interface Customer {
   barangay: string
   city: string
   province: string
+  postalCode: string
   addressLat: number | null
   addressLng: number | null
   addressPlaceId: string
@@ -50,6 +54,8 @@ export interface Order {
   proofImage: string          // base64 — will be replaced with a Supabase Storage URL
   paymentStatus: 'Pending' | 'Confirmed' | 'Rejected'
   deliveryStatus: 'Processing' | 'Ready' | 'Delivered'
+  marketCode?: 'PH' | 'CA'
+  currencyCode?: 'PHP' | 'CAD'
 }
 
 export interface Message {
@@ -94,6 +100,9 @@ export type PaymentMethod = 'gcash' | 'maya'
 export type CheckoutStep = 0 | 1 | 2 | 3 | 4 | 5
 export interface CartItem {
   id?: string
+  baseProductId?: string
+  marketCode?: 'PH' | 'CA'
+  currencyCode?: 'PHP' | 'CAD'
   name: string
   price: string
   originalPrice?: string
