@@ -714,6 +714,7 @@ export const useCartStore = defineStore('cart', () => {
     if (letterData.value.include) {
       const { error: letterError } = await supabase.from('letters').insert({
         order_id:       insertedOrder.id,
+        market_code:    market.code,
         recipient:      letterData.value.recipientName,
         sender:         customer.value.name,
         message:        letterData.value.mainMessage,
