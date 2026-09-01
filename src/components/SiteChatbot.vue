@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MessageCircle, Send, Sparkles, X } from 'lucide-vue-next'
+import { MessageCircle, Send, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-vue-next'
 import { supabase } from '@/supabaseClient'
 import { useMarketStore } from '@/stores/market'
 
@@ -10,6 +10,8 @@ type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
   route?: string
+  interactionId?: string
+  feedback?: 'helpful' | 'not_helpful'
 }
 
 const route = useRoute()
@@ -21,6 +23,19 @@ const input = ref('')
 const inputElement = ref<HTMLTextAreaElement | null>(null)
 const messageList = ref<HTMLElement | null>(null)
 let nextMessageId = 1
+const CHAT_SESSION_KEY = 'stack-petals:chat-session'
+
+function chatSessionToken() {
+  const existing = localStorage.getItem(CHAT_SESSION_KEY)
+  if (existing && /^[A-Za-z0-9_-]{20,80}$/.test(existing)) return existing
+  const token = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID().replace(/-/g, '')
+    : `${Date.now()}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`
+  localStorage.setItem(CHAT_SESSION_KEY, token)
+  return token
+}
+
+const sessionToken = chatSessionToken()
 
 const messages = ref<ChatMessage[]>([
   {
@@ -84,6 +99,7 @@ async function sendMessage(prefilled?: string) {
       history,
       market: market.code,
       page: route.fullPath,
+      sessionToken,
     },
   })
 
@@ -100,6 +116,7 @@ async function sendMessage(prefilled?: string) {
       role: 'assistant',
       content: String(data.answer),
       route: routeLabels[data.route] ? data.route : undefined,
+      interactionId: data.interactionId || undefined,
     })
   }
 
@@ -118,6 +135,20 @@ function handleInputKeydown(event: KeyboardEvent) {
 async function followRoute(path: string) {
   closeChat()
   await router.push(path)
+}
+
+async function rateMessage(message: ChatMessage, feedback: 'helpful' | 'not_helpful') {
+  if (!message.interactionId || message.feedback) return
+  const previous = message.feedback
+  message.feedback = feedback
+
+  const { data, error } = await supabase.rpc('rate_chatbot_interaction', {
+    p_interaction_id: message.interactionId,
+    p_session_token: sessionToken,
+    p_feedback: feedback,
+  })
+
+  if (error || data !== true) message.feedback = previous
 }
 
 watch(() => market.code, () => {
@@ -165,6 +196,29 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
             >
               {{ routeLabels[message.route] }}
             </button>
+            <div v-if="message.interactionId" class="petal-chat-feedback" aria-label="Was this answer helpful?">
+              <span>{{ message.feedback ? 'Thank you' : 'Helpful?' }}</span>
+              <button
+                type="button"
+                :class="{ selected: message.feedback === 'helpful' }"
+                :disabled="Boolean(message.feedback)"
+                aria-label="Helpful answer"
+                title="Helpful"
+                @click="rateMessage(message, 'helpful')"
+              >
+                <ThumbsUp :size="13" />
+              </button>
+              <button
+                type="button"
+                :class="{ selected: message.feedback === 'not_helpful' }"
+                :disabled="Boolean(message.feedback)"
+                aria-label="Not helpful answer"
+                title="Not helpful"
+                @click="rateMessage(message, 'not_helpful')"
+              >
+                <ThumbsDown :size="13" />
+              </button>
+            </div>
           </div>
 
           <div v-if="messages.length === 1" class="petal-chat-suggestions">
@@ -375,6 +429,36 @@ onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
   font: 600 12px/1 Arial, sans-serif;
   cursor: pointer;
 }
+
+.petal-chat-feedback {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 6px;
+  color: #8a7d80;
+  font: 11px/1 Arial, sans-serif;
+}
+
+.petal-chat-feedback button {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #eadadd;
+  border-radius: 50%;
+  background: #fff;
+  color: #806f73;
+  cursor: pointer;
+}
+
+.petal-chat-feedback button:hover:not(:disabled),
+.petal-chat-feedback button.selected {
+  border-color: #b66d7d;
+  color: #9b5261;
+}
+
+.petal-chat-feedback button:disabled { cursor: default; }
 
 .petal-chat-suggestions {
   display: flex;
