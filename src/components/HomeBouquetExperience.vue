@@ -29,10 +29,16 @@ let revealedResetTimer: number | undefined
 let returnTimer: number | undefined
 let returnTransitionTimer: number | undefined
 let layoutFrame: number | undefined
+let resizeFrame: number | undefined
 let resizeObserver: ResizeObserver | undefined
 let intersectionObserver: IntersectionObserver | undefined
+let isDisposed = false
 
-const phoneStyle = computed(() => ({ transform: `translate3d(${position.x}px, ${position.y}px, 0)` }))
+const phoneStyle = computed(() => ({
+  transform: isPhonePositioned.value
+    ? `translate3d(${position.x}px, ${position.y}px, 0)`
+    : 'translate3d(-200vw, -200vh, 0)',
+}))
 const phoneAriaLabel = computed(() => scanState.value === 'revealed'
   ? 'Stack Petals keepsafe opened. Tap to visit the Stack Petals process page.'
   : 'Draggable QR scanner phone. Move it over the QR code on the bouquet.')
@@ -189,20 +195,65 @@ function finishDrag(event: PointerEvent) {
 }
 
 function onResize() {
-  setStartPosition(isAtHome.value || isReturning.value)
-  if (!isAtHome.value && !isReturning.value) Object.assign(position, clampPosition(position.x, position.y))
-  checkScannerOverlap()
+  window.cancelAnimationFrame(resizeFrame ?? 0)
+  resizeFrame = window.requestAnimationFrame(() => {
+    if (!isPhonePositioned.value) return
+    setStartPosition(isAtHome.value || isReturning.value)
+    if (!isAtHome.value && !isReturning.value) Object.assign(position, clampPosition(position.x, position.y))
+    checkScannerOverlap()
+  })
+}
+
+function nextFrame() {
+  return new Promise<void>((resolve) => {
+    layoutFrame = window.requestAnimationFrame(() => resolve())
+  })
+}
+
+function withTimeout(promise: Promise<unknown>, timeout = 1800) {
+  return Promise.race([
+    promise,
+    new Promise<void>((resolve) => window.setTimeout(resolve, timeout)),
+  ])
+}
+
+async function waitForInitialLayout() {
+  const bouquetImage = scene.value?.querySelector<HTMLImageElement>('.bouquet-artwork > img')
+  const imageReady = bouquetImage?.complete
+    ? Promise.resolve()
+    : bouquetImage?.decode?.().catch(() => undefined) ?? Promise.resolve()
+  const fontsReady = document.fonts?.ready ?? Promise.resolve()
+
+  await Promise.allSettled([
+    withTimeout(imageReady),
+    withTimeout(fontsReady),
+  ])
+
+  let previous: DOMRect | null = null
+  let stableFrames = 0
+  for (let frame = 0; frame < 24 && stableFrames < 3; frame += 1) {
+    await nextFrame()
+    if (!scene.value || isDisposed) return
+    const current = scene.value.getBoundingClientRect()
+    const stable = previous
+      && Math.abs(current.left - previous.left) < 0.5
+      && Math.abs(current.top - previous.top) < 0.5
+      && Math.abs(current.width - previous.width) < 0.5
+      && Math.abs(current.height - previous.height) < 0.5
+    stableFrames = stable ? stableFrames + 1 : 0
+    previous = current
+  }
 }
 
 onMounted(async () => {
   await nextTick()
+  await waitForInitialLayout()
+  if (isDisposed || !scene.value || !phone.value) return
   setStartPosition(true)
-  layoutFrame = window.requestAnimationFrame(() => {
-    onResize()
-    layoutFrame = window.requestAnimationFrame(() => {
-      isPhonePositioned.value = true
-    })
-  })
+  await nextTick()
+  await nextFrame()
+  if (isDisposed) return
+  isPhonePositioned.value = true
   if (scene.value && 'ResizeObserver' in window) {
     resizeObserver = new ResizeObserver(onResize)
     resizeObserver.observe(scene.value)
@@ -215,9 +266,11 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  isDisposed = true
   clearScanTimers()
   clearReturnTimers()
   window.cancelAnimationFrame(layoutFrame ?? 0)
+  window.cancelAnimationFrame(resizeFrame ?? 0)
   resizeObserver?.disconnect()
   intersectionObserver?.disconnect()
   window.removeEventListener('resize', onResize)

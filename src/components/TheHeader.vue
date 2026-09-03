@@ -10,6 +10,8 @@ const router = useRouter()
 const market = useMarketStore()
 const cart = useCartStore()
 const menuOpen = ref(false)
+const compactMarketLabels = ref(false)
+let compactMarketQuery: MediaQueryList | undefined
 
 const closeMenu = () => {
   menuOpen.value = false
@@ -17,6 +19,10 @@ const closeMenu = () => {
 
 const handleEscape = (event: KeyboardEvent) => {
   if (event.key === 'Escape') closeMenu()
+}
+
+const syncMarketLabelSize = (event?: MediaQueryListEvent) => {
+  compactMarketLabels.value = event?.matches ?? compactMarketQuery?.matches ?? false
 }
 
 function changeMarket(event: Event) {
@@ -41,10 +47,16 @@ watch(
   closeMenu,
 )
 
-onMounted(() => window.addEventListener('keydown', handleEscape))
+onMounted(() => {
+  window.addEventListener('keydown', handleEscape)
+  compactMarketQuery = window.matchMedia('(max-width: 520px)')
+  syncMarketLabelSize()
+  compactMarketQuery.addEventListener('change', syncMarketLabelSize)
+})
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleEscape)
+  compactMarketQuery?.removeEventListener('change', syncMarketLabelSize)
   document.documentElement.classList.remove('site-menu-open')
 })
 </script>
@@ -59,8 +71,8 @@ onBeforeUnmount(() => {
       <MapPin :size="16" stroke-width="1.8" aria-hidden="true" />
       <span class="sr-only">Shopping region</span>
       <select :value="market.code" aria-label="Shopping region" @change="changeMarket">
-        <option value="PH">Philippines</option>
-        <option value="CA">Canada</option>
+        <option value="PH">{{ compactMarketLabels ? 'PH' : 'Philippines' }}</option>
+        <option value="CA">{{ compactMarketLabels ? 'CA' : 'Canada' }}</option>
       </select>
     </label>
 

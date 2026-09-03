@@ -5566,7 +5566,7 @@ input, textarea, [contenteditable="true"] {
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .site-header {
     gap: 8px;
   }
@@ -5580,8 +5580,10 @@ input, textarea, [contenteditable="true"] {
   }
 
   .market-switcher select {
-    max-width: 38px;
+    width: 28px;
+    max-width: 28px;
     padding-right: 0;
+    text-align: center;
   }
 }
 
