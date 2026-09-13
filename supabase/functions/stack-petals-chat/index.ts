@@ -4,8 +4,8 @@ type MarketCode = 'PH' | 'CA'
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 type RateLimitEntry = { count: number; resetAt: number }
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') || ''
-const OPENAI_CHAT_MODEL = Deno.env.get('OPENAI_CHAT_MODEL') || 'gpt-5-mini'
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') || ''
+const GEMINI_CHAT_MODEL = Deno.env.get('GEMINI_CHAT_MODEL') || 'gemini-3.6-flash'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || ''
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || ''
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SERVICE_ROLE_KEY') || ''
@@ -279,31 +279,25 @@ async function getProductContext(market: MarketCode) {
   }
 }
 
-async function isFlagged(message: string) {
-  const response = await fetch('https://api.openai.com/v1/moderations', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ model: 'omni-moderation-latest', input: message }),
-  })
-  if (!response.ok) return false
-  const result = await response.json()
-  return Boolean(result.results?.[0]?.flagged)
+function geminiOutputText(response: Record<string, unknown>) {
+  if (!Array.isArray(response.candidates)) return ''
+  const candidate = response.candidates[0] as Record<string, unknown> | undefined
+  const content = candidate?.content as Record<string, unknown> | undefined
+  if (!Array.isArray(content?.parts)) return ''
+  const part = [...content.parts].reverse().find((item: unknown) => (
+    Boolean(item)
+    && typeof item === 'object'
+    && (item as Record<string, unknown>).thought !== true
+    && typeof (item as Record<string, unknown>).text === 'string'
+  )) as Record<string, unknown> | undefined
+  return typeof part?.text === 'string' ? part.text : ''
 }
 
-function outputText(response: Record<string, unknown>) {
-  if (typeof response.output_text === 'string') return response.output_text
-  if (!Array.isArray(response.output)) return ''
-
-  for (const item of response.output as Array<Record<string, unknown>>) {
-    if (!Array.isArray(item.content)) continue
-    for (const content of item.content as Array<Record<string, unknown>>) {
-      if (content.type === 'output_text' && typeof content.text === 'string') return content.text
-    }
-  }
-  return ''
+function parseStructuredOutput(output: string) {
+  const normalized = output.trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+  return JSON.parse(normalized)
 }
 
 serve(async req => {
@@ -345,21 +339,7 @@ serve(async req => {
       }, 200, headers)
     }
 
-    if (!OPENAI_API_KEY) return json({ error: 'Chat service is not configured.' }, 503, headers)
-
-    if (await isFlagged(message)) {
-      const answer = `I can't help with that request, but I'm still happy to help you choose a meaningful gift, write a sweet message, or explore Stack Petals.`
-      const interactionId = await recordInteraction({
-        sessionToken, market, question: message, answer, topic: 'other',
-        inScope: false, needsHuman: false, route: '',
-      })
-      return json({
-        answer,
-        inScope: false,
-        route: '',
-        interactionId,
-      }, 200, headers)
-    }
+    if (!GEMINI_API_KEY) return json({ error: 'Chat service is not configured.' }, 503, headers)
 
     const catalog = await getProductContext(market)
     const knowledge = await getKnowledgeContext(message, market)
@@ -423,50 +403,50 @@ ${knowledge.text}
 
 Current page: ${page}`
 
-    const input = [
+    const contents = [
       ...history.map(item => ({
-        role: item.role,
-        content: [{ type: item.role === 'assistant' ? 'output_text' : 'input_text', text: item.content }],
+        role: item.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: item.content }],
       })),
-      { role: 'user', content: [{ type: 'input_text', text: message }] },
+      { role: 'user', parts: [{ text: message }] },
     ]
 
-    const aiResponse = await fetch('https://api.openai.com/v1/responses', {
+    const aiResponse = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/'
+        + encodeURIComponent(GEMINI_CHAT_MODEL)
+        + ':generateContent',
+      {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'x-goog-api-key': GEMINI_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: OPENAI_CHAT_MODEL,
-        store: false,
-        max_output_tokens: 260,
-        instructions,
-        input,
-        text: {
-          format: {
-            type: 'json_schema',
-            name: 'stack_petals_chat_reply',
-            strict: true,
-            schema: {
-              type: 'object',
-              additionalProperties: false,
+        systemInstruction: { parts: [{ text: instructions }] },
+        contents,
+        generationConfig: {
+          maxOutputTokens: 1024,
+          temperature: 0.6,
+          responseMimeType: 'application/json',
+          responseSchema: {
+              type: 'OBJECT',
               properties: {
-                in_scope: { type: 'boolean' },
-                answer: { type: 'string' },
-                route: { type: 'string', enum: ROUTES },
-                topic: { type: 'string', enum: ['products', 'ordering', 'fulfillment', 'payment', 'customization', 'keepsake', 'tracking', 'gallery', 'contact', 'other'] },
-                needs_human: { type: 'boolean' },
+                in_scope: { type: 'BOOLEAN' },
+                answer: { type: 'STRING' },
+                route: { type: 'STRING' },
+                topic: { type: 'STRING', enum: ['products', 'ordering', 'fulfillment', 'payment', 'customization', 'keepsake', 'tracking', 'gallery', 'contact', 'other'] },
+                needs_human: { type: 'BOOLEAN' },
               },
               required: ['in_scope', 'answer', 'route', 'topic', 'needs_human'],
-            },
           },
         },
       }),
-    })
+      },
+    )
 
     if (!aiResponse.ok) {
-      console.error('OpenAI response error:', aiResponse.status, await aiResponse.text())
+      const providerErrorText = await aiResponse.text()
+      console.error('Gemini response error:', aiResponse.status, providerErrorText)
       if (aiResponse.status === 429) {
         const answer = catalogFallbackReply(message, catalog, market)
         const interactionId = await recordInteraction({
@@ -482,16 +462,27 @@ Current page: ${page}`
           source: 'catalog_fallback',
         }, 200, headers)
       }
-      const setupError = aiResponse.status === 401
-        ? 'The chatbot API key was rejected. Check the OPENAI_API_KEY secret.'
-        : aiResponse.status === 400 || aiResponse.status === 404
+      const setupError = aiResponse.status === 401 || aiResponse.status === 403
+        ? 'The chatbot API key was rejected. Check the GEMINI_API_KEY secret.'
+        : aiResponse.status === 404
             ? 'The chatbot model is not available for this API project.'
+            : aiResponse.status === 400
+              ? 'The chatbot request configuration was rejected.'
             : 'Petal Guide is resting for a moment. Please try again shortly.'
-      return json({ error: setupError, code: `openai_${aiResponse.status}` }, 502, headers)
+      return json({ error: setupError, code: `gemini_${aiResponse.status}` }, 502, headers)
     }
 
     const responseBody = await aiResponse.json()
-    const result = JSON.parse(outputText(responseBody))
+    const output = geminiOutputText(responseBody)
+    if (!output) {
+      const answer = "I can't help with that request, but I'm still happy to help with Stack Petals gifts, messages, delivery, or pickup."
+      const interactionId = await recordInteraction({
+        sessionToken, market, question: message, answer, topic: 'other',
+        inScope: false, needsHuman: false, route: '',
+      })
+      return json({ answer, inScope: false, route: '', needsHuman: false, interactionId }, 200, headers)
+    }
+    const result = parseStructuredOutput(output)
     const route = ROUTES.includes(result.route) ? result.route : ''
     const answer = String(result.answer || '').slice(0, 800)
     const interactionId = await recordInteraction({
