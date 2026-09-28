@@ -58,10 +58,13 @@ export const useCartStore = defineStore('cart', () => {
   // ── Love Letter ────────────────────────────────────────────────────────
   const letterData = ref({
     include: false,
+    theme: 'romance',
+    fromName: '',
     recipientName: '',
     mainMessage: '',
     songSuggestion: '',
     petalMessages: ['', '', '', '', '', ''],
+    petalSvgSelections: [0, 1, 2, 3, 4, 5],
     memories: [] as string[],
   })
 
@@ -716,10 +719,12 @@ export const useCartStore = defineStore('cart', () => {
         order_id:       insertedOrder.id,
         market_code:    market.code,
         recipient:      letterData.value.recipientName,
-        sender:         customer.value.name,
+        letter_theme:   letterData.value.theme || 'romance',
+        sender:         letterData.value.fromName.trim() || customer.value.name,
         message:        letterData.value.mainMessage,
         song_suggestion: letterData.value.songSuggestion.trim(),
         petal_messages: letterData.value.petalMessages,
+        backgrounds: { petal_artworks: letterData.value.petalSvgSelections },
         memories:       letterData.value.memories,
         angle_photos:   [],
         published:      false,
@@ -817,10 +822,13 @@ export const useCartStore = defineStore('cart', () => {
 
     letterData.value = {
       include: false,
+      theme: 'romance',
+      fromName: '',
       recipientName: '',
       mainMessage: '',
       songSuggestion: '',
       petalMessages: ['', '', '', '', '', ''],
+      petalSvgSelections: [0, 1, 2, 3, 4, 5],
       memories: [],
     }
   }

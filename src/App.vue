@@ -23,11 +23,11 @@ const preview = usePreviewStore()
 const market  = useMarketStore()
 const route   = useRoute()
 
-const isLetterPage = computed(() => route.name === 'letter')
+const isLetterPage = computed(() => route.name === 'letter' || route.name === 'letter-test')
 const STARTUP_LOADER_KEY = 'stack-petals:startup-ready:v1'
 const startupAssets = [
   '/images/background.png',
-  '/images/logo.png',
+  '/images/stack-petals-floral-logo.png',
   '/images/cart-icon.png',
   '/images/home-experience/bouquet-qr-guide.png',
   '/images/home-experience/phone-frame.png',

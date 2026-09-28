@@ -2,6 +2,7 @@
 import { useCartStore } from '@/stores/cart'
 import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import LetterPage from '@/pages/LetterPage.vue'
 
 const cart = useCartStore()
 const router = useRouter()
@@ -9,9 +10,31 @@ const checkoutModal = ref<HTMLElement | null>(null)
 const isShaking = ref(false)
 const emailError = ref('')
 const showLetterExperiencePreview = ref(false)
+// Kept for backwards-compatible state restoration when an existing checkout
+// session contains the former multi-screen preview data.
 const letterPreviewScreen = ref(0)
 const letterPreviewPetals = ref([false, false, false, false, false, false])
 const activeLetterPreviewPetal = ref<number | null>(null)
+const activePetalEditor = ref<number | null>(null)
+const draftPetalMessage = ref('')
+const draftPetalSvg = ref(0)
+const petalSvgOptions = ['Sun', 'Flower', 'Sparkles', 'Heart', 'Smile', 'Care']
+// Older recovered checkout sessions predate petal artwork selections.
+// Normalize them before any editor action so Save cannot fail on undefined.
+if (!Array.isArray(cart.letterData.petalSvgSelections)) {
+  cart.letterData.petalSvgSelections = [0, 1, 2, 3, 4, 5]
+}
+const petalSvgSelections = computed(() => cart.letterData.petalSvgSelections)
+const showPetalDiscardPrompt = ref(false)
+const cropQueue = ref<File[]>([])
+const cropSource = ref('')
+const cropZoom = ref(1)
+const cropOffset = ref({ x: 0, y: 0 })
+const cropDragging = ref(false)
+const cropDragStart = ref({ x: 0, y: 0 })
+const cropOffsetStart = ref({ x: 0, y: 0 })
+const cropViewport = ref<HTMLElement | null>(null)
+const cropImage = ref<HTMLImageElement | null>(null)
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
@@ -19,6 +42,24 @@ const showPickupAddress = ref(false)
 const MAIN_LETTER_WORD_LIMIT = 300
 const PETAL_MESSAGE_CHAR_LIMIT = 60
 const PICKUP_ADDRESS = 'Evasco Family, Santa Ana, Taytay Rizal'
+const petalPrompts = [
+  { title: 'Their smile', placeholder: 'What makes their smile special?' },
+  { title: 'Their kindness', placeholder: 'A small kindness you always remember...' },
+  { title: 'Your favorite memory', placeholder: 'A short memory you share...' },
+  { title: 'What you admire', placeholder: 'Something you admire about them...' },
+  { title: 'How they make you feel', placeholder: 'The feeling they bring into your life...' },
+  { title: 'A wish for them', placeholder: 'A short wish or reminder for them...' },
+]
+
+const checkoutPreviewLetter = computed(() => ({
+  letter_theme: cart.letterData.theme,
+  recipient: cart.letterData.recipientName || 'your recipient',
+  sender: cart.letterData.fromName?.trim() || cart.customer.name || 'someone special',
+  message: cart.letterData.mainMessage || 'A personal letter is waiting to be revealed.',
+  petal_messages: cart.letterData.petalMessages,
+  memories: cart.letterData.memories,
+  petal_artworks: cart.letterData.petalSvgSelections,
+}))
 
 // ── Functions ──────────────────────────────────────
 async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promise<File> {
@@ -50,12 +91,15 @@ async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promis
   }
 }
 
-async function fileToDataUrl(file: File) {
-  const compressed = await compressImage(file, 1200, 0.8)
-  return await new Promise<string>((resolve) => {
+// Keep the original file as the crop source. Compression belongs to the
+// saved crop, not to the preview: otherwise the cropper can display a
+// resampled/letterboxed version instead of the photo the customer selected.
+async function rawFileToDataUrl(file: File) {
+  return await new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = event => resolve(event.target?.result as string)
-    reader.readAsDataURL(compressed)
+    reader.onload = event => resolve(String(event.target?.result || ''))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
   })
 }
 
@@ -111,10 +155,6 @@ function limitWords(text: string, limit = MAIN_LETTER_WORD_LIMIT) {
 
 function handleMainMessageInput() {
   cart.letterData.mainMessage = limitWords(cart.letterData.mainMessage)
-}
-
-function limitPetalMessage(index: number) {
-  cart.letterData.petalMessages[index] = cart.letterData.petalMessages[index].slice(0, PETAL_MESSAGE_CHAR_LIMIT)
 }
 
 function handleAddressInput() {
@@ -280,22 +320,106 @@ const mainMessageNearLimit = computed(() => mainMessageWordCount.value >= MAIN_L
 
 async function handleMemoryUpload(e: Event) {
   const files = (e.target as HTMLInputElement).files
-  if (files) {
-    for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
-      cart.letterData.memories.push(await fileToDataUrl(files[i]))
-    }
-  }
+  if (files) await queueMemoryFiles(Array.from(files))
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 async function handleMemoryDrop(e: DragEvent) {
   const files = e.dataTransfer?.files
-  if (files) {
-    for (let i = 0; i < Math.min(files.length, 3 - cart.letterData.memories.length); i++) {
-      if (files[i].type.startsWith('image/')) {
-        cart.letterData.memories.push(await fileToDataUrl(files[i]))
-      }
-    }
+  if (files) await queueMemoryFiles(Array.from(files).filter(file => file.type.startsWith('image/')))
+}
+
+async function queueMemoryFiles(files: File[]) {
+  const remaining = Math.max(0, 3 - cart.letterData.memories.length)
+  cropQueue.value = files.filter(file => file.type.startsWith('image/')).slice(0, remaining)
+  await openNextCrop()
+}
+
+async function openNextCrop() {
+  const next = cropQueue.value.shift()
+  if (!next) {
+    cropSource.value = ''
+    return
   }
+  cropZoom.value = 1
+  cropOffset.value = { x: 0, y: 0 }
+  cropSource.value = await rawFileToDataUrl(next)
+}
+
+function startCropDrag(event: PointerEvent) {
+  cropDragging.value = true
+  cropDragStart.value = { x: event.clientX, y: event.clientY }
+  cropOffsetStart.value = { ...cropOffset.value }
+  ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
+}
+
+function moveCropDrag(event: PointerEvent) {
+  if (!cropDragging.value) return
+  const viewport = cropViewport.value
+  const image = cropImage.value
+  const imageWidth = image?.naturalWidth || 0
+  const imageHeight = image?.naturalHeight || 0
+  const viewportWidth = viewport?.clientWidth || 0
+  const viewportHeight = viewport?.clientHeight || 0
+  const imageRatio = imageHeight ? imageWidth / imageHeight : 1
+  const viewportRatio = viewportHeight ? viewportWidth / viewportHeight : 1
+  const baseWidth = imageRatio > viewportRatio ? viewportHeight * imageRatio : viewportWidth
+  const baseHeight = imageRatio > viewportRatio ? viewportHeight : viewportWidth / imageRatio
+  const maxX = Math.max(0, (baseWidth * cropZoom.value - viewportWidth) / 2)
+  const maxY = Math.max(0, (baseHeight * cropZoom.value - viewportHeight) / 2)
+  cropOffset.value = {
+    x: Math.max(-maxX, Math.min(maxX, cropOffsetStart.value.x + event.clientX - cropDragStart.value.x)),
+    y: Math.max(-maxY, Math.min(maxY, cropOffsetStart.value.y + event.clientY - cropDragStart.value.y)),
+  }
+}
+
+function endCropDrag() { cropDragging.value = false }
+
+function clampCropOffset() {
+  const viewport = cropViewport.value
+  const image = cropImage.value
+  if (!viewport || !image?.naturalWidth || !image.naturalHeight) return
+  const viewportWidth = viewport.clientWidth
+  const viewportHeight = viewport.clientHeight
+  const imageRatio = image.naturalWidth / image.naturalHeight
+  const viewportRatio = viewportWidth / viewportHeight
+  const baseWidth = imageRatio > viewportRatio ? viewportHeight * imageRatio : viewportWidth
+  const baseHeight = imageRatio > viewportRatio ? viewportHeight : viewportWidth / imageRatio
+  const maxX = Math.max(0, (baseWidth * cropZoom.value - viewportWidth) / 2)
+  const maxY = Math.max(0, (baseHeight * cropZoom.value - viewportHeight) / 2)
+  cropOffset.value = {
+    x: Math.max(-maxX, Math.min(maxX, cropOffset.value.x)),
+    y: Math.max(-maxY, Math.min(maxY, cropOffset.value.y)),
+  }
+}
+
+async function saveCrop() {
+  if (!cropSource.value) return
+  const image = new Image()
+  image.src = cropSource.value
+  await new Promise<void>(resolve => { image.onload = () => resolve(); image.onerror = () => resolve() })
+  if (!image.naturalWidth || !image.naturalHeight) return openNextCrop()
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 900
+  canvas.height = 600
+  const context = canvas.getContext('2d')
+  if (!context) return openNextCrop()
+  const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight) * cropZoom.value
+  const width = image.naturalWidth * scale
+  const height = image.naturalHeight * scale
+  // Dragging happens in CSS pixels while the saved crop is rendered at a
+  // fixed resolution. Convert the same movement into canvas pixels so the
+  // saved image exactly matches what the customer positioned in the frame.
+  const viewportWidth = cropViewport.value?.clientWidth || canvas.width
+  const viewportHeight = cropViewport.value?.clientHeight || canvas.height
+  const offsetX = cropOffset.value.x * (canvas.width / viewportWidth)
+  const offsetY = cropOffset.value.y * (canvas.height / viewportHeight)
+  context.fillStyle = '#fffaf8'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(image, (canvas.width - width) / 2 + offsetX, (canvas.height - height) / 2 + offsetY, width, height)
+  cart.letterData.memories.push(canvas.toDataURL('image/jpeg', 0.86))
+  await openNextCrop()
 }
 
 function openLetterExperiencePreview() {
@@ -305,23 +429,40 @@ function openLetterExperiencePreview() {
   showLetterExperiencePreview.value = true
 }
 
-function nextLetterPreviewScreen() {
-  if (letterPreviewScreen.value < 3) letterPreviewScreen.value++
+function nextLetterPreviewScreen() { if (letterPreviewScreen.value < 3) letterPreviewScreen.value++ }
+function prevLetterPreviewScreen() { if (letterPreviewScreen.value > 0) letterPreviewScreen.value-- }
+function toggleLetterPreviewPetal(index: number) {
+  letterPreviewPetals.value[index] = true
+  activeLetterPreviewPetal.value = index
 }
-
-function prevLetterPreviewScreen() {
-  if (letterPreviewScreen.value > 0) letterPreviewScreen.value--
+function openPetalEditor(index: number) {
+  activePetalEditor.value = index
+  draftPetalMessage.value = cart.letterData.petalMessages[index] || ''
+  draftPetalSvg.value = petalSvgSelections.value[index] ?? index
+  showPetalDiscardPrompt.value = false
 }
-
-function toggleLetterPreviewPetal(i: number) {
-  letterPreviewPetals.value[i] = true
-  activeLetterPreviewPetal.value = i
+function savePetalMessage() {
+  if (activePetalEditor.value === null) return
+  cart.letterData.petalMessages[activePetalEditor.value] = draftPetalMessage.value.slice(0, PETAL_MESSAGE_CHAR_LIMIT)
+  petalSvgSelections.value[activePetalEditor.value] = draftPetalSvg.value
+  activePetalEditor.value = null
+  showPetalDiscardPrompt.value = false
 }
-
-const activeLetterPreviewPetalMessage = computed(() => {
-  if (activeLetterPreviewPetal.value === null) return ''
-  return cart.letterData.petalMessages[activeLetterPreviewPetal.value] || 'Your petal message will appear here.'
-})
+function requestPetalDiscard() {
+  if (activePetalEditor.value === null || draftPetalMessage.value === cart.letterData.petalMessages[activePetalEditor.value]) {
+    activePetalEditor.value = null
+    showPetalDiscardPrompt.value = false
+    return
+  }
+  showPetalDiscardPrompt.value = true
+}
+function confirmPetalDiscard() {
+  activePetalEditor.value = null
+  showPetalDiscardPrompt.value = false
+}
+const activeLetterPreviewPetalMessage = computed(() => activeLetterPreviewPetal.value === null
+  ? ''
+  : cart.letterData.petalMessages[activeLetterPreviewPetal.value] || 'Your petal message will appear here.')
 
 watch(
   () => cart.checkoutStep,
@@ -547,10 +688,46 @@ watch(
           <span>Yes, include a personalized love letter</span>
         </label>
 
+        <div v-if="cart.letterData.include" class="letter-theme-picker">
+          <span class="petals-section-title">Choose your letter style</span>
+          <div class="letter-theme-options">
+            <button v-for="option in [
+              { id: 'romance', label: 'Romance' },
+              { id: 'family', label: 'Family' },
+              { id: 'birthday', label: 'Birthday' },
+              { id: 'sympathy', label: 'Sympathy' },
+              { id: 'friendship', label: 'Friendship' },
+              { id: 'graduation', label: 'Graduation' },
+              { id: 'original', label: 'Original' },
+            ]" :key="option.id" type="button" :class="['letter-theme-option', { active: cart.letterData.theme === option.id }]" @click="cart.letterData.theme = option.id">
+              {{ option.label }}
+            </button>
+          </div>
+        </div>
+
         <div v-if="cart.letterData.include" class="letter-card">
           <div class="letter-field">
-            <label>For</label>
-            <input v-model="cart.letterData.recipientName" type="text" placeholder="Their name..." class="letter-input" />
+            <label for="checkout-letter-from">From</label>
+            <input
+              id="checkout-letter-from"
+              v-model="cart.letterData.fromName"
+              type="text"
+              maxlength="120"
+              placeholder="Your name..."
+              class="letter-input"
+            />
+          </div>
+
+          <div class="letter-field">
+            <label for="checkout-letter-to">To</label>
+            <input
+              id="checkout-letter-to"
+              v-model="cart.letterData.recipientName"
+              type="text"
+              maxlength="120"
+              placeholder="Recipient's name..."
+              class="letter-input"
+            />
           </div>
 
           <div class="letter-field">
@@ -583,16 +760,19 @@ watch(
             <label class="petals-section-title">6 Petal Messages</label>
 
             <div class="petals-grid">
-              <div v-for="(_, i) in cart.letterData.petalMessages" :key="i" class="petal-field">
+              <div v-for="(prompt, i) in petalPrompts" :key="prompt.title" class="petal-field">
                 <span class="petal-number">{{ i + 1 }}</span>
                 <div class="petal-input-wrap">
-                  <input
-                    v-model="cart.letterData.petalMessages[i]"
-                    :placeholder="`Petal ${i + 1}...`"
-                    class="petal-input"
-                    :maxlength="PETAL_MESSAGE_CHAR_LIMIT"
-                    @input="limitPetalMessage(i)"
-                  />
+                  <label class="petal-prompt" :for="`petal-message-${i}`">{{ prompt.title }}</label>
+                  <button
+                    :id="`petal-message-${i}`"
+                    type="button"
+                    class="petal-input-trigger"
+                    :class="{ 'has-message': cart.letterData.petalMessages[i] }"
+                    @click.stop="openPetalEditor(i)"
+                  >
+                    {{ cart.letterData.petalMessages[i] || prompt.placeholder }}
+                  </button>
                   <span class="petal-char-count" :class="{ warning: cart.letterData.petalMessages[i].length >= PETAL_MESSAGE_CHAR_LIMIT - 5 }">
                     {{ cart.letterData.petalMessages[i].length }}/{{ PETAL_MESSAGE_CHAR_LIMIT }}
                   </span>
@@ -650,6 +830,16 @@ watch(
           &times;
         </button>
 
+        <div class="checkout-letter-full-preview">
+          <LetterPage
+            :preview-letter="checkoutPreviewLetter"
+            :preview="true"
+          />
+        </div>
+
+        <!-- The former multi-screen preview remains available in source for
+             migration safety, but checkout intentionally shows only a teaser. -->
+        <template v-if="false">
         <div class="letter-preview-phone">
           <section v-if="letterPreviewScreen === 0" class="letter-preview-screen center">
             <div class="letter-preview-logo">Stack Petals</div>
@@ -769,7 +959,103 @@ watch(
             {{ letterPreviewScreen === 3 ? 'Done' : 'Next' }}
           </button>
         </div>
+        </template>
       </div>
+    </div>
+
+    <div v-if="cropSource" class="memory-crop-overlay">
+      <section class="memory-crop-modal" role="dialog" aria-modal="true" aria-labelledby="memory-crop-title">
+        <button class="petal-editor-close" type="button" aria-label="Cancel photo crop" @click="cropQueue = []; cropSource = ''">&times;</button>
+        <span class="petals-section-title">Photo memory</span>
+        <h3 id="memory-crop-title">Crop this photo</h3>
+        <p class="petal-editor-help">Drag the image to choose what appears in your letter.</p>
+        <div
+          ref="cropViewport"
+          class="memory-crop-viewport"
+          @pointerdown="startCropDrag"
+          @pointermove="moveCropDrag"
+          @pointerup="endCropDrag"
+          @pointercancel="endCropDrag"
+          @pointerleave="endCropDrag"
+        >
+          <img
+            ref="cropImage"
+            :src="cropSource"
+            alt="Photo crop preview"
+            :style="{
+              left: `calc(50% + ${cropOffset.x}px)`,
+              top: `calc(50% + ${cropOffset.y}px)`,
+              transform: 'translate(-50%, -50%) scale(' + cropZoom + ')'
+            }"
+            draggable="false"
+          />
+          <span class="memory-crop-guide" aria-hidden="true"></span>
+        </div>
+        <label class="memory-crop-zoom">Zoom
+          <input v-model.number="cropZoom" type="range" min="1" max="2.5" step="0.01" @input="clampCropOffset" />
+        </label>
+        <div class="petal-editor-footer">
+          <span>{{ cropQueue.length ? `${cropQueue.length} more photo${cropQueue.length === 1 ? '' : 's'}` : 'Ready to add' }}</span>
+          <button class="co-btn-primary" type="button" @click="saveCrop">Use this crop</button>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="activePetalEditor !== null" class="petal-editor-overlay" @click.self="requestPetalDiscard">
+      <section class="petal-editor-modal" role="dialog" aria-modal="true" aria-labelledby="petal-editor-title">
+        <button class="petal-editor-close" type="button" aria-label="Close petal editor" @click="requestPetalDiscard">&times;</button>
+        <span class="petals-section-title">Petal {{ activePetalEditor + 1 }}</span>
+        <h3 id="petal-editor-title">{{ petalPrompts[activePetalEditor].title }}</h3>
+        <p class="petal-editor-help">Write one short description about this person.</p>
+        <div class="petal-svg-picker">
+          <span class="petal-svg-picker__label">Choose the note artwork</span>
+          <div class="petal-svg-options">
+            <button
+              v-for="(name, iconIndex) in petalSvgOptions"
+              :key="name"
+              type="button"
+              class="petal-svg-option"
+              :class="{ active: draftPetalSvg === iconIndex }"
+              :aria-label="`Use ${name} artwork`"
+              @click="draftPetalSvg = iconIndex"
+            >
+              <svg viewBox="0 0 100 100" aria-hidden="true">
+                <template v-if="iconIndex === 0">
+                  <circle cx="50" cy="50" r="16" fill="none"/><path d="M50 7v22M50 71v22M7 50h22m42 0h22M20 20l16 16m28 28 16 16M80 20 64 36M36 64 20 80"/>
+                </template>
+                <template v-else-if="iconIndex === 1"><path d="M50 88V48m0 12C29 59 19 45 21 29c17 0 27 10 29 31Zm0-13c20 0 30-11 29-26-17 0-27 10-29 26Z"/><path d="M50 48c-8-15-4-26 0-34 7 11 8 22 0 34Z"/></template>
+                <template v-else-if="iconIndex === 2"><path d="M50 8v28M50 64v28M8 50h28M64 50h28M20 20l20 20m20 20 20 20M80 20 60 40M40 60 20 80"/><path d="M50 31c2 15 9 22 24 24-15 2-22 9-24 24-2-15-9-22-24-24 15-2 22-9 24-24Z"/></template>
+                <template v-else-if="iconIndex === 3"><path d="M50 82C25 64 14 50 14 35c0-22 26-29 36-10 10-19 36-12 36 10 0 15-11 29-36 47Z"/></template>
+                <template v-else-if="iconIndex === 4"><circle cx="50" cy="50" r="25" fill="none"/><path d="M39 46h1m20 0h1M40 61q10 9 20 0M24 25l-8-8m60 8 8-8M24 75l-8 8m60-8 8 8"/></template>
+                <template v-else><path d="M14 55c10-14 20-15 36-3 16-12 26-11 36 3L65 78H35L14 55Z"/><path d="M50 52 38 66m12-14 12 14M18 28l6 5m58-5-6 5"/></template>
+              </svg>
+              <small>{{ name }}</small>
+            </button>
+          </div>
+        </div>
+        <textarea
+          v-model="draftPetalMessage"
+          class="petal-editor-textarea"
+          :maxlength="PETAL_MESSAGE_CHAR_LIMIT"
+          :placeholder="petalPrompts[activePetalEditor].placeholder"
+          autofocus
+        ></textarea>
+        <div class="petal-editor-footer">
+          <span>{{ draftPetalMessage.length }}/{{ PETAL_MESSAGE_CHAR_LIMIT }}</span>
+          <button class="co-btn-primary" type="button" @click="savePetalMessage">Save</button>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="showPetalDiscardPrompt" class="petal-discard-overlay" role="alertdialog" aria-modal="true" aria-labelledby="petal-discard-title">
+      <section class="petal-discard-modal">
+        <h3 id="petal-discard-title">Discard this message?</h3>
+        <p>Are you sure you want to discard your changes?</p>
+        <div class="petal-discard-actions">
+          <button class="co-btn-outline" type="button" @click="showPetalDiscardPrompt = false">Keep editing</button>
+          <button class="co-btn-primary" type="button" @click="confirmPetalDiscard">Discard</button>
+        </div>
+      </section>
     </div>
 
       <!-- STEP 4 - Payment -->

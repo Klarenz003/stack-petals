@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
+import ThemedLetterExperience from '@/components/StackPetalsLetterExperience.vue'
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
 import { supabase } from '@/supabaseClient'
@@ -17,6 +18,7 @@ interface Letter {
   sender: string
   message: string
   petal_messages: string[]
+  petal_artworks?: number[]
   memories: string[]
   angle_photos: string[]
   backgrounds: Record<string, string | null>
@@ -24,11 +26,17 @@ interface Letter {
   bouquet_image_url: string
   published: boolean
   template: string
+  letter_theme?: string | null
 }
 
 // ── State ──────────────────────────────────────────────────────────
 const route = useRoute()
+const props = defineProps<{
+  preview?: boolean
+  previewLetter?: Partial<Letter> | null
+}>()
 const letter = ref<Letter | null>(null)
+const hasCinematicLetter = computed(() => Boolean(letter.value) && letter.value?.letter_theme !== 'original')
 const loading = ref(true)
 const notFound = ref(false)
 const currentScreen = ref(0)
@@ -138,6 +146,7 @@ function analyticsDeviceType() {
 }
 
 async function sendLetterAnalyticsEvent(eventType: LetterAnalyticsEvent, screenNumber?: number) {
+  if (props.preview) return true
   if (!letter.value) return false
   const eventKey = `${eventType}:${screenNumber || 0}`
   if (trackedAnalyticsEvents.has(eventKey)) return true
@@ -801,7 +810,21 @@ function screenBg(screenKey: string): string {
 // ── Lifecycle ──────────────────────────────────────────────────────
 onMounted(() => {
   syncVisibleViewportHeight()
-  loadLetter()
+  if (props.preview && props.previewLetter) {
+    letter.value = {
+      id: 'checkout-preview', order_id: '', recipient: props.previewLetter.recipient || 'your recipient',
+      sender: props.previewLetter.sender || 'someone special', message: props.previewLetter.message || '',
+      petal_messages: props.previewLetter.petal_messages || ['', '', '', '', '', ''],
+      petal_artworks: props.previewLetter.petal_artworks || [],
+      memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: {}, music_url: '',
+      bouquet_image_url: '', published: true, template: 'original', letter_theme: props.previewLetter.letter_theme || 'romance',
+    }
+    loading.value = false
+    notFound.value = false
+    syncVisibleViewportHeight()
+  } else {
+    loadLetter()
+  }
   window.addEventListener('resize', renderAngleFrame)
   window.addEventListener('resize', syncVisibleViewportHeight)
   window.visualViewport?.addEventListener('resize', syncVisibleViewportHeight)
@@ -932,7 +955,9 @@ function skipAnimation() {
 </script>
 
 <template>
+    <ThemedLetterExperience v-if="hasCinematicLetter" :letter="letter!" :preview="props.preview" />
   <div
+    v-else
     class="letter-page"
     @touchstart="onTouchStart"
     @touchend="onTouchEnd"
