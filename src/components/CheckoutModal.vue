@@ -825,6 +825,7 @@ watch(
       </div>
 
     <!-- Full Letter Experience Preview Modal -->
+    <Teleport to="body">
     <div
       v-if="showLetterExperiencePreview"
       class="letter-experience-overlay"
@@ -972,6 +973,7 @@ watch(
         </template>
       </div>
     </div>
+    </Teleport>
 
     <div v-if="cropSource" class="memory-crop-overlay">
       <section class="memory-crop-modal" role="dialog" aria-modal="true" aria-labelledby="memory-crop-title">
