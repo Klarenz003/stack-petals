@@ -28,4 +28,10 @@ describe('letter navigation', () => {
     expect(getNextLetterScreen(3, 10, true)).toBe(4)
     expect(normalizeLetterScreen(4, 10, true)).toBe(4)
   })
+
+  it('bounds navigation for shortened experiences', () => {
+    expect(getNextLetterScreen(3, 5, false)).toBe(4)
+    expect(normalizeLetterScreen(-20, 5, false)).toBe(0)
+    expect(normalizeLetterScreen(99, 5, false)).toBe(4)
+  })
 })
