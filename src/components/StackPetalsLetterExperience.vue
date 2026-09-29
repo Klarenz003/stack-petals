@@ -13,6 +13,7 @@ import { initBlooms } from './cinematic-letter/engine/initBlooms.js'
 import './cinematic-letter/styles/original.css'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import type { LetterRecord } from '@/types/letter'
+import { getPetalMessages } from '@/utils/letterDefaults'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
@@ -42,7 +43,7 @@ Object.assign(GIFT, {
   recipient: props.letter?.recipient || 'you',
   sender: props.letter?.sender || 'someone who cares',
   paragraphs: [messageParts[0] || props.letter?.message || 'A personal note, written especially for you.', messageParts[1] || '', messageParts.slice(2).join('\n\n') || ''],
-  reasons: [...(props.letter?.petal_messages || []), '', '', '', '', '', ''].slice(0, 6),
+  reasons: getPetalMessages(props.letter?.petal_messages),
   photoMemories: memories,
   petalArtworks: props.letter?.petal_artworks || props.letter?.backgrounds?.petal_artworks || [],
   lastNote: closings[theme] || closings.romance,

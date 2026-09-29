@@ -11,6 +11,7 @@ import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import { getNextLetterScreen, normalizeLetterScreen } from '@/utils/letterNavigation'
 import type { LetterRecord } from '@/types/letter'
+import { getPetalMessages } from '@/utils/letterDefaults'
 
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -805,7 +806,7 @@ onMounted(() => {
     letter.value = {
       id: 'checkout-preview', order_id: '', recipient: props.previewLetter.recipient || 'your recipient',
       sender: props.previewLetter.sender || 'someone special', message: props.previewLetter.message || '',
-      petal_messages: props.previewLetter.petal_messages?.length ? props.previewLetter.petal_messages : ['Your laugh', 'Your kindness', 'Being you', 'Your heart', 'Your smile', 'The way you care'],
+      petal_messages: getPetalMessages(props.previewLetter.petal_messages),
       petal_artworks: props.previewLetter.petal_artworks || [],
       memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: {}, music_url: '',
       bouquet_image_url: '', published: true, template: 'original', letter_theme: props.previewLetter.letter_theme || 'romance',
