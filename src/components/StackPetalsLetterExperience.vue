@@ -21,6 +21,7 @@ import { getPetalMessages } from '@/utils/letterDefaults'
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
 let destroyExperience: (() => void) | null = null
+let destroyBlooms: (() => void) | null = null
 const theme = props.letter?.letter_theme || 'romance'
 const capabilities = getLetterCapabilities(props.letter)
 const has360Viewer = capabilities.has360View
@@ -60,12 +61,14 @@ onMounted(async () => {
   await nextTick()
   if (!root.value) return
   destroyExperience = initExperience(root.value)
-  initBlooms(root.value)
+  destroyBlooms = initBlooms(root.value)
 })
 
 onBeforeUnmount(() => {
   destroyExperience?.()
   destroyExperience = null
+  destroyBlooms?.()
+  destroyBlooms = null
   if (!root.value) return
   gsap.killTweensOf(root.value.querySelectorAll('*'))
   ScrollTrigger.getAll().forEach(trigger => {

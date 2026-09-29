@@ -1,5 +1,10 @@
 // Decorative blooming-button and six-note effects from the original HTML.
 export function initBlooms(rootElement) {
+const cleanups = [];
+const listen = (target, event, handler, options) => {
+  target?.addEventListener(event, handler, options);
+  if (target) cleanups.push(() => target.removeEventListener(event, handler, options));
+};
 
 /* The Blooming Atelier: decorative petals, six keepsake notes and the fold-out paper book.
    Pure DOM/CSS, so these additions work even when the GSAP CDN is offline. */
@@ -67,7 +72,7 @@ export function initBlooms(rootElement) {
     const front=card.querySelector('.reason-card__front');
     if(front){const mark=document.createElement('span');mark.className='floral-card-bud';mark.innerHTML=icons.flower;mark.setAttribute('aria-hidden','true');front.appendChild(mark)}
     const bud=document.createElement('span');bud.className='bloom-bud';bud.innerHTML=icons.flower;budRow?.appendChild(bud);
-    card.addEventListener('click',()=>{
+    listen(card, 'click', ()=>{
       const isOpen=card.getAttribute('aria-pressed')==='true';
       if(isOpen){discovered.add(i); progress();burst(card,discovered.size===6?'grand':'medium')}
       else burst(card,'mini');
@@ -75,7 +80,7 @@ export function initBlooms(rootElement) {
   });
   progress();
   // Dynamic occasion choices and gallery dots are covered by delegated bubbling events.
-  scope.addEventListener('click', e=>{
+  listen(scope, 'click', e=>{
     const target=e.target.closest?.('button');if(!target)return;
     if(target.matches('.reason-card'))return;
     if(target.matches('#seal-button,#open-button')){burst(target,'grand',e.detail?{x:e.clientX,y:e.clientY}:undefined);return;}
@@ -92,31 +97,34 @@ export function initBlooms(rootElement) {
       if(surprise.open) window.setTimeout(()=>burst(scope.querySelector('#surprise-heading'),'medium'),100);
     });
     finalBloom.observe(surprise,{attributes:true,attributeFilter:['open']});
+    cleanups.push(() => finalBloom.disconnect());
   }
   // 3D panels now wait for the center paper to finish arriving before unfolding.
   function setBook(open){book?.classList.toggle('is-unfolded',open);bookToggle?.setAttribute('aria-pressed',String(open));book?.querySelectorAll('.flower-leaf').forEach(wing=>{wing.setAttribute('aria-hidden',String(!open)); wing.inert=!open});if(bookToggle)bookToggle.textContent=open?'✿   Fold the flower pages':'✿   Unfold the flower pages'}
   setBook(false);
-  bookToggle?.addEventListener('click',()=>setBook(!book.classList.contains('is-unfolded')));
-  foldAccess?.addEventListener('click',()=>scope.querySelector('#reasons-section')?.scrollIntoView({behavior:reduced.matches?'auto':'smooth'}));
-  scope.addEventListener('stackpetals:letter-enter',()=>{
+  listen(bookToggle, 'click', ()=>setBook(!book.classList.contains('is-unfolded')));
+  listen(foldAccess, 'click', ()=>scope.querySelector('#reasons-section')?.scrollIntoView({behavior:reduced.matches?'auto':'smooth'}));
+  listen(scope, 'stackpetals:letter-enter', ()=>{
     window.setTimeout(()=>setBook(true),reduced.matches?0:180);
   });
   if(!reduced.matches && window.matchMedia('(hover:hover) and (pointer:fine)').matches && book){
     let dragging=false,startX=0,startY=0,rx=0,ry=0;
-    book.addEventListener('pointerdown',e=>{
+    listen(book, 'pointerdown', e=>{
       if(e.target.closest('button,a')||e.button!==0)return;
       dragging=true;startX=e.clientX;startY=e.clientY;book.classList.add('is-dragging');
       book.setPointerCapture?.(e.pointerId);
     });
-    book.addEventListener('pointermove',e=>{
+    listen(book, 'pointermove', e=>{
       if(!dragging)return;
       ry=Math.max(-11,Math.min(11,(e.clientX-startX)*.12));
       rx=Math.max(-8,Math.min(8,(startY-e.clientY)*.10));
       book.style.setProperty('--book-rx',rx+'deg');book.style.setProperty('--book-ry',ry+'deg');
     });
     const stop=()=>{if(!dragging)return;dragging=false;book.classList.remove('is-dragging');book.style.setProperty('--book-rx','0deg');book.style.setProperty('--book-ry','0deg')};
-    book.addEventListener('pointerup',stop);book.addEventListener('pointercancel',stop);book.addEventListener('lostpointercapture',stop);
+    listen(book, 'pointerup', stop);listen(book, 'pointercancel', stop);listen(book, 'lostpointercapture', stop);
   }
 })();
+
+return () => cleanups.splice(0).forEach(cleanup => cleanup());
 
 }
