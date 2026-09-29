@@ -1063,7 +1063,7 @@ export function initExperience(rootElement) {
     }
     $('gift-folder-input').addEventListener('change',e=>importGiftFiles(e.target.files));
     $('gift-files-input').addEventListener('change',e=>importGiftFiles(e.target.files));
-    document.addEventListener('visibilitychange',()=>{
+    listen(document, 'visibilitychange', ()=>{
       if(document.hidden){stopBoxSpin();stopProductSpin();}
       else if($('gift-dialog').open&&!reduceMotion){giftView.opened?startProductSpin():startBoxSpin();}
     });
