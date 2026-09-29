@@ -802,6 +802,11 @@
 /* The experience can also be mounted inside the checkout preview. */
 .checkout-letter-full-preview{width:100%;min-width:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .checkout-letter-full-preview .letter-experience{width:100%;min-width:0;max-width:100%;overflow-x:hidden;}
+.checkout-letter-full-preview .flower-book{
+  --book-rx: 0deg;
+  --book-ry: 0deg;
+  transform: none !important;
+}
 
 /* Use the checkout dialog as the only scroll surface. Nested scrolling made
    the later chapters appear missing after the envelope was opened. */
