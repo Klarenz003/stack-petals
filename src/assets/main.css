@@ -861,7 +861,7 @@ html { scrollbar-width: thin; scrollbar-color: #c48b8d #fdf0ef; }
 .feature span { font-size: 12px; color: #766e6a; }
 
 
-/* â”€â”€ Home Experience â”€â”€ */
+/* Home Experience */
 .home-experience {
   width: min(1180px, 90%);
   margin: 74px auto 0;
