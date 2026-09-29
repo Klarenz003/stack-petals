@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useCartStore } from '@/stores/cart'
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
-import LetterPage from '@/pages/LetterPage.vue'
+
+const LetterPage = defineAsyncComponent(() => import('@/pages/LetterPage.vue'))
 
 const cart = useCartStore()
 const router = useRouter()
