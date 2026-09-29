@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
@@ -17,6 +17,12 @@ const gift = ref<{
   status: string
   letter_id: string | null
 } | null>(null)
+const giftFeatureCopy = computed(() => {
+  if (!gift.value) return 'Your message and petal notes can be added next.'
+  return gift.value.has_photo_upload
+    ? 'Your message, petal notes, and memories can be added next.'
+    : 'Your message and petal notes can be added next.'
+})
 
 onMounted(async () => {
   const token = String(route.params.token || '').trim()
@@ -84,7 +90,7 @@ function continueToLetterBuilder() {
         <button class="gift-claim-button" type="button" :disabled="claiming" @click="continueToLetterBuilder">
           {{ claiming ? 'Opening…' : 'Create the letter' }}
         </button>
-        <small>Your message, petal notes, and memories can be added next.</small>
+        <small>{{ giftFeatureCopy }}</small>
       </template>
       <p v-else class="gift-claim-error">{{ error }}</p>
     </section>
