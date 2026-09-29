@@ -1,4 +1,8 @@
-export const PUBLIC_SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '')
+const runtimeOrigin = typeof globalThis.location?.origin === 'string'
+  ? globalThis.location.origin
+  : 'http://localhost:5173'
+
+export const PUBLIC_SITE_URL = (import.meta.env.VITE_PUBLIC_SITE_URL || runtimeOrigin).replace(/\/$/, '')
 
 export function siteUrl(path = ''): string {
   return `${PUBLIC_SITE_URL}/${path.replace(/^\//, '')}`

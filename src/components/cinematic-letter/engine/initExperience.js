@@ -3,7 +3,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import logoUrl from '../assets/stack-petals-logo.png';
 import { GIFT } from '../config/gift.js';
 import { getVisibleLetterChapters, formatChapterIndicator } from '../../../utils/letterChapters';
-const publicSiteUrl = () => (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
+import { PUBLIC_SITE_URL } from '../../../utils/siteConfig';
+const publicSiteUrl = () => PUBLIC_SITE_URL;
 
 /**
  * Compatibility animation controller: the original cinematic GSAP timelines and
