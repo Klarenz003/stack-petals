@@ -64,6 +64,7 @@ export const useCartStore = defineStore('cart', () => {
     mainMessage: '',
     songSuggestion: '',
     petalMessages: ['', '', '', '', '', ''],
+    petalLabels: ['', '', '', '', '', ''],
     petalSvgSelections: [0, 1, 2, 3, 4, 5],
     memories: [] as string[],
   })
@@ -733,7 +734,10 @@ export const useCartStore = defineStore('cart', () => {
         message:        letterData.value.mainMessage,
         song_suggestion: letterData.value.songSuggestion.trim(),
         petal_messages: letterData.value.petalMessages,
-        backgrounds: { petal_artworks: letterData.value.petalSvgSelections },
+        backgrounds: {
+          petal_artworks: letterData.value.petalSvgSelections,
+          petal_labels: letterData.value.petalLabels,
+        },
         memories:       letterData.value.memories,
         angle_photos:   [],
         has_360_view:   cartItems.value.some(item => Boolean(item.has360Viewer)),
@@ -847,6 +851,7 @@ export const useCartStore = defineStore('cart', () => {
       mainMessage: '',
       songSuggestion: '',
       petalMessages: ['', '', '', '', '', ''],
+      petalLabels: ['', '', '', '', '', ''],
       petalSvgSelections: [0, 1, 2, 3, 4, 5],
       memories: [],
     }

@@ -201,9 +201,10 @@ export function initExperience(rootElement) {
       const cards=[...rootElement.querySelectorAll('.reason-card')];
       cards.forEach((card,i)=>{
         const [label,message]=profile.notes[i];
-        card.querySelectorAll('.reason-card__label').forEach(el=>el.textContent=label);
+        const customLabel = Array.isArray(GIFT.petalLabels) ? String(GIFT.petalLabels[i] || '').trim() : '';
+        card.querySelectorAll('.reason-card__label').forEach(el=>el.textContent=customLabel || label);
         $(`reason-${i+1}`).textContent=message;
-        card.setAttribute('aria-pressed','false');card.setAttribute('aria-label',`Reveal note ${i+1}: ${label}`);
+        card.setAttribute('aria-pressed','false');card.setAttribute('aria-label',`Reveal note ${i+1}: ${customLabel || label}`);
       });
       // Customer-selected note artwork is used by every cinematic theme.
       // The original theme intentionally keeps its historical SVGs.

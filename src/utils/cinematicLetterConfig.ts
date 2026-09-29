@@ -41,6 +41,11 @@ export function configureCinematicLetter(
       messageParts.slice(2).join('\n\n') || '',
     ],
     reasons: getPetalMessages(letter.petal_messages),
+    petalLabels: Array.isArray(letter.petal_labels)
+      ? letter.petal_labels.map(value => String(value || '').trim()).slice(0, 6)
+      : (Array.isArray((letter.backgrounds as any)?.petal_labels)
+        ? (letter.backgrounds as any).petal_labels.map((value: unknown) => String(value || '').trim()).slice(0, 6)
+        : []),
     photoMemories: memories,
     petalArtworks: letter.petal_artworks || letter.backgrounds?.petal_artworks || [],
     lastNote: closings[theme] || closings.romance,

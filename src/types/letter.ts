@@ -5,6 +5,7 @@ export interface LetterRecord {
   sender: string
   message: string
   petal_messages: string[]
+  petal_labels?: string[]
   petal_artworks?: number[]
   memories: string[]
   angle_photos: string[]

@@ -5000,6 +5000,35 @@ input, textarea, [contenteditable="true"] {
   color: #704351;
   outline: none;
 }
+.petal-editor-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.petal-title-input {
+  width: min(100%, 300px);
+  border: 1px solid #e8c4be;
+  border-radius: 6px;
+  padding: 6px 9px;
+  color: #543f44;
+  background: #fffaf9;
+  font: inherit;
+}
+.petal-title-edit {
+  border: 0;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #f8e5e4;
+  color: #9b6573;
+  font: 600 10px/1.2 Arial, sans-serif;
+  cursor: pointer;
+}
+.petal-title-edit:hover,
+.petal-title-edit:focus-visible {
+  background: #efd2d3;
+  color: #704351;
+  outline: none;
+}
 .checkout-modal .petals-grid .checkout-petal-field,
 .checkout-modal .petals-grid .petal-input-wrap {
   position: relative !important;

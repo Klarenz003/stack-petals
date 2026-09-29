@@ -19,12 +19,17 @@ const letterPreviewPetals = ref([false, false, false, false, false, false])
 const activeLetterPreviewPetal = ref<number | null>(null)
 const activePetalEditor = ref<number | null>(null)
 const draftPetalMessage = ref('')
+const draftPetalTitle = ref('')
+const isEditingPetalTitle = ref(false)
 const draftPetalSvg = ref(0)
 const petalSvgOptions = ['Sun', 'Flower', 'Sparkles', 'Heart', 'Smile', 'Care']
 // Older recovered checkout sessions predate petal artwork selections.
 // Normalize them before any editor action so Save cannot fail on undefined.
 if (!Array.isArray(cart.letterData.petalSvgSelections)) {
   cart.letterData.petalSvgSelections = [0, 1, 2, 3, 4, 5]
+}
+if (!Array.isArray(cart.letterData.petalLabels)) {
+  cart.letterData.petalLabels = ['', '', '', '', '', '']
 }
 const petalSvgSelections = computed(() => cart.letterData.petalSvgSelections)
 const showPetalDiscardPrompt = ref(false)
@@ -44,7 +49,7 @@ const showPickupAddress = ref(false)
 const MAIN_LETTER_WORD_LIMIT = 300
 const PETAL_MESSAGE_CHAR_LIMIT = 60
 const PICKUP_ADDRESS = 'Evasco Family, Santa Ana, Taytay Rizal'
-const petalPrompts = [
+const defaultPetalPrompts = [
   { title: 'Their smile', placeholder: 'What makes their smile special?' },
   { title: 'Their kindness', placeholder: 'A small kindness you always remember...' },
   { title: 'Your favorite memory', placeholder: 'A short memory you share...' },
@@ -52,6 +57,10 @@ const petalPrompts = [
   { title: 'How they make you feel', placeholder: 'The feeling they bring into your life...' },
   { title: 'A wish for them', placeholder: 'A short wish or reminder for them...' },
 ]
+const petalPrompts = computed(() => defaultPetalPrompts.map((prompt, index) => ({
+  ...prompt,
+  title: cart.letterData.petalLabels[index]?.trim() || prompt.title,
+})))
 
 const checkoutPreviewLetter = computed(() => ({
   letter_theme: cart.letterData.theme,
@@ -59,6 +68,7 @@ const checkoutPreviewLetter = computed(() => ({
   sender: cart.letterData.fromName?.trim() || cart.customer.name || 'someone special',
   message: cart.letterData.mainMessage || 'A personal letter is waiting to be revealed.',
   petal_messages: cart.letterData.petalMessages,
+  petal_labels: cart.letterData.petalLabels,
   memories: cart.letterData.memories,
   has_360_view: cart.cartItems.some(item => Boolean(item.has360Viewer)),
   petal_artworks: cart.letterData.petalSvgSelections,
@@ -448,18 +458,31 @@ function toggleLetterPreviewPetal(index: number) {
 function openPetalEditor(index: number) {
   activePetalEditor.value = index
   draftPetalMessage.value = cart.letterData.petalMessages[index] || ''
+  draftPetalTitle.value = petalPrompts.value[index].title
+  isEditingPetalTitle.value = false
   draftPetalSvg.value = petalSvgSelections.value[index] ?? index
   showPetalDiscardPrompt.value = false
 }
 function savePetalMessage() {
   if (activePetalEditor.value === null) return
   cart.letterData.petalMessages[activePetalEditor.value] = draftPetalMessage.value.slice(0, PETAL_MESSAGE_CHAR_LIMIT)
+  const defaultTitle = defaultPetalPrompts[activePetalEditor.value].title
+  cart.letterData.petalLabels[activePetalEditor.value] = draftPetalTitle.value.trim() === defaultTitle
+    ? ''
+    : draftPetalTitle.value.trim().slice(0, 36)
   petalSvgSelections.value[activePetalEditor.value] = draftPetalSvg.value
   activePetalEditor.value = null
+  isEditingPetalTitle.value = false
   showPetalDiscardPrompt.value = false
 }
 function requestPetalDiscard() {
-  if (activePetalEditor.value === null || draftPetalMessage.value === cart.letterData.petalMessages[activePetalEditor.value]) {
+  if (activePetalEditor.value === null) {
+    activePetalEditor.value = null
+    showPetalDiscardPrompt.value = false
+    return
+  }
+  const currentTitle = petalPrompts.value[activePetalEditor.value].title
+  if (draftPetalMessage.value === cart.letterData.petalMessages[activePetalEditor.value] && draftPetalTitle.value === currentTitle) {
     activePetalEditor.value = null
     showPetalDiscardPrompt.value = false
     return
@@ -1025,7 +1048,27 @@ watch(
       <section class="petal-editor-modal" role="dialog" aria-modal="true" aria-labelledby="petal-editor-title">
         <button class="petal-editor-close" type="button" aria-label="Close petal editor" @click="requestPetalDiscard">&times;</button>
         <span class="petals-section-title">Petal {{ activePetalEditor + 1 }}</span>
-        <h3 id="petal-editor-title">{{ petalPrompts[activePetalEditor].title }}</h3>
+        <h3 id="petal-editor-title" class="petal-editor-title-row">
+          <template v-if="isEditingPetalTitle">
+            <input
+              v-model="draftPetalTitle"
+              class="petal-title-input"
+              maxlength="36"
+              aria-label="Petal title"
+              @keydown.enter.prevent="isEditingPetalTitle = false"
+            />
+          </template>
+          <template v-else>
+            {{ petalPrompts[activePetalEditor].title }}
+            <button
+              type="button"
+              class="petal-title-edit"
+              @click="isEditingPetalTitle = true"
+            >
+              Edit
+            </button>
+          </template>
+        </h3>
         <p class="petal-editor-help">Write one short description about this person.</p>
         <div class="petal-svg-picker">
           <span class="petal-svg-picker__label">Choose the note artwork</span>
