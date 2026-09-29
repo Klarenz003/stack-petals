@@ -14,6 +14,7 @@ describe('letter navigation', () => {
   })
 
   it('removes only the memories index for restricted letters', () => {
+    expect(getVisibleLetterScreenIndices(10, false)).toEqual([0, 1, 2, 3, 5, 6, 7, 8, 9])
     expect(getVisibleLetterScreenIndices(10, false)).not.toContain(LETTER_MEMORIES_SCREEN_INDEX)
     expect(getVisibleLetterScreenIndices(10, false)).toHaveLength(9)
     expect(getVisibleLetterScreenIndices(10, true)).toHaveLength(10)
