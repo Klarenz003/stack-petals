@@ -11,6 +11,12 @@ import { GIFT } from '../config/gift.js';
 export function initExperience(rootElement) {
   window.gsap = gsap;
   window.ScrollTrigger = ScrollTrigger;
+  const lastNoteButton = rootElement?.querySelector?.('#last-button');
+  if (lastNoteButton) {
+    lastNoteButton.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) node.textContent = node.textContent.replace(/\?/g, '↗');
+    });
+  }
   gsap.registerPlugin(ScrollTrigger);
   // The checkout preview owns the scroll position. Using the outer modal here
   // leaves ScrollTrigger listening to a different element than the one the
@@ -215,6 +221,17 @@ export function initExperience(rootElement) {
       setText('.gift-face--bottom span',occasion==='sympathy'?'with care':occasion==='birthday'?'for today':'made with care');
       setText('.gift-dialog__panel > .eyebrow',profile.label.toUpperCase());
       setText('.gift-dialog__panel > p',profile.giftCaption);
+      const donationUrl = import.meta.env.VITE_DONATION_URL || 'https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals';
+      document.querySelectorAll('[data-donation-link]').forEach(link => {
+        const amount = link.getAttribute('data-donation-amount');
+        if (!amount) {
+          link.setAttribute('href', donationUrl);
+          return;
+        }
+        const target = new URL(donationUrl, window.location.origin);
+        target.searchParams.set('amount', amount);
+        link.setAttribute('href', target.toString());
+      });
       if(window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         gsap.fromTo('.occasion-art',{opacity:.2,scale:.85,rotation:-10},{opacity:1,scale:1,rotation:0,duration:.7,ease:'back.out(1.4)',clearProps:'all'});
       }
@@ -293,12 +310,23 @@ export function initExperience(rootElement) {
     setupLuxeMotion();
 
     function setUpScroll() {
-      const chapters = [
+      const chapterDefinitions = [
         { id:'letter-section', label:'01 / 04 — THE LETTER' },
         { id:'reasons-section', label:'02 / 04 — LITTLE THINGS' },
         { id:'memories-section', label:'03 / 04 — OUR MEMORIES' },
         { id:'final-section', label:'04 / 04 — ONE LAST THING' }
       ];
+      const chapterTitles = { 'letter-section':'THE LETTER', 'reasons-section':'LITTLE THINGS', 'memories-section':'OUR MEMORIES', 'final-section':'ONE LAST THING' };
+      const chapters = chapterDefinitions
+        .filter(chapter => GIFT.hasPhotoUpload !== false || chapter.id !== 'memories-section')
+        .map((chapter, index, visibleChapters) => ({
+          ...chapter,
+          label: `${String(index + 1).padStart(2, '0')} / ${String(visibleChapters.length).padStart(2, '0')} — ${chapterTitles[chapter.id] || chapter.id}`,
+        }));
+      const finalChapterTag = rootElement.querySelector('#final-section .chapter-tag');
+      if (finalChapterTag) finalChapterTag.textContent = `CHAPTER ${chapters.length}  /  ONE LAST THING`;
+      const memoriesChapterTag = rootElement.querySelector('#memories-section .chapter-tag');
+      if (memoriesChapterTag && GIFT.hasPhotoUpload === false) memoriesChapterTag.closest('.chapter')?.setAttribute('hidden', 'true');
       const getViewportHeight = () => scrollRoot?.clientHeight || window.innerHeight;
       const getScrollTop = () => scrollRoot?.scrollTop || window.scrollY;
       const onScroll = () => {
@@ -619,6 +647,11 @@ export function initExperience(rootElement) {
 
     function setupPhotoMemories() {
       const memories = Array.isArray(GIFT.photoMemories) ? GIFT.photoMemories : [];
+      const memoriesSection = $('memories-section');
+      if (memoriesSection && GIFT.hasPhotoUpload === false) {
+        memoriesSection.hidden = true;
+        memoriesSection.style.display = 'none';
+      }
       const fallbackMemories = [
         { src:'', caption:'Your first favorite memory goes here.' },
         { src:'', caption:'Add another photo you never want to forget.' },
@@ -861,14 +894,17 @@ export function initExperience(rootElement) {
       giftStage.classList.add('is-unboxed');
       giftCube.classList.add('is-unboxed');
       $('gift-unseal').disabled=true;
-      $('gift-stage-instructions').hidden=false;
-      $('gift-frame-counter').hidden=Boolean(GIFT.previewMode);
-      $('gift-scrubber').hidden=Boolean(GIFT.previewMode);
+      const canRotateProduct = Boolean(GIFT.has360Viewer) && !GIFT.previewMode;
+      $('gift-stage-instructions').hidden=!canRotateProduct;
+      $('gift-frame-counter').hidden=!canRotateProduct;
+      $('gift-scrubber').hidden=!canRotateProduct;
       $('gift-close-box').hidden=false;
       boxHint.hidden=true;
-      giftStage.setAttribute('aria-label','360 degree product viewer. Drag horizontally, use arrow keys, or the frame slider to rotate the product.');
-      $('gift-spin-toggle').disabled=Boolean(GIFT.previewMode);
-      $('gift-reset-view').disabled=Boolean(GIFT.previewMode);
+      giftStage.setAttribute('aria-label',canRotateProduct
+        ? '360 degree product viewer. Drag horizontally, use arrow keys, or the frame slider to rotate the product.'
+        : 'Gift box reveal. This bouquet does not include an interactive 360 degree viewer.');
+      $('gift-spin-toggle').disabled=!canRotateProduct;
+      $('gift-reset-view').disabled=!canRotateProduct;
       $('gift-spin-toggle').textContent='↻   Rotate product';
       $('gift-spin-toggle').setAttribute('aria-pressed','false');
       $('gift-reset-view').textContent='↻   Reset product';
@@ -883,7 +919,7 @@ export function initExperience(rootElement) {
       giftProductRiseTimer=setTimeout(()=>{
         if($('gift-dialog').open && giftView.opened){giftStage.classList.add('is-product-rising');}
       },reduceMotion?30:1180);
-      if(!GIFT.previewMode&&!reduceMotion)setTimeout(()=>{if($('gift-dialog').open&&giftView.opened)startProductSpin();},5600);
+      if(canRotateProduct&&!reduceMotion)setTimeout(()=>{if($('gift-dialog').open&&giftView.opened)startProductSpin();},5600);
     }
     function rewrapGift(){
       if(!giftView.opened)return;
@@ -946,7 +982,12 @@ export function initExperience(rootElement) {
       if($('gift-dialog').open)$('gift-dialog').close();
     }
     const gift360Button = $('gift360-button');
-    if (GIFT.previewMode) {
+    if (!GIFT.has360Viewer) {
+      gift360Button.disabled = true;
+      gift360Button.hidden = true;
+      gift360Button.setAttribute('aria-hidden','true');
+      setText('.gift-card__caption','A keepsake gift box is included with this letter.');
+    } else if (GIFT.previewMode) {
       gift360Button.disabled = true;
       gift360Button.setAttribute('aria-disabled','true');
       gift360Button.title = 'The 360° viewer becomes available after checkout.';

@@ -97,6 +97,15 @@
 <span aria-live="polite" class="share-feedback" id="shop-share-feedback" role="status"></span>
 </div>
 <button class="replay-button" id="replay-button" type="button">EXPERIENCE IT ALL AGAIN &olarr;</button>
+<details class="support-garden">
+<summary>Support more keepsakes <span aria-hidden="true">&nearrow;</span></summary>
+<p>If this made you smile, you can help us create the next one.</p>
+<div class="support-garden__choices">
+<a data-donation-amount="50" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=50" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
+<a data-donation-amount="100" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=100" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
+<a data-donation-amount="200" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=200" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
+</div>
+</details>
 </div>
 </dialog>
 </template>

@@ -11,6 +11,7 @@ const ContactPage  = () => import('@/pages/ContactPage.vue')
 const TrackOrderPage = () => import('@/pages/TrackOrderPage.vue')
 const ReceiptPage = () => import('@/pages/ReceiptPage.vue')
 const LetterExperienceTestPage = () => import('@/pages/LetterExperienceTestPage.vue')
+const GiftClaimPage = () => import('@/pages/GiftClaimPage.vue')
 
 // Used in App.vue to determine slide direction
 export const routeOrder: Record<string, number> = {
@@ -40,6 +41,8 @@ const router = createRouter({
     { path: '/contact',  name: 'contact',   component: ContactPage  },
     { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/letter-test', name: 'letter-test', component: LetterExperienceTestPage, meta: { hideNav: true } },
+    { path: '/gift/claim/:token', name: 'gift-claim', component: GiftClaimPage, meta: { hideNav: true } },
+    { path: '/gift/create/:token', name: 'gift-create', component: () => import('@/pages/GiftLetterCreatePage.vue'), meta: { hideNav: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {

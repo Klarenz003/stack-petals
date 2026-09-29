@@ -19,6 +19,8 @@ export interface Product {
   preOrderAllowed?: boolean
   prepDays?: number
   deliveryRestrictions?: string
+  /** Whether this product includes the interactive 360-degree viewer. */
+  has360Viewer?: boolean
 }
 
 export interface CartItem extends Product {
@@ -119,4 +121,6 @@ export interface CartItem {
   deliveryRestrictions?: string
   quantity: number
   preOrder?: boolean
+  /** Whether this purchased item includes the interactive 360-degree viewer. */
+  has360Viewer?: boolean
 }

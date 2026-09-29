@@ -3,6 +3,8 @@
 export const GIFT = {
       occasion: 'romance', // romance, sympathy, birthday, family, friendship, other
       showOccasionPicker: true, // Set false before sending a single-occasion letter.
+      has360Viewer: false,
+      hasPhotoUpload: true,
       otherOccasionName: 'Just Because',
       // Optional per-occasion overrides: e.g. sympathy: { paragraphs: ['...', '...', '...'], lastNote: '...' }
       custom: {},

@@ -27,6 +27,7 @@ interface Letter {
   published: boolean
   template: string
   letter_theme?: string | null
+  has_360_view?: boolean | null
 }
 
 // ── State ──────────────────────────────────────────────────────────
@@ -48,6 +49,9 @@ const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
+const has360Viewer = computed(() => Boolean(
+  letter.value?.has_360_view || letter.value?.angle_photos?.length,
+))
 const hasViewed360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
@@ -500,7 +504,9 @@ function stopSoftMusic() {
 function nextScreen() {
   if (currentScreen.value >= totalScreens - 1) return
   markLetterEngaged()
-  const destination = currentScreen.value + 1
+  const destination = currentScreen.value === 3 && !letter.value?.memories?.length
+    ? 5
+    : currentScreen.value + 1
   slideDirection.value = forwardPageTransitions[destination] || 'slide-forward'
   currentScreen.value = destination
 }
@@ -512,6 +518,7 @@ function prevScreen() {
 }
 
 function goToScreen(n: number) {
+  if (n === 4 && !letter.value?.memories?.length) n = 5
   markLetterEngaged()
   if (currentScreen.value === totalScreens - 1 && n < currentScreen.value) {
     void trackLetterEvent('letter_replayed')
@@ -743,6 +750,7 @@ function stepAngle(direction: number) {
 }
 
 function open360Viewer() {
+  if (!has360Viewer.value) return
   if (!angleAssetsReady.value) return
   markLetterEngaged()
   void trackLetterEvent('bouquet_360_viewed')
@@ -814,10 +822,11 @@ onMounted(() => {
     letter.value = {
       id: 'checkout-preview', order_id: '', recipient: props.previewLetter.recipient || 'your recipient',
       sender: props.previewLetter.sender || 'someone special', message: props.previewLetter.message || '',
-      petal_messages: props.previewLetter.petal_messages || ['', '', '', '', '', ''],
+      petal_messages: props.previewLetter.petal_messages?.length ? props.previewLetter.petal_messages : ['Your laugh', 'Your kindness', 'Being you', 'Your heart', 'Your smile', 'The way you care'],
       petal_artworks: props.previewLetter.petal_artworks || [],
       memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: {}, music_url: '',
       bouquet_image_url: '', published: true, template: 'original', letter_theme: props.previewLetter.letter_theme || 'romance',
+      has_360_view: Boolean(props.previewLetter.has_360_view),
     }
     loading.value = false
     notFound.value = false
@@ -1219,7 +1228,7 @@ function skipAnimation() {
 
       <!-- ── SCREEN 5 — Memories ────────────────────────────────── -->
       <div
-        v-if="currentScreen === 4"
+        v-if="currentScreen === 4 && letter.memories?.length"
         class="letter-screen memories-screen"
         :style="{ backgroundColor: screenBg('screen5') }"
       >
@@ -1316,7 +1325,7 @@ function skipAnimation() {
               <span>QR keepsake</span>
               <span>Made with care</span>
             </div>
-            <button v-if="letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
+            <button v-if="has360Viewer && letter.angle_photos && letter.angle_photos.length > 0" class="btn-360" :class="{ preparing: !angleAssetsReady }" :disabled="!angleAssetsReady" @click.stop="open360Viewer">
               <span class="rotate-mark">↻</span>
               <span v-if="angleAssetsReady">View 360</span>
               <span v-else>Preparing 360° View</span>
@@ -1326,7 +1335,7 @@ function skipAnimation() {
 
           <Transition name="page6-unlock">
             <LetterMagicButton
-              v-if="hasViewed360 || !letter.angle_photos || letter.angle_photos.length === 0"
+              v-if="hasViewed360 || !has360Viewer || !letter.angle_photos || letter.angle_photos.length === 0"
               class="letter-magic-action page6-magic-action"
               label="Continue"
               @activate="nextScreen"
@@ -1340,7 +1349,7 @@ function skipAnimation() {
 
       <!-- ── 360° Full Screen Viewer ────────────────────────────────────── -->
       <Teleport to="body">
-        <div v-if="show360 && letter.angle_photos && letter.angle_photos.length > 0" class="viewer-fullscreen">
+            <div v-if="show360 && has360Viewer && letter.angle_photos && letter.angle_photos.length > 0" class="viewer-fullscreen">
           <button class="viewer-close" @click="show360 = false">✕</button>
 
           <div class="viewer-header">
@@ -1499,7 +1508,7 @@ function skipAnimation() {
               <i aria-hidden="true">&#8594;</i>
             </button>
 
-            <button class="keepsake-tile keepsake-memory" :disabled="!letter.memories?.length" @click="goToScreen(4)">
+            <button v-if="letter.memories?.length" class="keepsake-tile keepsake-memory" @click="goToScreen(4)">
               <span class="keepsake-number" aria-hidden="true">02</span>
               <img
                 :src="letter.memories?.length ? normalizeImageSrc(letter.memories[0]) : bouquetImage"
@@ -1601,6 +1610,15 @@ function skipAnimation() {
               Keepsake
               <span aria-hidden="true"></span>
             </button>
+            <details class="end-support-garden">
+              <summary>Support more keepsakes <span aria-hidden="true">&#8599;</span></summary>
+              <p>If this made you smile, you can help us create the next one.</p>
+              <div>
+                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=50" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
+                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=100" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
+                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=200" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
+              </div>
+            </details>
           </div>
         </div>
         <div class="screen-dots">

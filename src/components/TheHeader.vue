@@ -64,7 +64,8 @@ onBeforeUnmount(() => {
 <template>
   <header class="site-header">
     <div class="logo" @click="router.push('/')">
-      <img src="/images/logo.png" alt="Stack Petals" />
+      <img src="/images/stack-petals-floral-logo.png" alt="Stack Petals floral logo" />
+      <span class="logo-wordmark">Stack Petals</span>
     </div>
 
     <label class="market-switcher">

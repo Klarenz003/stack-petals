@@ -15,6 +15,10 @@ import './cinematic-letter/styles/original.css'
 const props = defineProps<{ letter: any; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
 const theme = props.letter?.letter_theme || props.letter?.theme || 'romance'
+const has360Viewer = Boolean(
+  props.letter?.has_360_view ?? props.letter?.has360Viewer ?? props.letter?.angle_photos?.length,
+)
+const hasPhotoUpload = Boolean(props.letter?.has_photo_upload ?? props.letter?.memories?.length)
 const messageParts = String(props.letter?.message || '').split(/\n\s*\n/).filter(Boolean)
 const memories = (props.letter?.memories || []).map((item: any, index: number) => {
   const value = typeof item === 'string' ? item : item?.src || item?.url || item?.image
@@ -32,6 +36,8 @@ Object.assign(GIFT, {
   occasion: theme,
   showOccasionPicker: Boolean(props.showPicker) && !props.preview,
   previewMode: Boolean(props.preview),
+  has360Viewer,
+  hasPhotoUpload,
   recipient: props.letter?.recipient || 'you',
   sender: props.letter?.sender || 'someone who cares',
   paragraphs: [messageParts[0] || props.letter?.message || 'A personal note, written especially for you.', messageParts[1] || '', messageParts.slice(2).join('\n\n') || ''],
@@ -39,7 +45,7 @@ Object.assign(GIFT, {
   photoMemories: memories,
   petalArtworks: props.letter?.petal_artworks || props.letter?.backgrounds?.petal_artworks || [],
   lastNote: closings[theme] || closings.romance,
-  product360: { mode: 'demo', frameCount: 240 },
+  product360: has360Viewer ? { mode: 'demo', frameCount: 240 } : { mode: 'none', frameCount: 0 },
 })
 
 // Vue owns all of the page's elements; cinematic and 3D effects initialize only

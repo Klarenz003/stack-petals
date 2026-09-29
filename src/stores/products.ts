@@ -23,7 +23,14 @@ export const useProductsStore = defineStore('products', () => {
       return
     }
 
-    allProducts.value = (data || []).map((p: any) => {
+    const storefrontRows = data || []
+    const productIds = storefrontRows.map((p: any) => p.product_id).filter(Boolean)
+    const { data: capabilityRows } = productIds.length
+      ? await supabase.from('products').select('id, has_360_view').in('id', productIds)
+      : { data: [] as any[] }
+    const capabilities = new Map((capabilityRows || []).map((row: any) => [row.id, Boolean(row.has_360_view)]))
+
+    allProducts.value = storefrontRows.map((p: any) => {
       const priceAmount = Number(p.price || 0)
       const salePriceAmount = p.sale_price === null || p.sale_price === undefined
         ? null
@@ -49,6 +56,9 @@ export const useProductsStore = defineStore('products', () => {
         preOrderAllowed: p.pre_order_allowed ?? true,
         prepDays: p.prep_days ?? 5,
         deliveryRestrictions: p.delivery_restrictions ?? '',
+        // The RPC can expose this capability when configured in the admin
+        // catalog. Keep false as the safe default for ordinary bouquets.
+        has360Viewer: capabilities.get(p.product_id) ?? Boolean(p.has_360_view ?? p.has360Viewer ?? p.supports_360),
       }
     })
     loading.value = false

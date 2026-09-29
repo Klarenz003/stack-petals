@@ -184,11 +184,13 @@ html { scrollbar-width: thin; scrollbar-color: #c48b8d #fdf0ef; }
 }
 
 .site-header .logo img {
-  width: 100%;
-  max-width: 205px;
+  width: 74px;
+  max-width: 74px;
   height: auto;
   cursor: pointer;
 }
+.site-header .logo { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; flex: 0 0 auto; }
+.site-header .logo-wordmark { color: #1f2523; font: 600 clamp(1.2rem, 2vw, 1.75rem)/1 'Cormorant Garamond', Georgia, serif; white-space: nowrap; }
 
 .site-header > nav {
   display: flex;
@@ -9077,6 +9079,29 @@ input, textarea, [contenteditable="true"] {
 .home-page > .hero::after {
   content: none !important;
 }
+
+.end-support-link {
+  color: #8a5c68;
+  font: 600 11px/1.2 'DM Sans', sans-serif;
+  letter-spacing: .08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.end-support-link:hover,
+.end-support-link:focus-visible {
+  color: #a15f73;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.end-support-garden { margin-top: 10px; color: #8c777a; font-size: 12px; }
+.end-support-garden summary { color: #8a5c68; cursor: pointer; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.end-support-garden summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.end-support-garden p { margin: 8px 0; font-style: italic; }
+.end-support-garden > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
+.end-support-garden a { color: #8a5c68; font-size: 10px; text-decoration: none; }
+.end-support-garden a:hover, .end-support-garden a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 
 .home-page > .hero .hero-left h1 {
   font-family: 'Cormorant Garamond', serif;

@@ -686,6 +686,7 @@ export const useCartStore = defineStore('cart', () => {
         preOrder: !!i.preOrder,
         prepDays: i.prepDays ?? 5,
         deliveryRestrictions: i.deliveryRestrictions || '',
+        has360Viewer: Boolean(i.has360Viewer),
         marketProductId: i.id,
         productId: i.baseProductId,
         marketCode: market.code,
@@ -715,8 +716,16 @@ export const useCartStore = defineStore('cart', () => {
 
     // 4. Save letter draft if included
     if (letterData.value.include) {
-      const { error: letterError } = await supabase.from('letters').insert({
+      let giftQrId: string | null = null
+      try {
+        const claim = JSON.parse(localStorage.getItem('stack-petals:gift-claim') || 'null')
+        giftQrId = typeof claim?.qrId === 'string' ? claim.qrId : null
+      } catch {
+        giftQrId = null
+      }
+      const { data: insertedLetter, error: letterError } = await supabase.from('letters').insert({
         order_id:       insertedOrder.id,
+        gift_qr_id:     giftQrId,
         market_code:    market.code,
         recipient:      letterData.value.recipientName,
         letter_theme:   letterData.value.theme || 'romance',
@@ -727,11 +736,21 @@ export const useCartStore = defineStore('cart', () => {
         backgrounds: { petal_artworks: letterData.value.petalSvgSelections },
         memories:       letterData.value.memories,
         angle_photos:   [],
+        has_360_view:   cartItems.value.some(item => Boolean(item.has360Viewer)),
         published:      false,
         template:       'love',
-      })
+      }).select('id').single()
 
       if (letterError) console.warn('Letter draft was not created:', letterError)
+      else {
+        try {
+          const claim = JSON.parse(localStorage.getItem('stack-petals:gift-claim') || 'null')
+          if (claim?.token && insertedLetter?.id) {
+            await supabase.rpc('publish_gift_qr', { p_public_token: claim.token, p_letter_id: insertedLetter.id })
+          }
+        } catch { /* QR publishing is best effort; the order remains valid. */ }
+        localStorage.removeItem('stack-petals:gift-claim')
+      }
     }
 
     // 5. Send email notifications if the edge function is available.

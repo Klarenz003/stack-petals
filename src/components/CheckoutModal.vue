@@ -58,6 +58,7 @@ const checkoutPreviewLetter = computed(() => ({
   message: cart.letterData.mainMessage || 'A personal letter is waiting to be revealed.',
   petal_messages: cart.letterData.petalMessages,
   memories: cart.letterData.memories,
+  has_360_view: cart.cartItems.some(item => Boolean(item.has360Viewer)),
   petal_artworks: cart.letterData.petalSvgSelections,
 }))
 
