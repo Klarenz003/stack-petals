@@ -210,7 +210,7 @@
 <button class="gift-360-button" id="gift360-button" type="button"><span>&#10227;</span> Unwrap &amp; explore 360&deg;</button>
 </div>
 </div>
-<button class="last-button" id="last-button" type="button">UNFOLD THE LAST NOTE &nbsp; ?<svg aria-hidden="true" class="petal-button__icon" focusable="false" viewBox="0 0 44 44"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M22 19c-7-15 0-19 5-11 4-13 14-8 9 4 12-2 13 10 1 13 6 11-5 17-13 8-8 10-19 3-13-7-13-4-11-14 1-13-1-14 9-18 14-5Z" opacity=".7"></path><path d="M22 24c-6-3-7-13-5-17M23 25c9-2 13-8 13-11M22 25c2 7 8 10 13 9M22 25c-7 2-11 7-10 11M22 25c-3-8-10-10-14-11"></path><circle cx="22" cy="24" fill="currentColor" r="4" stroke="none"></circle></g></svg></button>
+<button class="last-button" id="last-button" type="button">UNFOLD THE LAST NOTE &nbsp; ↗<svg aria-hidden="true" class="petal-button__icon" focusable="false" viewBox="0 0 44 44"><g fill="none" stroke="currentColor" stroke-width="1.4"><path d="M22 19c-7-15 0-19 5-11 4-13 14-8 9 4 12-2 13 10 1 13 6 11-5 17-13 8-8 10-19 3-13-7-13-4-11-14 1-13-1-14 9-18 14-5Z" opacity=".7"></path><path d="M22 24c-6-3-7-13-5-17M23 25c9-2 13-8 13-11M22 25c2 7 8 10 13 9M22 25c-7 2-11 7-10 11M22 25c-3-8-10-10-14-11"></path><circle cx="22" cy="24" fill="currentColor" r="4" stroke="none"></circle></g></svg></button>
 <div aria-label="Stack Petals signature" class="brand-signoff reveal">
 <span class="brand-signoff__overline">A keepsake by</span>
 <img alt="Stack Petals logo" class="brand-logo brand-logo--signature" data-stack-petals-logo=""/>
