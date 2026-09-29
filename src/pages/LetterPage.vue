@@ -741,8 +741,13 @@ onMounted(() => {
       id: 'checkout-preview', order_id: '', recipient: props.previewLetter.recipient || 'your recipient',
       sender: props.previewLetter.sender || 'someone special', message: props.previewLetter.message || '',
       petal_messages: getPetalMessages(props.previewLetter.petal_messages),
+      petal_labels: Array.isArray(props.previewLetter.petal_labels)
+        ? props.previewLetter.petal_labels
+        : (Array.isArray((props.previewLetter.backgrounds as any)?.petal_labels)
+          ? (props.previewLetter.backgrounds as any).petal_labels
+          : []),
       petal_artworks: props.previewLetter.petal_artworks || [],
-      memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: {}, music_url: '',
+      memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: props.previewLetter.backgrounds || {}, music_url: '',
       bouquet_image_url: '', published: true, template: 'original', letter_theme: props.previewLetter.letter_theme || 'romance',
       has_360_view: Boolean(props.previewLetter.has_360_view),
     }
