@@ -229,6 +229,8 @@ const loadingMessages = [
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = 10
+const visibleScreenIndices = computed(() => Array.from({ length: totalScreens }, (_, index) => index)
+  .filter(index => hasPhotoUpload.value || index !== 4))
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
@@ -1044,7 +1046,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1067,7 +1069,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page2-magic-action" label="Continue" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1146,7 +1148,7 @@ function skipAnimation() {
           </div>
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1210,7 +1212,7 @@ function skipAnimation() {
         </div>
 
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1273,7 +1275,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page5-magic-action" label="View your gift" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1331,7 +1333,7 @@ function skipAnimation() {
           </Transition>
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1426,7 +1428,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page7-magic-action" label="Continue" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1464,7 +1466,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page8-magic-action" label="See your keepsake" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1543,7 +1545,7 @@ function skipAnimation() {
           <LetterMagicButton class="letter-magic-action page9-magic-action" label="Close keepsake" @activate="nextScreen" />
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
@@ -1610,7 +1612,7 @@ function skipAnimation() {
           </div>
         </div>
         <div class="screen-dots">
-          <span v-for="i in totalScreens" :key="i" :class="{ active: currentScreen === i - 1 }" @click="goToScreen(i - 1)"></span>
+          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
         </div>
       </div>
 
