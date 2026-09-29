@@ -770,7 +770,7 @@ watch(
             <label class="petals-section-title">6 Petal Messages</label>
 
             <div class="petals-grid">
-              <div v-for="(prompt, i) in petalPrompts" :key="prompt.title" class="petal-field">
+              <div v-for="(prompt, i) in petalPrompts" :key="prompt.title" class="checkout-petal-field">
                 <span class="petal-number">{{ i + 1 }}</span>
                 <div class="petal-input-wrap">
                   <label class="petal-prompt" :for="`petal-message-${i}`">{{ prompt.title }}</label>

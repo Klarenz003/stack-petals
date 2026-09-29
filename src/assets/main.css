@@ -4981,6 +4981,24 @@ input, textarea, [contenteditable="true"] {
 }
 .petal-input-trigger.has-message { color: #543f44; }
 .petal-input-trigger:hover,.petal-input-trigger:focus-visible { border-color: #D4909A; background: #fff; outline: none; }
+.checkout-modal .petals-grid .checkout-petal-field,
+.checkout-modal .petals-grid .petal-input-wrap {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  transform: none !important;
+  float: none !important;
+  z-index: auto !important;
+}
+.checkout-modal .petals-grid .petal-input-trigger {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  transform: none !important;
+  float: none !important;
+}
 
 .petal-editor-overlay,.petal-discard-overlay {
   position: fixed;
