@@ -4923,7 +4923,7 @@ input, textarea, [contenteditable="true"] {
 .petal-number {
   position: absolute;
   top: 8px;
-  right: 8px;
+  right: 42px;
   font-size: 11px;
   font-weight: 600;
   color: #D4909A;
@@ -4981,6 +4981,25 @@ input, textarea, [contenteditable="true"] {
 }
 .petal-input-trigger.has-message { color: #543f44; }
 .petal-input-trigger:hover,.petal-input-trigger:focus-visible { border-color: #D4909A; background: #fff; outline: none; }
+.petal-edit-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 4;
+  border: 0;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: transparent;
+  color: #9b6573;
+  font: 600 10px/1.2 Arial, sans-serif;
+  cursor: pointer;
+}
+.petal-edit-button:hover,
+.petal-edit-button:focus-visible {
+  background: #f8e5e4;
+  color: #704351;
+  outline: none;
+}
 .checkout-modal .petals-grid .checkout-petal-field,
 .checkout-modal .petals-grid .petal-input-wrap {
   position: relative !important;

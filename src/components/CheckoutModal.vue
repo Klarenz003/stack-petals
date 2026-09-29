@@ -783,6 +783,14 @@ watch(
                   >
                     {{ cart.letterData.petalMessages[i] || prompt.placeholder }}
                   </button>
+                  <button
+                    type="button"
+                    class="petal-edit-button"
+                    :aria-label="`Edit ${prompt.title}`"
+                    @click.stop="openPetalEditor(i)"
+                  >
+                    Edit
+                  </button>
                   <span class="petal-char-count" :class="{ warning: cart.letterData.petalMessages[i].length >= PETAL_MESSAGE_CHAR_LIMIT - 5 }">
                     {{ cart.letterData.petalMessages[i].length }}/{{ PETAL_MESSAGE_CHAR_LIMIT }}
                   </span>
