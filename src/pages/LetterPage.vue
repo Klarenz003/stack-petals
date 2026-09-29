@@ -9,6 +9,7 @@ const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/S
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
 import { useLetterNavigation } from '@/composables/useLetterNavigation'
+import { useMemorySlideshow } from '@/composables/useMemorySlideshow'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
@@ -98,6 +99,14 @@ const {
   animateFinalChapterEntrance,
   destroy: destroyLetterMicroMotion,
 } = useLetterMicroMotion(pageRoot)
+
+const { startMemoryTimer, goToMemory, onMemoryTouchStart, onMemoryTouchEnd, onMemoryMouseDown, onMemoryMouseUp, cancelMemorySwipe } = useMemorySlideshow({
+  letter,
+  currentMemory,
+  memoryTimer,
+  hasPhotoUpload,
+  animateMemoryChange,
+})
 
 const { nextScreen, prevScreen, goToScreen } = useLetterNavigation({
   currentScreen,
@@ -565,87 +574,6 @@ async function revealPetal(i: number) {
   petalSparkleKey.value += 1
   await nextTick()
   animatePetalReveal(i, allPetalsRevealed.value)
-}
-
-// ── Memory Slideshow ───────────────────────────────────────────────
-let memorySwipeStartX = 0
-let memorySwipeStartY = 0
-let isMemorySwiping = false
-
-function startMemoryTimer() {
-  if (memoryTimer.value) clearInterval(memoryTimer.value)
-  if (!hasPhotoUpload.value) {
-    memoryTimer.value = null
-    return
-  }
-  memoryTimer.value = window.setInterval(() => {
-    if (letter.value && letter.value.memories.length > 1) {
-      nextMemory()
-    }
-  }, 3000)
-}
-
-async function nextMemory() {
-  if (!letter.value || letter.value.memories.length <= 1) return
-  currentMemory.value = (currentMemory.value + 1) % letter.value.memories.length
-  await nextTick()
-  animateMemoryChange(1)
-}
-
-async function prevMemory() {
-  if (!letter.value || letter.value.memories.length <= 1) return
-  currentMemory.value = (currentMemory.value - 1 + letter.value.memories.length) % letter.value.memories.length
-  await nextTick()
-  animateMemoryChange(-1)
-}
-
-async function goToMemory(index: number) {
-  if (index === currentMemory.value) return
-  const direction: 1 | -1 = index > currentMemory.value ? 1 : -1
-  currentMemory.value = index
-  startMemoryTimer()
-  await nextTick()
-  animateMemoryChange(direction)
-}
-
-function onMemoryTouchStart(e: TouchEvent) {
-  memorySwipeStartX = e.touches[0].clientX
-  memorySwipeStartY = e.touches[0].clientY
-  isMemorySwiping = true
-}
-
-function onMemoryTouchEnd(e: TouchEvent) {
-  if (!isMemorySwiping) return
-  isMemorySwiping = false
-  const diffX = memorySwipeStartX - e.changedTouches[0].clientX
-  const diffY = Math.abs(memorySwipeStartY - e.changedTouches[0].clientY)
-  if (Math.abs(diffX) > 45 && Math.abs(diffX) > diffY * 1.5) {
-    if (diffX > 0) nextMemory()
-    else prevMemory()
-    startMemoryTimer()
-  }
-}
-
-function onMemoryMouseDown(e: MouseEvent) {
-  memorySwipeStartX = e.clientX
-  memorySwipeStartY = e.clientY
-  isMemorySwiping = true
-}
-
-function onMemoryMouseUp(e: MouseEvent) {
-  if (!isMemorySwiping) return
-  isMemorySwiping = false
-  const diffX = memorySwipeStartX - e.clientX
-  const diffY = Math.abs(memorySwipeStartY - e.clientY)
-  if (Math.abs(diffX) > 45 && Math.abs(diffX) > diffY * 1.5) {
-    if (diffX > 0) nextMemory()
-    else prevMemory()
-    startMemoryTimer()
-  }
-}
-
-function cancelMemorySwipe() {
-  isMemorySwiping = false
 }
 
 // ── 360° Drag (smooth with momentum) ──────────────────────────────
