@@ -6,11 +6,12 @@ import LetterScreenDots from '@/components/LetterScreenDots.vue'
 const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/StackPetalsLetterExperience.vue'))
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
+import { useLetterNavigation } from '@/composables/useLetterNavigation'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
-import { getNextLetterScreen, normalizeLetterScreen, getVisibleLetterScreenIndices, LETTER_TOTAL_SCREENS } from '@/utils/letterNavigation'
+import { getVisibleLetterScreenIndices, LETTER_TOTAL_SCREENS } from '@/utils/letterNavigation'
 import type { LetterRecord } from '@/types/letter'
 import { getPetalMessages } from '@/utils/letterDefaults'
 import { siteUrl, supportUrl } from '@/utils/siteConfig'
@@ -91,6 +92,16 @@ const {
   animateFinalChapterEntrance,
   destroy: destroyLetterMicroMotion,
 } = useLetterMicroMotion(pageRoot)
+
+const { nextScreen, prevScreen, goToScreen } = useLetterNavigation({
+  currentScreen,
+  slideDirection,
+  totalScreens: LETTER_TOTAL_SCREENS,
+  hasPhotoUpload,
+  forwardPageTransitions,
+  markLetterEngaged,
+  trackLetterReplay: () => trackLetterEvent('letter_replayed'),
+})
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -493,32 +504,6 @@ function stopSoftMusic() {
   letterMusic.pause()
   letterMusic.currentTime = 0
   musicPlaying.value = false
-}
-
-function nextScreen() {
-  if (currentScreen.value >= totalScreens - 1) return
-  markLetterEngaged()
-  const destination = getNextLetterScreen(currentScreen.value, totalScreens, hasPhotoUpload.value)
-  slideDirection.value = forwardPageTransitions[destination] || 'slide-forward'
-  currentScreen.value = destination
-}
-
-function prevScreen() {
-  markLetterEngaged()
-  slideDirection.value = 'magic-back'
-  if (currentScreen.value > 0) currentScreen.value--
-}
-
-function goToScreen(n: number) {
-  n = normalizeLetterScreen(n, totalScreens, hasPhotoUpload.value)
-  markLetterEngaged()
-  if (currentScreen.value === totalScreens - 1 && n < currentScreen.value) {
-    void trackLetterEvent('letter_replayed')
-  }
-  slideDirection.value = n > currentScreen.value
-    ? forwardPageTransitions[n] || 'slide-forward'
-    : 'magic-back'
-  currentScreen.value = n
 }
 
 // ── Touch / Swipe (page navigation) ───────────────────────────────
