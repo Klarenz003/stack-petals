@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
+import LetterScreenDots from '@/components/LetterScreenDots.vue'
 const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/StackPetalsLetterExperience.vue'))
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
@@ -1052,9 +1053,7 @@ function skipAnimation() {
 
           <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 2 — Blooming Animation ─────────────────────── -->
@@ -1075,9 +1074,7 @@ function skipAnimation() {
           <p class="page2-sub">Please wait a moment<br>while we prepare your letter &#10022;</p>
           <LetterMagicButton class="letter-magic-action page2-magic-action" label="Continue" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 3 — Petal Messages ─────────────────────────── -->
@@ -1154,9 +1151,7 @@ function skipAnimation() {
             </Transition>
           </div>
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 4 — The Letter ───────────────────────────── -->
@@ -1218,9 +1213,7 @@ function skipAnimation() {
           </div>
         </div>
 
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 5 — Memories ────────────────────────────────── -->
@@ -1281,9 +1274,7 @@ function skipAnimation() {
 
           <LetterMagicButton class="letter-magic-action page5-magic-action" label="View your gift" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 6 — 360° View ───────────────────────────────── -->
@@ -1339,9 +1330,7 @@ function skipAnimation() {
             />
           </Transition>
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── 360° Full Screen Viewer ────────────────────────────────────── -->
@@ -1434,9 +1423,7 @@ function skipAnimation() {
           </div>
           <LetterMagicButton class="letter-magic-action page7-magic-action" label="Continue" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 8 — From Sender ─────────────────────────────── -->
@@ -1472,9 +1459,7 @@ function skipAnimation() {
           </div>
           <LetterMagicButton class="letter-magic-action page8-magic-action" label="See your keepsake" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 9 — Experience Menu ─────────────────────────── -->
@@ -1551,9 +1536,7 @@ function skipAnimation() {
 
           <LetterMagicButton class="letter-magic-action page9-magic-action" label="Close keepsake" @activate="nextScreen" />
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
       <!-- ── SCREEN 10 — End ────────────────────────────────────── -->
@@ -1618,9 +1601,7 @@ function skipAnimation() {
             </details>
           </div>
         </div>
-        <div class="screen-dots">
-          <span v-for="screenIndex in visibleScreenIndices" :key="screenIndex" :class="{ active: currentScreen === screenIndex }" @click="goToScreen(screenIndex)"></span>
-        </div>
+        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
       </div>
 
     </div>
@@ -2244,24 +2225,6 @@ memories-screen,
   gap: 7px;
   z-index: 100;
   pointer-events: none;
-}
-
-.screen-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #E8B4C0;
-  cursor: default;
-  opacity: 0.64;
-  transition: all 0.24s ease;
-}
-
-.screen-dots span.active {
-  background: #D4687A;
-  box-shadow: 0 0 0 4px rgba(212, 104, 122, 0.1);
-  opacity: 1;
-  width: 20px;
-  border-radius: 999px;
 }
 
 /* ── Flower ───────────────────────────────────────────────────────── */
