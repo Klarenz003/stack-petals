@@ -2125,7 +2125,7 @@ memories-screen,
   width: min(72vw, 286px);
   max-width: min(100%, 286px);
   min-height: clamp(44px, 6.2dvh, 58px);
-  background: url('/images/button-trim.png') center / 80% 80% no-repeat;
+  background: url('/images/page4_button2-trim.png') center / 80% 80% no-repeat;
   color: white;
   border: none;
   border-radius: 999px;
@@ -2189,7 +2189,7 @@ memories-screen,
   width: min(68vw, 260px);
   max-width: min(100%, 260px);
   min-height: clamp(42px, 5.8dvh, 54px);
-  background: url('/images/button-trim.png') center / 80% 80% no-repeat;
+  background: url('/images/page4_button2-trim.png') center / 80% 80% no-repeat;
   color: white;
   border: none;
   border-radius: 999px;
