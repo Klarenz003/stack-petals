@@ -6977,6 +6977,7 @@ input, textarea, [contenteditable="true"] {
   max-height: min(92dvh, 900px);
   min-height: 0;
   isolation: isolate;
+  contain: paint;
 }
 
 .checkout-modal,
