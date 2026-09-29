@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import logoUrl from '../assets/stack-petals-logo.png';
 import { GIFT } from '../config/gift.js';
+const publicSiteUrl = () => (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
 
 /**
  * Compatibility animation controller: the original cinematic GSAP timelines and
@@ -221,7 +222,7 @@ export function initExperience(rootElement) {
       setText('.gift-face--bottom span',occasion==='sympathy'?'with care':occasion==='birthday'?'for today':'made with care');
       setText('.gift-dialog__panel > .eyebrow',profile.label.toUpperCase());
       setText('.gift-dialog__panel > p',profile.giftCaption);
-      const donationUrl = import.meta.env.VITE_DONATION_URL || 'https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals';
+      const donationUrl = import.meta.env.VITE_DONATION_URL || `${publicSiteUrl()}/contact?subject=Support%20Stack%20Petals`;
       document.querySelectorAll('[data-donation-link]').forEach(link => {
         const amount = link.getAttribute('data-donation-amount');
         if (!amount) {
@@ -1104,7 +1105,7 @@ export function initExperience(rootElement) {
     $('dialog-close').addEventListener('click',()=> $('surprise-dialog').close());
     $('surprise-dialog').addEventListener('click',e => {if(e.target===$('surprise-dialog'))$('surprise-dialog').close();});
     $('share-shop-button').addEventListener('click', async () => {
-      const url = 'https://stackoverpetals.shop/';
+      const url = `${publicSiteUrl()}/`;
       const message = 'Stack Petals — Engineered with Precision, Crafted with Love.';
       const feedback = $('shop-share-feedback');
       feedback.textContent = '';

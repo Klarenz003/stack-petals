@@ -6,6 +6,7 @@ import {
   isTapGesture,
   viewportToDocumentPosition,
 } from '@/utils/homeBouquetInteraction'
+import { siteUrl } from '@/utils/siteConfig'
 
 type ScanState = 'idle' | 'scanning' | 'detected' | 'revealed'
 
@@ -135,7 +136,7 @@ function completeScan() {
 
 function openProcessPage() {
   if (scanState.value !== 'revealed') return
-  window.location.assign('https://stackoverpetals.shop/process')
+  window.location.assign(siteUrl('/process'))
 }
 
 function checkScannerOverlap() {
