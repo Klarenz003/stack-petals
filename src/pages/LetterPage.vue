@@ -1,8 +1,8 @@
 ﻿<script setup lang="ts">
-import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, nextTick, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
-import ThemedLetterExperience from '@/components/StackPetalsLetterExperience.vue'
+const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/StackPetalsLetterExperience.vue'))
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
 import { supabase } from '@/supabaseClient'
