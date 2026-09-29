@@ -11,14 +11,14 @@ import { GIFT } from './cinematic-letter/config/gift.js'
 import { initExperience } from './cinematic-letter/engine/initExperience.js'
 import { initBlooms } from './cinematic-letter/engine/initBlooms.js'
 import './cinematic-letter/styles/original.css'
+import { getLetterCapabilities } from '@/utils/letterCapabilities'
 
 const props = defineProps<{ letter: any; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
 const theme = props.letter?.letter_theme || props.letter?.theme || 'romance'
-const has360Viewer = Boolean(
-  props.letter?.has_360_view ?? props.letter?.has360Viewer ?? props.letter?.angle_photos?.length,
-)
-const hasPhotoUpload = Boolean(props.letter?.has_photo_upload ?? props.letter?.memories?.length)
+const capabilities = getLetterCapabilities(props.letter)
+const has360Viewer = capabilities.has360View
+const hasPhotoUpload = capabilities.hasPhotoUpload
 const messageParts = String(props.letter?.message || '').split(/\n\s*\n/).filter(Boolean)
 const memories = (props.letter?.memories || []).map((item: any, index: number) => {
   const value = typeof item === 'string' ? item : item?.src || item?.url || item?.image

@@ -8,6 +8,7 @@ import { useLetterMotion } from '@/composables/useLetterMotion'
 import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
+import { getLetterCapabilities } from '@/utils/letterCapabilities'
 
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -49,9 +50,8 @@ const isDragging = ref(false)
 const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
-const has360Viewer = computed(() => Boolean(
-  letter.value?.has_360_view || letter.value?.angle_photos?.length,
-))
+const capabilities = computed(() => getLetterCapabilities(letter.value))
+const has360Viewer = computed(() => capabilities.value.has360View)
 const hasViewed360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
