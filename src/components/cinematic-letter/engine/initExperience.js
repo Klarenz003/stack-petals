@@ -1136,7 +1136,7 @@ export function initExperience(rootElement) {
         }
         feedback.textContent = 'Shop link copied — ready to share!';
       } catch (error) {
-        feedback.textContent = 'Share this link: stackoverpetals.shop';
+        feedback.textContent = `Share this link: ${PUBLIC_SITE_URL}`;
       }
     });
     $('replay-button').addEventListener('click',()=>window.location.reload());
