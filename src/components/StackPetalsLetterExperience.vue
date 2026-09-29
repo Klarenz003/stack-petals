@@ -4,48 +4,14 @@ import InvitationAndCurtain from './cinematic-letter/InvitationAndCurtain.vue'
 import KeepsakeStory from './cinematic-letter/KeepsakeStory.vue'
 import GiftAndSurprise from './cinematic-letter/GiftAndSurprise.vue'
 // These DOM controllers are intentionally JavaScript; keep their boundary explicit.
-// @ts-expect-error no public TypeScript declarations for the cinematic config
-import { GIFT } from './cinematic-letter/config/gift.js'
 import './cinematic-letter/styles/original.css'
 import { useCinematicExperience } from '@/composables/useCinematicExperience'
-import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import type { LetterRecord } from '@/types/letter'
-import { getPetalMessages } from '@/utils/letterDefaults'
+import { configureCinematicLetter } from '@/utils/cinematicLetterConfig'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = useCinematicExperience()
-const theme = props.letter?.letter_theme || 'romance'
-const capabilities = getLetterCapabilities(props.letter)
-const has360Viewer = capabilities.has360View
-const hasPhotoUpload = capabilities.hasPhotoUpload
-const messageParts = String(props.letter?.message || '').split(/\n\s*\n/).filter(Boolean)
-const memories = (props.letter?.memories || []).map((item: any, index: number) => {
-  const value = typeof item === 'string' ? item : item?.src || item?.url || item?.image
-  return value ? { src: value, alt: `Memory ${index + 1}`, caption: item?.caption || `Memory ${index + 1}` } : null
-}).filter(Boolean)
-const closings: Record<string, string> = {
-  romance: 'You are loved, today and always. Keep this little reminder close.',
-  family: 'Wherever life leads, you will always have a home here.',
-  birthday: 'May the year ahead bloom with joy. Happy birthday!',
-  sympathy: 'You are held in care. Take each day gently.',
-  friendship: 'Life is brighter with you in it. I am grateful for you.',
-  graduation: 'This is only the beginning. Keep growing into your brightest future.',
-}
-Object.assign(GIFT, {
-  occasion: theme,
-  showOccasionPicker: Boolean(props.showPicker) && !props.preview,
-  previewMode: Boolean(props.preview),
-  has360Viewer,
-  hasPhotoUpload,
-  recipient: props.letter?.recipient || 'you',
-  sender: props.letter?.sender || 'someone who cares',
-  paragraphs: [messageParts[0] || props.letter?.message || 'A personal note, written especially for you.', messageParts[1] || '', messageParts.slice(2).join('\n\n') || ''],
-  reasons: getPetalMessages(props.letter?.petal_messages),
-  photoMemories: memories,
-  petalArtworks: props.letter?.petal_artworks || props.letter?.backgrounds?.petal_artworks || [],
-  lastNote: closings[theme] || closings.romance,
-  product360: has360Viewer ? { mode: 'demo', frameCount: 240 } : { mode: 'none', frameCount: 0 },
-})
+const { theme } = configureCinematicLetter(props.letter, props)
 
 </script>
 

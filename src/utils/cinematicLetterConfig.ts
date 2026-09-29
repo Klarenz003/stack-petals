@@ -1,0 +1,55 @@
+import { getLetterCapabilities } from './letterCapabilities'
+import { getPetalMessages } from './letterDefaults'
+import type { LetterRecord } from '@/types/letter'
+
+// The cinematic engine consumes a mutable JavaScript config object.
+// @ts-expect-error no public TypeScript declarations for the cinematic config
+import { GIFT } from '@/components/cinematic-letter/config/gift.js'
+
+const closings: Record<string, string> = {
+  romance: 'You are loved, today and always. Keep this little reminder close.',
+  family: 'Wherever life leads, you will always have a home here.',
+  birthday: 'May the year ahead bloom with joy. Happy birthday!',
+  sympathy: 'You are held in care. Take each day gently.',
+  friendship: 'Life is brighter with you in it. I am grateful for you.',
+  graduation: 'This is only the beginning. Keep growing into your brightest future.',
+}
+
+export function configureCinematicLetter(
+  letter: Partial<LetterRecord>,
+  options: { preview?: boolean; showPicker?: boolean } = {},
+) {
+  const theme = letter.letter_theme || 'romance'
+  const capabilities = getLetterCapabilities(letter)
+  const messageParts = String(letter.message || '').split(/\n\s*\n/).filter(Boolean)
+  const memories = (letter.memories || []).map((item: any, index: number) => {
+    const value = typeof item === 'string' ? item : item?.src || item?.url || item?.image
+    return value ? { src: value, alt: `Memory ${index + 1}`, caption: item?.caption || `Memory ${index + 1}` } : null
+  }).filter(Boolean)
+
+  Object.assign(GIFT, {
+    occasion: theme,
+    showOccasionPicker: Boolean(options.showPicker) && !options.preview,
+    previewMode: Boolean(options.preview),
+    has360Viewer: capabilities.has360View,
+    hasPhotoUpload: capabilities.hasPhotoUpload,
+    recipient: letter.recipient || 'you',
+    sender: letter.sender || 'someone who cares',
+    paragraphs: [
+      messageParts[0] || letter.message || 'A personal note, written especially for you.',
+      messageParts[1] || '',
+      messageParts.slice(2).join('\n\n') || '',
+    ],
+    reasons: getPetalMessages(letter.petal_messages),
+    photoMemories: memories,
+    petalArtworks: letter.petal_artworks || letter.backgrounds?.petal_artworks || [],
+    lastNote: closings[theme] || closings.romance,
+    product360: capabilities.has360View ? { mode: 'demo', frameCount: 240 } : { mode: 'none', frameCount: 0 },
+  })
+
+  return {
+    theme,
+    has360Viewer: capabilities.has360View,
+    hasPhotoUpload: capabilities.hasPhotoUpload,
+  }
+}
