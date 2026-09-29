@@ -40,6 +40,7 @@ const dragStartX = ref(0)
 const memoryTimer = ref<number | null>(null)
 const show360 = ref(false)
 const capabilities = computed(() => getLetterCapabilities(letter.value))
+const hasPhotoUpload = computed(() => capabilities.value.hasPhotoUpload)
 const has360Viewer = computed(() => capabilities.value.has360View)
 const hasViewed360 = ref(false)
 const senderVisible = ref(false)
@@ -493,7 +494,7 @@ function stopSoftMusic() {
 function nextScreen() {
   if (currentScreen.value >= totalScreens - 1) return
   markLetterEngaged()
-  const destination = getNextLetterScreen(currentScreen.value, totalScreens, Boolean(letter.value?.memories?.length))
+  const destination = getNextLetterScreen(currentScreen.value, totalScreens, hasPhotoUpload.value)
   slideDirection.value = forwardPageTransitions[destination] || 'slide-forward'
   currentScreen.value = destination
 }
@@ -505,7 +506,7 @@ function prevScreen() {
 }
 
 function goToScreen(n: number) {
-  n = normalizeLetterScreen(n, totalScreens, Boolean(letter.value?.memories?.length))
+  n = normalizeLetterScreen(n, totalScreens, hasPhotoUpload.value)
   markLetterEngaged()
   if (currentScreen.value === totalScreens - 1 && n < currentScreen.value) {
     void trackLetterEvent('letter_replayed')
@@ -1202,7 +1203,7 @@ function skipAnimation() {
               <div v-if="senderVisible" class="sender-footer">
                 <div class="letter-divider"><span></span>✦<span></span></div>
                 <p class="letter-from">— With warm wishes, {{ letter.sender }}</p>
-                <LetterMagicButton class="letter-magic-action page4-memories-magic-action" label="See memories" @activate="nextScreen" />
+                <LetterMagicButton v-if="hasPhotoUpload" class="letter-magic-action page4-memories-magic-action" label="See memories" @activate="nextScreen" />
               </div>
             </Transition>
           </div>
@@ -1215,7 +1216,7 @@ function skipAnimation() {
 
       <!-- ── SCREEN 5 — Memories ────────────────────────────────── -->
       <div
-        v-if="currentScreen === 4 && letter.memories?.length"
+        v-if="currentScreen === 4 && hasPhotoUpload"
         class="letter-screen memories-screen"
         :style="{ backgroundColor: screenBg('screen5') }"
       >
@@ -1495,7 +1496,7 @@ function skipAnimation() {
               <i aria-hidden="true">&#8594;</i>
             </button>
 
-            <button v-if="letter.memories?.length" class="keepsake-tile keepsake-memory" @click="goToScreen(4)">
+            <button v-if="hasPhotoUpload" class="keepsake-tile keepsake-memory" @click="goToScreen(4)">
               <span class="keepsake-number" aria-hidden="true">02</span>
               <img
                 :src="letter.memories?.length ? normalizeImageSrc(letter.memories[0]) : bouquetImage"
