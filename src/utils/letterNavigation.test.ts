@@ -4,9 +4,14 @@ import {
   normalizeLetterScreen,
   LETTER_GIFT_SCREEN_INDEX,
   LETTER_MEMORIES_SCREEN_INDEX,
+  LETTER_TOTAL_SCREENS,
 } from './letterNavigation'
 
 describe('letter navigation', () => {
+  it('keeps the legacy letter screen count explicit', () => {
+    expect(LETTER_TOTAL_SCREENS).toBe(10)
+  })
+
   it('skips the memories chapter when unavailable', () => {
     expect(getNextLetterScreen(3, 10, false)).toBe(LETTER_GIFT_SCREEN_INDEX)
     expect(normalizeLetterScreen(LETTER_MEMORIES_SCREEN_INDEX, 10, false)).toBe(LETTER_GIFT_SCREEN_INDEX)
