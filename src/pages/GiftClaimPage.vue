@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
+import { getGiftCapabilities } from '@/utils/giftCapabilities'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,7 +20,7 @@ const gift = ref<{
 } | null>(null)
 const giftFeatureCopy = computed(() => {
   if (!gift.value) return 'Your message and petal notes can be added next.'
-  return gift.value.has_photo_upload
+  return getGiftCapabilities(gift.value).hasPhotoUpload
     ? 'Your message, petal notes, and memories can be added next.'
     : 'Your message and petal notes can be added next.'
 })

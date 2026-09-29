@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
+import { getGiftCapabilities } from '@/utils/giftCapabilities'
 const route=useRoute(); const router=useRouter(); const saving=ref(false); const error=ref(''); const from=ref(''); const to=ref(''); const theme=ref('romance'); const message=ref(''); const memories=ref<string[]>([]); const canUpload=ref(true)
-try { const claim=JSON.parse(localStorage.getItem('stack-petals:gift-claim')||'null'); canUpload.value=claim?.hasPhotoUpload !== false } catch {}
+try { const claim=JSON.parse(localStorage.getItem('stack-petals:gift-claim')||'null'); canUpload.value=getGiftCapabilities(claim).hasPhotoUpload } catch {}
 async function addPhoto(e:Event){if(!canUpload.value)return;const files=Array.from((e.target as HTMLInputElement).files||[]);for(const file of files.slice(0,3-memories.value.length)){memories.value.push(await new Promise<string>(resolve=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.readAsDataURL(file)}))}}
 async function publish(){saving.value=true;error.value='';try{const token=String(route.params.token||'');const {data,error:e}=await supabase.rpc('create_gift_letter',{p_public_token:token,p_from:from.value.trim(),p_to:to.value.trim(),p_theme:theme.value,p_message:message.value.trim(),p_memories:memories.value});if(e)throw e;const id=Array.isArray(data)?data[0]?.id:data?.id;if(!id)throw new Error('The letter could not be created.');router.replace(`/letter/${id}`)}catch(e){error.value=e instanceof Error?e.message:'Could not save the letter.'}finally{saving.value=false}}
 </script>
