@@ -250,7 +250,7 @@ const loadingMessages = [
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = LETTER_TOTAL_SCREENS
 const visibleScreenIndices = computed(() => getVisibleLetterScreenIndices(totalScreens, hasPhotoUpload.value))
-const finalVisibleScreen = computed(() => visibleScreenIndices.value.at(-1) ?? totalScreens - 1)
+const finalVisibleScreen = computed(() => visibleScreenIndices.value[visibleScreenIndices.value.length - 1] ?? totalScreens - 1)
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
