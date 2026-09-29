@@ -315,7 +315,7 @@ export function initExperience(rootElement) {
     function setUpScroll() {
       const chapters = getVisibleLetterChapters({
         hasPhotoUpload: GIFT.hasPhotoUpload !== false,
-        has360View: GIFT.has360View !== false,
+        has360View: GIFT.has360Viewer !== false,
       }).map((chapter, index, visibleChapters) => ({
         ...chapter,
         label: formatChapterIndicator(chapter, index, visibleChapters.length),
