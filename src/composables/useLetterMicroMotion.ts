@@ -63,8 +63,9 @@ const senderSparkleVectors = [
   { x: -46, y: 28 },
 ]
 
-export function useLetterMicroMotion() {
+export function useLetterMicroMotion(rootElement?: { value: HTMLElement | null }) {
   const runningAnimations = new Set<AnimeAnimation>()
+  const queryRoot = () => rootElement?.value || document
 
   function shouldReduceMotion() {
     return typeof window !== 'undefined'
@@ -81,7 +82,7 @@ export function useLetterMicroMotion() {
   function animatePetalReveal(index: number, isComplete: boolean) {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.petal-message-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.petal-message-screen')
     if (!screen) return
 
     const symbols = Array.from(screen.querySelectorAll<HTMLElement>('.petal-symbol'))
@@ -157,7 +158,7 @@ export function useLetterMicroMotion() {
   async function animateEnvelopeOpening() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const wrap = document.querySelector<HTMLElement>('.letter-reveal-wrap.anime-opening')
+    const wrap = queryRoot().querySelector<HTMLElement>('.letter-reveal-wrap.anime-opening')
     if (!wrap) return
 
     const stage = wrap.querySelector<HTMLElement>('.page4-envelope-stage')
@@ -259,7 +260,7 @@ export function useLetterMicroMotion() {
   function animateMemoryChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.memories-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.memories-screen')
     if (!screen) return
 
     const title = screen.querySelector<HTMLElement>('.letter-title')
@@ -357,7 +358,7 @@ export function useLetterMicroMotion() {
   function animateMemoryChange(direction: 1 | -1) {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.memories-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.memories-screen')
     if (!screen) return
 
     const frame = screen.querySelector<HTMLElement>('.memory-frame')
@@ -431,7 +432,7 @@ export function useLetterMicroMotion() {
   function animateBouquetChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.bouquet-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.bouquet-screen')
     if (!screen) return
 
     const title = screen.querySelector<HTMLElement>('.letter-title')
@@ -569,7 +570,7 @@ export function useLetterMicroMotion() {
   function animateReminderChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.quote-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.quote-screen')
     if (!screen) return
 
     const flowerWrap = screen.querySelector<HTMLElement>('.quote-flower-wrap')
@@ -674,7 +675,7 @@ export function useLetterMicroMotion() {
   function animateSenderChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.sender-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.sender-screen')
     if (!screen) return
 
     const card = screen.querySelector<HTMLElement>('.sender-keepsake')
@@ -805,7 +806,7 @@ export function useLetterMicroMotion() {
   function animateKeepsakeChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.keepsake-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.keepsake-screen')
     if (!screen) return
 
     const eyebrow = screen.querySelector<HTMLElement>('.keepsake-heading > span')
@@ -917,7 +918,7 @@ export function useLetterMicroMotion() {
   function animateFinalChapterEntrance() {
     if (typeof document === 'undefined' || shouldReduceMotion()) return
 
-    const screen = document.querySelector<HTMLElement>('.end-screen')
+    const screen = queryRoot().querySelector<HTMLElement>('.end-screen')
     const stationery = screen?.querySelector<HTMLElement>('.end-stationery')
     if (!screen || !stationery) return
 

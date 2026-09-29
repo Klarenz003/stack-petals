@@ -27,6 +27,7 @@ const props = defineProps<{
   previewLetter?: Partial<Letter> | null
 }>()
 const letter = ref<Letter | null>(null)
+const pageRoot = ref<HTMLElement | null>(null)
 const hasCinematicLetter = computed(() => Boolean(letter.value) && letter.value?.letter_theme !== 'original')
 const loading = ref(true)
 const notFound = ref(false)
@@ -88,7 +89,7 @@ const {
   animateKeepsakeChapterEntrance,
   animateFinalChapterEntrance,
   destroy: destroyLetterMicroMotion,
-} = useLetterMicroMotion()
+} = useLetterMicroMotion(pageRoot)
 
 let letterMusic: HTMLAudioElement | null = null
 let loadingTextTimer: number | null = null
@@ -962,6 +963,7 @@ function skipAnimation() {
     <ThemedLetterExperience v-if="hasCinematicLetter" :letter="letter!" :preview="props.preview" />
   <div
     v-else
+    ref="pageRoot"
     class="letter-page"
     @touchstart="onTouchStart"
     @touchend="onTouchEnd"
