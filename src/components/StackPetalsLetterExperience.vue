@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// @ts-nocheck -- supplied cinematic engines are JavaScript DOM controllers.
 // The supplied cinematic experience remains the visual source of truth.
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { gsap } from 'gsap'
@@ -7,8 +6,12 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import InvitationAndCurtain from './cinematic-letter/InvitationAndCurtain.vue'
 import KeepsakeStory from './cinematic-letter/KeepsakeStory.vue'
 import GiftAndSurprise from './cinematic-letter/GiftAndSurprise.vue'
+// These DOM controllers are intentionally JavaScript; keep their boundary explicit.
+// @ts-expect-error no public TypeScript declarations for the cinematic config
 import { GIFT } from './cinematic-letter/config/gift.js'
+// @ts-expect-error no public TypeScript declarations for the cinematic engine
 import { initExperience } from './cinematic-letter/engine/initExperience.js'
+// @ts-expect-error no public TypeScript declarations for the cinematic engine
 import { initBlooms } from './cinematic-letter/engine/initBlooms.js'
 import './cinematic-letter/styles/original.css'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
@@ -17,7 +20,7 @@ import { getPetalMessages } from '@/utils/letterDefaults'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
-const theme = props.letter?.letter_theme || props.letter?.theme || 'romance'
+const theme = props.letter?.letter_theme || 'romance'
 const capabilities = getLetterCapabilities(props.letter)
 const has360Viewer = capabilities.has360View
 const hasPhotoUpload = capabilities.hasPhotoUpload
