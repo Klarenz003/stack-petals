@@ -42,6 +42,7 @@ const show360 = ref(false)
 const capabilities = computed(() => getLetterCapabilities(letter.value))
 const hasPhotoUpload = computed(() => capabilities.value.hasPhotoUpload)
 const has360Viewer = computed(() => capabilities.value.has360View)
+const hasAngleViewerContent = computed(() => has360Viewer.value && Boolean(letter.value?.angle_photos?.length))
 const hasViewed360 = ref(false)
 const senderVisible = ref(false)
 const slideDirection = ref('slide-forward')
@@ -1534,9 +1535,9 @@ function skipAnimation() {
               <span class="keepsake-number" aria-hidden="true">04</span>
               <img :src="bouquetImage" alt="" />
               <span class="keepsake-copy">
-                <small>{{ letter.angle_photos?.length ? 'Made to be discovered' : 'Made especially for you' }}</small>
-                <strong>{{ letter.angle_photos?.length ? 'Gift & 360° view' : 'Your gift' }}</strong>
-                <em>{{ letter.angle_photos?.length ? 'Turn it around, slowly' : 'See what was chosen for you' }}</em>
+                <small>{{ hasAngleViewerContent ? 'Made to be discovered' : 'Made especially for you' }}</small>
+                <strong>{{ hasAngleViewerContent ? 'Gift & 360° view' : 'Your gift' }}</strong>
+                <em>{{ hasAngleViewerContent ? 'Turn it around, slowly' : 'See what was chosen for you' }}</em>
               </span>
               <i aria-hidden="true">&#8594;</i>
             </button>
