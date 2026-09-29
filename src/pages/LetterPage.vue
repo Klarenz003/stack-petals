@@ -11,7 +11,11 @@ import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
-import { getVisibleLetterScreenIndices, LETTER_TOTAL_SCREENS } from '@/utils/letterNavigation'
+import {
+  getVisibleLetterScreenIndices,
+  LETTER_MEMORIES_SCREEN_INDEX,
+  LETTER_TOTAL_SCREENS,
+} from '@/utils/letterNavigation'
 import type { LetterRecord } from '@/types/letter'
 import { getPetalMessages } from '@/utils/letterDefaults'
 import { siteUrl, supportUrl } from '@/utils/siteConfig'
@@ -195,8 +199,10 @@ async function trackLetterEvent(eventType: Exclude<LetterAnalyticsEvent, 'letter
 
 async function trackCurrentLetterScreen(screen = currentScreen.value) {
   await trackLetterEvent('screen_viewed', screen + 1)
-  if (screen === 4) await trackLetterEvent('memories_viewed')
-  if (screen === totalScreens - 1) await trackLetterEvent('letter_completed')
+  if (hasPhotoUpload.value && screen === LETTER_MEMORIES_SCREEN_INDEX) {
+    await trackLetterEvent('memories_viewed')
+  }
+  if (screen === finalVisibleScreen.value) await trackLetterEvent('letter_completed')
 }
 
 function markLetterEngaged() {
@@ -244,6 +250,7 @@ const loadingMessages = [
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = LETTER_TOTAL_SCREENS
 const visibleScreenIndices = computed(() => getVisibleLetterScreenIndices(totalScreens, hasPhotoUpload.value))
+const finalVisibleScreen = computed(() => visibleScreenIndices.value.at(-1) ?? totalScreens - 1)
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
