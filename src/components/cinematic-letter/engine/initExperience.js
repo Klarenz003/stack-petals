@@ -2,6 +2,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import logoUrl from '../assets/stack-petals-logo.png';
 import { GIFT } from '../config/gift.js';
+import { getVisibleLetterChapters, formatChapterIndicator } from '../../../utils/letterChapters';
 const publicSiteUrl = () => (import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, '');
 
 /**
@@ -311,19 +312,13 @@ export function initExperience(rootElement) {
     setupLuxeMotion();
 
     function setUpScroll() {
-      const chapterDefinitions = [
-        { id:'letter-section', label:'01 / 04 — THE LETTER' },
-        { id:'reasons-section', label:'02 / 04 — LITTLE THINGS' },
-        { id:'memories-section', label:'03 / 04 — OUR MEMORIES' },
-        { id:'final-section', label:'04 / 04 — ONE LAST THING' }
-      ];
-      const chapterTitles = { 'letter-section':'THE LETTER', 'reasons-section':'LITTLE THINGS', 'memories-section':'OUR MEMORIES', 'final-section':'ONE LAST THING' };
-      const chapters = chapterDefinitions
-        .filter(chapter => GIFT.hasPhotoUpload !== false || chapter.id !== 'memories-section')
-        .map((chapter, index, visibleChapters) => ({
-          ...chapter,
-          label: `${String(index + 1).padStart(2, '0')} / ${String(visibleChapters.length).padStart(2, '0')} — ${chapterTitles[chapter.id] || chapter.id}`,
-        }));
+      const chapters = getVisibleLetterChapters({
+        hasPhotoUpload: GIFT.hasPhotoUpload !== false,
+        has360View: GIFT.has360View !== false,
+      }).map((chapter, index, visibleChapters) => ({
+        ...chapter,
+        label: formatChapterIndicator(chapter, index, visibleChapters.length),
+      }));
       const finalChapterTag = rootElement.querySelector('#final-section .chapter-tag');
       if (finalChapterTag) finalChapterTag.textContent = `CHAPTER ${chapters.length}  /  ONE LAST THING`;
       const memoriesChapterTag = rootElement.querySelector('#memories-section .chapter-tag');

@@ -3,6 +3,8 @@ export interface LetterCapabilities {
   has360View: boolean
 }
 
+import { getVisibleLetterChapters } from './letterChapters'
+
 /** Derive one consistent capability profile for every letter renderer. */
 export function getLetterCapabilities(letter: any): LetterCapabilities {
   return {
@@ -12,10 +14,5 @@ export function getLetterCapabilities(letter: any): LetterCapabilities {
 }
 
 export function getVisibleChapterIds(capabilities: LetterCapabilities): string[] {
-  return [
-    'letter-section',
-    'reasons-section',
-    ...(capabilities.hasPhotoUpload ? ['memories-section'] : []),
-    'final-section',
-  ]
+  return getVisibleLetterChapters(capabilities).map(chapter => chapter.id)
 }
