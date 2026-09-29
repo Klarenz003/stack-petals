@@ -319,8 +319,13 @@ export function initExperience(rootElement) {
         ...chapter,
         label: formatChapterIndicator(chapter, index, visibleChapters.length),
       }));
-      const finalChapterTag = rootElement.querySelector('#final-section .chapter-tag');
-      if (finalChapterTag) finalChapterTag.textContent = `CHAPTER ${chapters.length}  /  ONE LAST THING`;
+      const chapterNumberWords = ['ONE', 'TWO', 'THREE', 'FOUR'];
+      chapters.forEach((chapter, index) => {
+        const chapterTag = rootElement.querySelector(`#${chapter.id} .chapter-tag`);
+        if (chapterTag) {
+          chapterTag.textContent = `CHAPTER ${chapterNumberWords[index] || index + 1}  /  ${chapter.title}`;
+        }
+      });
       const memoriesChapterTag = rootElement.querySelector('#memories-section .chapter-tag');
       if (memoriesChapterTag && GIFT.hasPhotoUpload === false) memoriesChapterTag.closest('.chapter')?.setAttribute('hidden', 'true');
       const getViewportHeight = () => scrollRoot?.clientHeight || window.innerHeight;
