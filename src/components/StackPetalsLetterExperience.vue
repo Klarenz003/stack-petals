@@ -1,27 +1,19 @@
 <script setup lang="ts">
 // The supplied cinematic experience remains the visual source of truth.
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import InvitationAndCurtain from './cinematic-letter/InvitationAndCurtain.vue'
 import KeepsakeStory from './cinematic-letter/KeepsakeStory.vue'
 import GiftAndSurprise from './cinematic-letter/GiftAndSurprise.vue'
 // These DOM controllers are intentionally JavaScript; keep their boundary explicit.
 // @ts-expect-error no public TypeScript declarations for the cinematic config
 import { GIFT } from './cinematic-letter/config/gift.js'
-// @ts-expect-error no public TypeScript declarations for the cinematic engine
-import { initExperience } from './cinematic-letter/engine/initExperience.js'
-// @ts-expect-error no public TypeScript declarations for the cinematic engine
-import { initBlooms } from './cinematic-letter/engine/initBlooms.js'
 import './cinematic-letter/styles/original.css'
+import { useCinematicExperience } from '@/composables/useCinematicExperience'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import type { LetterRecord } from '@/types/letter'
 import { getPetalMessages } from '@/utils/letterDefaults'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
-const root = ref<HTMLElement | null>(null)
-let destroyExperience: (() => void) | null = null
-let destroyBlooms: (() => void) | null = null
+const root = useCinematicExperience()
 const theme = props.letter?.letter_theme || 'romance'
 const capabilities = getLetterCapabilities(props.letter)
 const has360Viewer = capabilities.has360View
@@ -55,27 +47,6 @@ Object.assign(GIFT, {
   product360: has360Viewer ? { mode: 'demo', frameCount: 240 } : { mode: 'none', frameCount: 0 },
 })
 
-// Vue owns all of the page's elements; cinematic and 3D effects initialize only
-// after those elements exist. This avoids the pre-mount letter flash.
-onMounted(async () => {
-  await nextTick()
-  if (!root.value) return
-  destroyExperience = initExperience(root.value)
-  destroyBlooms = initBlooms(root.value)
-})
-
-onBeforeUnmount(() => {
-  destroyExperience?.()
-  destroyExperience = null
-  destroyBlooms?.()
-  destroyBlooms = null
-  if (!root.value) return
-  gsap.killTweensOf(root.value.querySelectorAll('*'))
-  ScrollTrigger.getAll().forEach(trigger => {
-    if (root.value?.contains(trigger.trigger as Node)) trigger.kill()
-  })
-  delete document.body.dataset.occasion
-})
 </script>
 
 <template>
