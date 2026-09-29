@@ -9,6 +9,7 @@ import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
+import { getNextLetterScreen, normalizeLetterScreen } from '@/utils/letterNavigation'
 
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -504,9 +505,7 @@ function stopSoftMusic() {
 function nextScreen() {
   if (currentScreen.value >= totalScreens - 1) return
   markLetterEngaged()
-  const destination = currentScreen.value === 3 && !letter.value?.memories?.length
-    ? 5
-    : currentScreen.value + 1
+  const destination = getNextLetterScreen(currentScreen.value, totalScreens, Boolean(letter.value?.memories?.length))
   slideDirection.value = forwardPageTransitions[destination] || 'slide-forward'
   currentScreen.value = destination
 }
@@ -518,7 +517,7 @@ function prevScreen() {
 }
 
 function goToScreen(n: number) {
-  if (n === 4 && !letter.value?.memories?.length) n = 5
+  n = normalizeLetterScreen(n, totalScreens, Boolean(letter.value?.memories?.length))
   markLetterEngaged()
   if (currentScreen.value === totalScreens - 1 && n < currentScreen.value) {
     void trackLetterEvent('letter_replayed')
