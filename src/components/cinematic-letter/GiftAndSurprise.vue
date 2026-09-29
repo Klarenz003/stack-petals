@@ -1,3 +1,9 @@
+<script setup lang="ts">
+import { siteUrl, supportUrl } from '@/utils/siteConfig'
+
+const shopUrl = siteUrl()
+</script>
+
 <template>
   <!-- 3D spinning box, 240-frame product spinner, music and surprise modal. -->
 <button aria-label="Play background music" aria-pressed="false" class="music-pill" id="music-toggle" title="Play music" type="button">
@@ -85,13 +91,13 @@
 <p id="final-message">No grand occasion needed. Just a little reminder that having you in my life is a gift all on its own.</p>
 <div class="surprise-card__signature" data-sender="">your favorite person</div>
 <div aria-label="Stack Petals" class="surprise-brand">
-<a aria-label="Visit Stack Petals online shop" class="surprise-brand__logo-link" href="https://stackoverpetals.shop/" rel="noopener noreferrer" target="_blank">
+<a aria-label="Visit Stack Petals online shop" class="surprise-brand__logo-link" :href="shopUrl" rel="noopener noreferrer" target="_blank">
 <img alt="Stack Petals logo" class="surprise-brand__logo" data-stack-petals-logo=""/>
 </a>
 <div class="surprise-brand__name">Stack Petals</div>
 <div class="surprise-brand__tagline">Engineered with Precision, Crafted with Love.</div>
 <div class="surprise-brand__actions">
-<a class="surprise-brand__visit" href="https://stackoverpetals.shop/" rel="noopener noreferrer" target="_blank">Visit StackOverPetals.shop &nearrow;</a>
+<a class="surprise-brand__visit" :href="shopUrl" rel="noopener noreferrer" target="_blank">Visit StackOverPetals.shop &nearrow;</a>
 <button class="surprise-brand__share" id="share-shop-button" type="button">Share our shop &nearrow;</button>
 </div>
 <span aria-live="polite" class="share-feedback" id="shop-share-feedback" role="status"></span>
@@ -101,9 +107,9 @@
 <summary>Support more keepsakes <span aria-hidden="true">&nearrow;</span></summary>
 <p>If this made you smile, you can help us create the next one.</p>
 <div class="support-garden__choices">
-<a data-donation-amount="50" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=50" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
-<a data-donation-amount="100" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=100" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
-<a data-donation-amount="200" data-donation-link href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=200" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
+<a data-donation-amount="50" data-donation-link :href="supportUrl(50)" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
+<a data-donation-amount="100" data-donation-link :href="supportUrl(100)" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
+<a data-donation-amount="200" data-donation-link :href="supportUrl(200)" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
 </div>
 </details>
 </div>

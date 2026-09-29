@@ -12,10 +12,13 @@ import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import { getNextLetterScreen, normalizeLetterScreen } from '@/utils/letterNavigation'
 import type { LetterRecord } from '@/types/letter'
 import { getPetalMessages } from '@/utils/letterDefaults'
+import { siteUrl, supportUrl } from '@/utils/siteConfig'
 
 
 // ── Types ──────────────────────────────────────────────────────────
 type Letter = LetterRecord
+
+const shopUrl = siteUrl()
 
 // ── State ──────────────────────────────────────────────────────────
 const route = useRoute()
@@ -1577,7 +1580,7 @@ function skipAnimation() {
               <small>Crafted with care by</small>
               <strong>Stack Petals</strong>
               <p>Create a meaningful gift<br />for someone special.</p>
-              <a href="https://stackoverpetals.shop" aria-label="Discover Stack Petals crafted gifts">
+                <a :href="shopUrl" aria-label="Discover Stack Petals crafted gifts">
                 Discover Stack Petals <span aria-hidden="true">&#8594;</span>
               </a>
             </div>
@@ -1598,9 +1601,9 @@ function skipAnimation() {
               <summary>Support more keepsakes <span aria-hidden="true">&#8599;</span></summary>
               <p>If this made you smile, you can help us create the next one.</p>
               <div>
-                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=50" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
-                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=100" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
-                <a href="https://stackoverpetals.shop/contact?subject=Support%20Stack%20Petals%20&amount=200" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
+                <a :href="supportUrl(50)" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
+                <a :href="supportUrl(100)" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
+                <a :href="supportUrl(200)" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
               </div>
             </details>
           </div>
