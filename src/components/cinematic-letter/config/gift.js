@@ -46,3 +46,6 @@ export const GIFT = {
       brandName: 'Stack Petals',
       brandTagline: 'Engineered with Precision, Crafted with Love.'
     };
+
+// Normalize the legacy mojibake sequence that can exist in older copied defaults.
+GIFT.paragraphs = GIFT.paragraphs.map(paragraph => paragraph.replace(/\u00e2\u20ac\u2122/g, "'"));
