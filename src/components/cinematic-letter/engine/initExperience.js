@@ -39,7 +39,7 @@ export function initExperience(rootElement) {
 
     // Embedded original brand image; this HTML has no local asset dependencies.
     const STACK_PETALS_LOGO = logoUrl;
-    document.querySelectorAll('[data-stack-petals-logo]').forEach(img => {img.src = STACK_PETALS_LOGO;});
+    rootElement.querySelectorAll('[data-stack-petals-logo]').forEach(img => {img.src = STACK_PETALS_LOGO;});
     if (window.gsap && window.ScrollTrigger) window.gsap.registerPlugin(window.ScrollTrigger);
     // The letter still opens without GSAP, but enhanced effects need the CDN.
   const luxeCleanup = []
@@ -163,7 +163,8 @@ export function initExperience(rootElement) {
       }
     };
 
-    const $ = id => document.getElementById(id);
+    const $ = id => rootElement.querySelector(`#${id}`);
+    const $$ = selector => rootElement.querySelectorAll(selector);
     const paramOccasion = new URLSearchParams(window.location.search).get('occasion');
     let occasion = OCCASIONS[paramOccasion] ? paramOccasion : (OCCASIONS[GIFT.occasion] ? GIFT.occasion : 'romance');
     const picker = $('occasion-picker');
@@ -175,14 +176,14 @@ export function initExperience(rootElement) {
       button.addEventListener('click', () => { if (!opened) { occasion = key; renderOccasion(); } });
       $('occasion-choices').appendChild(button);
     }
-    function setText(selector,value) { const el=document.querySelector(selector); if(el) el.textContent=value; }
+    function setText(selector,value) { const el=rootElement.querySelector(selector); if(el) el.textContent=value; }
     function renderOccasion() {
       const profile = {...OCCASIONS[occasion], ...(GIFT.custom[occasion] || {})};
       document.body.dataset.occasion = occasion;
       document.body.style.setProperty('--gift-hue',profile.hue);
       document.title = `${profile.label} Letter — Stack Petals`;
       document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.body).getPropertyValue('--occasion-canvas').trim();
-      document.querySelectorAll('.occasion-choice').forEach(el => el.setAttribute('aria-pressed',String(el.dataset.occasion===occasion)));
+      rootElement.querySelectorAll('.occasion-choice').forEach(el => el.setAttribute('aria-pressed',String(el.dataset.occasion===occasion)));
       for (const id of ['hero-motif','paper-motif','closing-motif','curtain-motif']) $(id).setAttribute('href',`#motif-${occasion}`);
       setText('.monogram',profile.monogram);setText('.hero__copy > .eyebrow',profile.eyebrow);
       setText('.hero__sub',profile.subtitle);
@@ -191,13 +192,13 @@ export function initExperience(rootElement) {
       setText('.envelope__letter span',String(GIFT.recipient || profile.label || 'you'));
       setText('.side-label',profile.eyebrow);setText('.bottom-note',profile.closing);setText('.footer-credit',profile.closing);
         setText('.story-nav__mark',`${profile.label} ✦`);
-      document.querySelector('.letter-paper').setAttribute('aria-label',profile.letterLabel);
+      rootElement.querySelector('.letter-paper').setAttribute('aria-label',profile.letterLabel);
       const heading = $('letter-heading');heading.replaceChildren(document.createTextNode(profile.heading+' '));
       const recipient = document.createElement('em');recipient.textContent=GIFT.recipient;heading.appendChild(recipient);
-      document.querySelectorAll('[data-sender]').forEach(el => el.textContent=GIFT.sender);
+      rootElement.querySelectorAll('[data-sender]').forEach(el => el.textContent=GIFT.sender);
       profile.paragraphs.forEach((line,i)=>{if($(`letter-paragraph-${i+1}`)) $(`letter-paragraph-${i+1}`).textContent=line;});
       $('letter-signoff').textContent=profile.signoff;
-      const cards=[...document.querySelectorAll('.reason-card')];
+      const cards=[...rootElement.querySelectorAll('.reason-card')];
       cards.forEach((card,i)=>{
         const [label,message]=profile.notes[i];
         card.querySelectorAll('.reason-card__label').forEach(el=>el.textContent=label);
@@ -207,7 +208,7 @@ export function initExperience(rootElement) {
       // Customer-selected note artwork is used by every cinematic theme.
       // The original theme intentionally keeps its historical SVGs.
       if (occasion !== 'original' && Array.isArray(GIFT.petalArtworks)) {
-        document.querySelectorAll('.reason-card__icon').forEach((icon, i) => {
+        rootElement.querySelectorAll('.reason-card__icon').forEach((icon, i) => {
           const artwork = PETAL_ARTWORKS[Number(GIFT.petalArtworks[i])];
           if (artwork) icon.innerHTML = artwork;
         });
@@ -225,7 +226,7 @@ export function initExperience(rootElement) {
       setText('.gift-dialog__panel > .eyebrow',profile.label.toUpperCase());
       setText('.gift-dialog__panel > p',profile.giftCaption);
       const donationUrl = import.meta.env.VITE_DONATION_URL || `${publicSiteUrl()}/contact?subject=Support%20Stack%20Petals`;
-      document.querySelectorAll('[data-donation-link]').forEach(link => {
+      rootElement.querySelectorAll('[data-donation-link]').forEach(link => {
         const amount = link.getAttribute('data-donation-amount');
         if (!amount) {
           link.setAttribute('href', donationUrl);
@@ -295,7 +296,7 @@ export function initExperience(rootElement) {
           y(-((e.clientY-rect.top)/rect.height-.5)*8);
         });
         listen($('hero'),'pointerleave',()=>{x(0);y(0)});
-        document.querySelectorAll('.reason-card').forEach(card=>{
+        rootElement.querySelectorAll('.reason-card').forEach(card=>{
           const inner=card.querySelector('.reason-card__inner');
           const rx=gsap.quickTo(card,'rotationX',{duration:.5,ease:'power2.out'});
           const ry=gsap.quickTo(card,'rotationY',{duration:.5,ease:'power2.out'});
@@ -511,7 +512,7 @@ export function initExperience(rootElement) {
     $('seal-button').addEventListener('click', async () => { if (occasion !== 'sympathy') await startMusic(); openLetter(); });
     $('open-button').addEventListener('click', async () => { if (occasion !== 'sympathy') await startMusic(); openLetter(); });
 
-    document.querySelectorAll('.reason-card').forEach((card, index) => {
+    rootElement.querySelectorAll('.reason-card').forEach((card, index) => {
       card.addEventListener('click',() => {
         const title = card.querySelector('.reason-card__front .reason-card__label').textContent.trim();
         const pressed = card.getAttribute('aria-pressed') === 'true';

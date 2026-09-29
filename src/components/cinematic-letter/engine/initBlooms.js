@@ -1,17 +1,18 @@
 // Decorative blooming-button and six-note effects from the original HTML.
-export function initBlooms() {
+export function initBlooms(rootElement) {
 
 /* The Blooming Atelier: decorative petals, six keepsake notes and the fold-out paper book.
    Pure DOM/CSS, so these additions work even when the GSAP CDN is offline. */
 (() => {
   'use strict';
+  const scope = rootElement || document;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const cards = [...document.querySelectorAll('.reason-card')];
-  const message = document.getElementById('bloom-message');
-  const budRow = document.getElementById('bloom-buds');
-  const book = document.getElementById('flower-book');
-  const bookToggle = document.getElementById('flower-book-toggle');
-  const foldAccess = document.getElementById('go-to-blooms');
+  const cards = [...scope.querySelectorAll('.reason-card')];
+  const message = scope.querySelector('#bloom-message');
+  const budRow = scope.querySelector('#bloom-buds');
+  const book = scope.querySelector('#flower-book');
+  const bookToggle = scope.querySelector('#flower-book-toggle');
+  const foldAccess = scope.querySelector('#go-to-blooms');
   const icons = {
     flower: `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><g fill="currentColor" opacity=".85"><ellipse cx="20" cy="10.5" rx="6.8" ry="9"/><ellipse cx="29" cy="17" rx="6.8" ry="9" transform="rotate(72 29 17)"/><ellipse cx="25.5" cy="28.5" rx="6.8" ry="9" transform="rotate(144 25.5 28.5)"/><ellipse cx="14.5" cy="28.5" rx="6.8" ry="9" transform="rotate(216 14.5 28.5)"/><ellipse cx="11" cy="17" rx="6.8" ry="9" transform="rotate(288 11 17)"/></g><circle cx="20" cy="20" r="4.2" fill="#e2bb7c" stroke="#fff5d8" stroke-width="1"/></svg>`,
     star: `<svg viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 0c2.7 9.5 5 11.8 16 16-11 3-13.3 5.3-16 16C12 21.3 9.7 19 0 16 9.7 12 12 9.5 16 0Z"/></svg>`
@@ -74,7 +75,7 @@ export function initBlooms() {
   });
   progress();
   // Dynamic occasion choices and gallery dots are covered by delegated bubbling events.
-  document.addEventListener('click', e=>{
+  scope.addEventListener('click', e=>{
     const target=e.target.closest?.('button');if(!target)return;
     if(target.matches('.reason-card'))return;
     if(target.matches('#seal-button,#open-button')){burst(target,'grand',e.detail?{x:e.clientX,y:e.clientY}:undefined);return;}
@@ -85,10 +86,10 @@ export function initBlooms() {
     if(target.matches('#music-toggle'))burst(target,'mini');
   }, true);
   // The final surprise gets its own gentle floating petals above the open modal.
-  const surprise=document.getElementById('surprise-dialog');
+  const surprise=scope.querySelector('#surprise-dialog');
   if(surprise){
     const finalBloom=new MutationObserver(()=>{
-      if(surprise.open) window.setTimeout(()=>burst(document.getElementById('surprise-heading'),'medium'),100);
+      if(surprise.open) window.setTimeout(()=>burst(scope.querySelector('#surprise-heading'),'medium'),100);
     });
     finalBloom.observe(surprise,{attributes:true,attributeFilter:['open']});
   }
@@ -96,8 +97,8 @@ export function initBlooms() {
   function setBook(open){book?.classList.toggle('is-unfolded',open);bookToggle?.setAttribute('aria-pressed',String(open));book?.querySelectorAll('.flower-leaf').forEach(wing=>{wing.setAttribute('aria-hidden',String(!open)); wing.inert=!open});if(bookToggle)bookToggle.textContent=open?'✿   Fold the flower pages':'✿   Unfold the flower pages'}
   setBook(false);
   bookToggle?.addEventListener('click',()=>setBook(!book.classList.contains('is-unfolded')));
-  foldAccess?.addEventListener('click',()=>document.getElementById('reasons-section').scrollIntoView({behavior:reduced.matches?'auto':'smooth'}));
-  document.addEventListener('stackpetals:letter-enter',()=>{
+  foldAccess?.addEventListener('click',()=>scope.querySelector('#reasons-section')?.scrollIntoView({behavior:reduced.matches?'auto':'smooth'}));
+  scope.addEventListener('stackpetals:letter-enter',()=>{
     window.setTimeout(()=>setBook(true),reduced.matches?0:180);
   });
   if(!reduced.matches && window.matchMedia('(hover:hover) and (pointer:fine)').matches && book){
