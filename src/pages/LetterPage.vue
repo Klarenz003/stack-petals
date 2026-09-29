@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import LetterScreenDots from '@/components/LetterScreenDots.vue'
 import WelcomeLetterScreen from '@/components/legacy-letter/WelcomeLetterScreen.vue'
+import DedicationLetterScreen from '@/components/legacy-letter/DedicationLetterScreen.vue'
 const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/StackPetalsLetterExperience.vue'))
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
@@ -1037,25 +1038,14 @@ function skipAnimation() {
       />
 
       <!-- ── SCREEN 2 — Blooming Animation ─────────────────────── -->
-      <div
+      <DedicationLetterScreen
         v-if="currentScreen === 1"
-        class="letter-screen dedication-screen"
-        :style="{ backgroundColor: screenBg('screen2') }"
-      >
-        <div class="screen-content center page2-content">
-          <div class="page2-logo-divider"><span></span>&#9829;<span></span></div>
-
-          <div class="page2-flower-wrap" aria-hidden="true">
-            <img src="/images/page2_flower-clean.png" alt="" class="page2-flower" />
-          </div>
-
-          <h2 class="page2-title">Something special<br><em>is waiting for you...</em></h2>
-          <div class="page2-divider"><span></span><i>&#9829;</i><span></span></div>
-          <p class="page2-sub">Please wait a moment<br>while we prepare your letter &#10022;</p>
-          <LetterMagicButton class="letter-magic-action page2-magic-action" label="Continue" @activate="nextScreen" />
-        </div>
-        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
-      </div>
+        :background-color="screenBg('screen2')"
+        :screen-indices="visibleScreenIndices"
+        :active-screen="currentScreen"
+        @next="nextScreen"
+        @select="goToScreen"
+      />
 
       <!-- ── SCREEN 3 — Petal Messages ─────────────────────────── -->
       <div
