@@ -3,6 +3,7 @@ import { computed, nextTick, ref, onMounted, onUnmounted, watch, defineAsyncComp
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import LetterScreenDots from '@/components/LetterScreenDots.vue'
+import WelcomeLetterScreen from '@/components/legacy-letter/WelcomeLetterScreen.vue'
 const ThemedLetterExperience = defineAsyncComponent(() => import('@/components/StackPetalsLetterExperience.vue'))
 import { useLetterMicroMotion } from '@/composables/useLetterMicroMotion'
 import { useLetterMotion } from '@/composables/useLetterMotion'
@@ -1025,27 +1026,15 @@ function skipAnimation() {
           </div>
 
       <!-- ── SCREEN 1 — Welcome ─────────────────────────────────── -->
-      <div
+      <WelcomeLetterScreen
         v-if="currentScreen === 0"
-        class="letter-screen welcome-screen"
-        :style="{ backgroundColor: screenBg('screen1') }"
-      >
-        <div class="screen-content center">
-          <div class="welcome-top-divider"><span></span>&#10022;<span></span></div>
-          <div class="recipient-keepsake">For {{ letter.recipient }}</div>
-          <div class="welcome-heart-line"><span></span>&#9825;<span></span></div>
-          <h1 class="letter-headline">A message<br><em>just for you</em></h1>
-          <div class="letter-invitation-card" aria-hidden="true">
-            <img src="/images/envelope-clean.png" alt="" class="letter-envelope-image" />
-          </div>
-          <div class="blooming-flower">&#127800;</div>
-          <div class="letter-divider"><span></span>&#10022;<span></span></div>
-          <p class="letter-sub">Someone who admires you<br>has something to share</p>
-
-          <LetterMagicButton class="letter-magic-action page1-magic-action" label="Open your letter" @activate="nextScreen" />
-        </div>
-        <LetterScreenDots :screen-indices="visibleScreenIndices" :active-screen="currentScreen" @select="goToScreen" />
-      </div>
+        :recipient="letter.recipient"
+        :background-color="screenBg('screen1')"
+        :screen-indices="visibleScreenIndices"
+        :active-screen="currentScreen"
+        @next="nextScreen"
+        @select="goToScreen"
+      />
 
       <!-- ── SCREEN 2 — Blooming Animation ─────────────────────── -->
       <div
