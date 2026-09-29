@@ -815,6 +815,9 @@
   max-width: 720px;
   margin-inline: auto;
 }
+.checkout-letter-full-preview .flower-book__controls{
+  display: none !important;
+}
 
 /* Use the checkout dialog as the only scroll surface. Nested scrolling made
    the later chapters appear missing after the envelope was opened. */
