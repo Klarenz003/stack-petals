@@ -579,6 +579,10 @@ let isMemorySwiping = false
 
 function startMemoryTimer() {
   if (memoryTimer.value) clearInterval(memoryTimer.value)
+  if (!hasPhotoUpload.value) {
+    memoryTimer.value = null
+    return
+  }
   memoryTimer.value = window.setInterval(() => {
     if (letter.value && letter.value.memories.length > 1) {
       nextMemory()
