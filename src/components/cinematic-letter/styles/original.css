@@ -807,6 +807,14 @@
   --book-ry: 0deg;
   transform: none !important;
 }
+.checkout-letter-full-preview .flower-book .flower-leaf{
+  display: none !important;
+}
+.checkout-letter-full-preview .flower-book .letter-paper{
+  width: min(100%, 720px);
+  max-width: 720px;
+  margin-inline: auto;
+}
 
 /* Use the checkout dialog as the only scroll surface. Nested scrolling made
    the later chapters appear missing after the envelope was opened. */
