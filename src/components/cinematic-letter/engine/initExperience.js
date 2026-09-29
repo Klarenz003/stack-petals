@@ -1164,5 +1164,7 @@ export function initExperience(rootElement) {
       }
     }
 
-  
+  return () => {
+    luxeCleanup.splice(0).forEach(cleanup => cleanup());
+  };
 }
