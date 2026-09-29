@@ -4,7 +4,8 @@ import InvitationAndCurtain from './cinematic-letter/InvitationAndCurtain.vue'
 import KeepsakeStory from './cinematic-letter/KeepsakeStory.vue'
 import GiftAndSurprise from './cinematic-letter/GiftAndSurprise.vue'
 // These DOM controllers are intentionally JavaScript; keep their boundary explicit.
-import './cinematic-letter/styles/original.css'
+import cinematicStyles from './cinematic-letter/styles/original.css?inline'
+import { onBeforeUnmount } from 'vue'
 import { useCinematicExperience } from '@/composables/useCinematicExperience'
 import type { LetterRecord } from '@/types/letter'
 import { configureCinematicLetter } from '@/utils/cinematicLetterConfig'
@@ -12,6 +13,29 @@ import { configureCinematicLetter } from '@/utils/cinematicLetterConfig'
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = useCinematicExperience()
 const { theme } = configureCinematicLetter(props.letter, props)
+
+// The cinematic stylesheet contains intentionally generic selectors (for example
+// `.hero`) because it was originally a standalone page. Keep it mounted only
+// while this experience exists so it cannot leak into the storefront homepage.
+const CINEMATIC_STYLE_ID = 'stack-petals-cinematic-styles'
+let cinematicStyle = document.getElementById(CINEMATIC_STYLE_ID) as HTMLStyleElement | null
+let cinematicStyleUsers = Number(cinematicStyle?.dataset.users || 0)
+if (!cinematicStyle) {
+  cinematicStyle = document.createElement('style')
+  cinematicStyle.id = CINEMATIC_STYLE_ID
+  cinematicStyle.textContent = cinematicStyles
+  document.head.appendChild(cinematicStyle)
+}
+cinematicStyleUsers += 1
+cinematicStyle.dataset.users = String(cinematicStyleUsers)
+
+onBeforeUnmount(() => {
+  const style = document.getElementById(CINEMATIC_STYLE_ID) as HTMLStyleElement | null
+  if (!style) return
+  const users = Math.max(0, Number(style.dataset.users || 1) - 1)
+  if (users === 0) style.remove()
+  else style.dataset.users = String(users)
+})
 
 </script>
 
