@@ -11,6 +11,7 @@ const checkoutModal = ref<HTMLElement | null>(null)
 const isShaking = ref(false)
 const emailError = ref('')
 const showLetterExperiencePreview = ref(false)
+const letterPreviewReturnScrollTop = ref(0)
 // Kept for backwards-compatible state restoration when an existing checkout
 // session contains the former multi-screen preview data.
 const letterPreviewScreen = ref(0)
@@ -425,10 +426,17 @@ async function saveCrop() {
 }
 
 function openLetterExperiencePreview() {
+  letterPreviewReturnScrollTop.value = checkoutModal.value?.scrollTop || 0
   letterPreviewScreen.value = 0
   letterPreviewPetals.value = [false, false, false, false, false, false]
   activeLetterPreviewPetal.value = null
   showLetterExperiencePreview.value = true
+}
+
+async function closeLetterExperiencePreview() {
+  showLetterExperiencePreview.value = false
+  await nextTick()
+  checkoutModal.value?.scrollTo({ top: letterPreviewReturnScrollTop.value, behavior: 'auto' })
 }
 
 function nextLetterPreviewScreen() { if (letterPreviewScreen.value < 3) letterPreviewScreen.value++ }
@@ -820,14 +828,14 @@ watch(
     <div
       v-if="showLetterExperiencePreview"
       class="letter-experience-overlay"
-      @click.self="showLetterExperiencePreview = false"
+      @click.self="closeLetterExperiencePreview"
     >
       <div class="letter-experience-modal">
         <button
           class="flower-modal-close letter-experience-close"
           type="button"
           aria-label="Close letter preview"
-          @click="showLetterExperiencePreview = false"
+          @click="closeLetterExperiencePreview"
         >
           &times;
         </button>
@@ -956,7 +964,7 @@ watch(
           </div>
           <button
             class="co-btn-primary"
-            @click="letterPreviewScreen === 3 ? showLetterExperiencePreview = false : nextLetterPreviewScreen()"
+            @click="letterPreviewScreen === 3 ? closeLetterExperiencePreview() : nextLetterPreviewScreen()"
           >
             {{ letterPreviewScreen === 3 ? 'Done' : 'Next' }}
           </button>
