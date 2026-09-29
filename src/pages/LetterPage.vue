@@ -10,27 +10,11 @@ import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
 import { getNextLetterScreen, normalizeLetterScreen } from '@/utils/letterNavigation'
+import type { LetterRecord } from '@/types/letter'
 
 
 // ── Types ──────────────────────────────────────────────────────────
-interface Letter {
-  id: string
-  order_id: string
-  recipient: string
-  sender: string
-  message: string
-  petal_messages: string[]
-  petal_artworks?: number[]
-  memories: string[]
-  angle_photos: string[]
-  backgrounds: Record<string, string | null>
-  music_url: string
-  bouquet_image_url: string
-  published: boolean
-  template: string
-  letter_theme?: string | null
-  has_360_view?: boolean | null
-}
+type Letter = LetterRecord
 
 // ── State ──────────────────────────────────────────────────────────
 const route = useRoute()

@@ -12,8 +12,9 @@ import { initExperience } from './cinematic-letter/engine/initExperience.js'
 import { initBlooms } from './cinematic-letter/engine/initBlooms.js'
 import './cinematic-letter/styles/original.css'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
+import type { LetterRecord } from '@/types/letter'
 
-const props = defineProps<{ letter: any; preview?: boolean; showPicker?: boolean }>()
+const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = ref<HTMLElement | null>(null)
 const theme = props.letter?.letter_theme || props.letter?.theme || 'romance'
 const capabilities = getLetterCapabilities(props.letter)
