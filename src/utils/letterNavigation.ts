@@ -3,6 +3,11 @@ export const LETTER_MESSAGE_SCREEN_INDEX = 3
 export const LETTER_MEMORIES_SCREEN_INDEX = 4
 export const LETTER_GIFT_SCREEN_INDEX = 5
 
+export function getVisibleLetterScreenIndices(total: number, hasMemories: boolean): number[] {
+  return Array.from({ length: total }, (_, index) => index)
+    .filter(index => hasMemories || index !== LETTER_MEMORIES_SCREEN_INDEX)
+}
+
 export function getNextLetterScreen(current: number, total: number, hasMemories: boolean): number {
   if (current >= total - 1) return current
   return current === LETTER_MESSAGE_SCREEN_INDEX && !hasMemories

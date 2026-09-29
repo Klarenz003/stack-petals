@@ -10,7 +10,7 @@ import { supabase } from '@/supabaseClient'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
-import { getNextLetterScreen, normalizeLetterScreen, LETTER_TOTAL_SCREENS } from '@/utils/letterNavigation'
+import { getNextLetterScreen, normalizeLetterScreen, getVisibleLetterScreenIndices, LETTER_TOTAL_SCREENS } from '@/utils/letterNavigation'
 import type { LetterRecord } from '@/types/letter'
 import { getPetalMessages } from '@/utils/letterDefaults'
 import { siteUrl, supportUrl } from '@/utils/siteConfig'
@@ -232,8 +232,7 @@ const loadingMessages = [
 
 // ── Screens ────────────────────────────────────────────────────────
 const totalScreens = LETTER_TOTAL_SCREENS
-const visibleScreenIndices = computed(() => Array.from({ length: totalScreens }, (_, index) => index)
-  .filter(index => hasPhotoUpload.value || index !== 4))
+const visibleScreenIndices = computed(() => getVisibleLetterScreenIndices(totalScreens, hasPhotoUpload.value))
 
 // ── Load Letter ────────────────────────────────────────────────────
 async function loadLetter() {
