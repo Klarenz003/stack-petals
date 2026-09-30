@@ -1,4 +1,6 @@
 ﻿<script setup lang="ts">
+import { PhMusicNotes, PhEnvelopeSimple, PhFlower, PhHeart, PhSparkle, PhArrowDown, PhCamera, PhX, PhCaretLeft, PhCaretRight, PhArrowRight, PhArrowUpRight } from '@phosphor-icons/vue'
+
 import { computed, nextTick, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
@@ -506,7 +508,12 @@ async function startSoftMusic(trackPlay = false) {
     if (trackPlay) void trackLetterEvent('music_played')
     return true
   } catch (error) {
-    console.warn('Letter music could not be played yet:', error)
+    // Browsers block autoplay until the visitor interacts with the page. This
+    // is expected and the unlock listeners above will retry after interaction.
+    // Keep the console quiet for that normal browser policy rejection.
+    if (!(error instanceof DOMException) || error.name !== 'NotAllowedError') {
+      console.warn('Letter music could not be played:', error)
+    }
     musicPlaying.value = false
     return false
   }
@@ -928,7 +935,7 @@ function skipAnimation() {
 
     <!-- Not Found -->
     <div v-else-if="notFound" class="letter-not-found">
-      <div class="loading-flower">💌</div>
+      <div class="loading-flower"><PhEnvelopeSimple class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
       <h2>Letter not found</h2>
       <p>This letter may not be published yet or the link is invalid.</p>
     </div>
@@ -950,7 +957,7 @@ function skipAnimation() {
         @mousedown.stop
         @touchstart.stop
       >
-        <span class="music-icon">{{ musicPlaying ? '♪' : '♫' }}</span>
+        <span class="music-icon"><PhMusicNotes :size="'1em'" aria-hidden="true" /></span>
       </button>
 
       <Transition :name="slideDirection" mode="out-in" appear @enter="animateCurrentChapter">
@@ -987,7 +994,7 @@ function skipAnimation() {
         :style="{ backgroundColor: screenBg('screen3') }"
       >
         <div class="screen-content center page3-content">
-          <div class="page3-logo-divider"><span></span>&#127800;<span></span></div>
+          <div class="page3-logo-divider"><span></span><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
           <h2 class="page3-title">Your petals</h2>
           <p class="page3-sub">Tap a petal to reveal your message</p>
 
@@ -1004,32 +1011,32 @@ function skipAnimation() {
 
             <!-- Petal 1 — Top -->
             <div class="petal-zone petal-z-1" :class="{ revealed: revealedPetals[0], active: activePetal === 0 }" @click="revealPetal(0)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
             <!-- Petal 2 — Top Right -->
             <div class="petal-zone petal-z-2" :class="{ revealed: revealedPetals[1], active: activePetal === 1 }" @click="revealPetal(1)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
             <!-- Petal 3 — Bottom Right -->
             <div class="petal-zone petal-z-3" :class="{ revealed: revealedPetals[2], active: activePetal === 2 }" @click="revealPetal(2)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
             <!-- Petal 4 — Bottom -->
             <div class="petal-zone petal-z-4" :class="{ revealed: revealedPetals[3], active: activePetal === 3 }" @click="revealPetal(3)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
             <!-- Petal 5 — Bottom Left -->
             <div class="petal-zone petal-z-5" :class="{ revealed: revealedPetals[4], active: activePetal === 4 }" @click="revealPetal(4)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
             <!-- Petal 6 — Top Left -->
             <div class="petal-zone petal-z-6" :class="{ revealed: revealedPetals[5], active: activePetal === 5 }" @click="revealPetal(5)">
-              <div class="petal-symbol">&#9829;</div>
+              <div class="petal-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             </div>
 
           </div>
@@ -1037,7 +1044,7 @@ function skipAnimation() {
           <div class="petal-message-slot" aria-live="polite">
             <Transition name="petal-message">
               <div v-if="activePetalMessage" class="petal-message-card">
-                <span>&#9829;</span>
+                <span><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
                 {{ activePetalMessage }}
               </div>
             </Transition>
@@ -1065,10 +1072,10 @@ function skipAnimation() {
       >
         <!-- Falling petals while typing -->
         <div class="falling-petals" v-if="isTyping">
-          <span class="fall-petal fp-1">🌸</span>
-          <span class="fall-petal fp-2">🌸</span>
-          <span class="fall-petal fp-3">🌸</span>
-          <span class="fall-petal fp-4">🌸</span>
+          <span class="fall-petal fp-1"><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
+          <span class="fall-petal fp-2"><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
+          <span class="fall-petal fp-3"><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
+          <span class="fall-petal fp-4"><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
         </div>
 
         <div class="screen-content center">
@@ -1084,16 +1091,16 @@ function skipAnimation() {
               </span>
             </div>
             <h2 class="page4-title">A letter<br><em>written just for you</em></h2>
-            <div class="page4-divider"><span></span>&#10022;<span></span></div>
+            <div class="page4-divider"><span></span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
             <p class="letter-sub">A thoughtful message made especially for you</p>
             <LetterMagicButton class="letter-magic-action page4-open-magic-action" label="Open letter" @activate="startLetterReveal" />
           </div>
 
           <!-- After reveal — typewriter animation -->
           <div v-else class="letter-reveal-content">
-            <div class="letter-heart">🤍</div>
+            <div class="letter-heart"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
             <h2 class="letter-dear">Dear <em>{{ letter.recipient }},</em></h2>
-            <div class="letter-divider"><span></span>✦<span></span></div>
+            <div class="letter-divider"><span></span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
             <div class="letter-message-box" :class="{ 'typing-complete': senderVisible }">
               <div class="letter-lines"></div>
               <p class="letter-message-text">{{ displayedText }}</p>
@@ -1101,14 +1108,12 @@ function skipAnimation() {
 
             <!-- Skip button — only shows while typing -->
             <Transition name="soft-fade">
-              <button v-if="isTyping" class="skip-btn" @click="skipAnimation">
-                 Skip ↓
-              </button>
+              <button v-if="isTyping" class="skip-btn" @click="skipAnimation"> Skip <PhArrowDown class="ui-icon" aria-hidden="true" :size="'1em'" /> </button>
             </Transition>
 
             <Transition name="sender-reveal">
               <div v-if="senderVisible" class="sender-footer">
-                <div class="letter-divider"><span></span>✦<span></span></div>
+                <div class="letter-divider"><span></span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
                 <p class="letter-from">— With warm wishes, {{ letter.sender }}</p>
                 <LetterMagicButton v-if="hasPhotoUpload" class="letter-magic-action page4-memories-magic-action" label="See memories" @activate="nextScreen" />
               </div>
@@ -1127,7 +1132,7 @@ function skipAnimation() {
       >
         <div class="screen-content center">
           <h2 class="letter-title">Some meaningful<br><em>moments to remember</em></h2>
-          <div class="letter-divider"><span></span>✦<span></span></div>
+          <div class="letter-divider"><span></span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
 
           <div v-if="letter.memories && letter.memories.length > 0" class="memory-slideshow">
             <div
@@ -1171,7 +1176,7 @@ function skipAnimation() {
           </div>
 
           <div v-else class="no-memories">
-            <p>📸</p>
+            <p><PhCamera class="ui-icon" aria-hidden="true" :size="'1em'" /></p>
             <p class="letter-sub">No memories attached</p>
           </div>
 
@@ -1189,7 +1194,7 @@ function skipAnimation() {
         <div class="screen-content center">
           <h2 class="letter-title">Your gift<br><em>up close</em></h2>
           <p class="bouquet-intro">A little showcase before the real one reaches your hands.</p>
-          <div class="letter-divider"><span></span>✦<span></span></div>
+          <div class="letter-divider"><span></span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /><span></span></div>
 
           <div class="bouquet-preview" @mousedown.stop @mouseup.stop @touchstart.stop @touchend.stop>
             <div class="bouquet-tag">Gift spotlight</div>
@@ -1239,7 +1244,7 @@ function skipAnimation() {
       <!-- ── 360° Full Screen Viewer ────────────────────────────────────── -->
       <Teleport to="body">
             <div v-if="show360 && has360Viewer && letter.angle_photos && letter.angle_photos.length > 0" class="viewer-fullscreen">
-          <button class="viewer-close" @click="show360 = false">✕</button>
+          <button aria-label="Close" class="viewer-close" @click="show360 = false"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
 
           <div class="viewer-header">
             <p class="viewer-kicker">Gift showcase</p>
@@ -1255,7 +1260,7 @@ function skipAnimation() {
               @pointerleave.stop="stopAngleHold"
               @pointercancel.stop="stopAngleHold"
               @contextmenu.prevent
-            >‹</button>
+            ><PhCaretLeft class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
             <div
               class="viewer-360-full"
               @mousedown.stop="on360Start"
@@ -1288,7 +1293,7 @@ function skipAnimation() {
               @pointerleave.stop="stopAngleHold"
               @pointercancel.stop="stopAngleHold"
               @contextmenu.prevent
-            >›</button>
+            ><PhCaretRight class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
           </div>
 
           <div class="viewer-footer">
@@ -1315,7 +1320,7 @@ function skipAnimation() {
             </span>
           </div>
           <p class="quote-kicker">A little reminder...</p>
-          <div class="quote-divider"><span></span><i>&#10048;</i><span></span></div>
+          <div class="quote-divider"><span></span><i><PhFlower class="ui-icon" aria-hidden="true" :size="'1em'" /></i><span></span></div>
 
           <div class="quote-card">
             <blockquote class="letter-quote">
@@ -1351,7 +1356,7 @@ function skipAnimation() {
             <h2 class="sender-name">{{ letter.sender }}</h2>
 
             <div class="sender-divider" aria-hidden="true">
-              <span></span><b>&#10022;</b><span></span>
+              <span></span><b><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /></b><span></span>
             </div>
 
             <p class="sender-note">
@@ -1390,7 +1395,7 @@ function skipAnimation() {
                 <strong>Open the letter</strong>
                 <em>Read it once more</em>
               </span>
-              <i aria-hidden="true">&#8594;</i>
+              <i aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></i>
             </button>
 
             <button v-if="hasPhotoUpload" class="keepsake-tile keepsake-memory" @click="goToScreen(4)">
@@ -1433,7 +1438,7 @@ function skipAnimation() {
                 <strong>{{ hasAngleViewerContent ? 'Gift & 360° view' : 'Your gift' }}</strong>
                 <em>{{ hasAngleViewerContent ? 'Turn it around, slowly' : 'See what was chosen for you' }}</em>
               </span>
-              <i aria-hidden="true">&#8594;</i>
+              <i aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></i>
             </button>
           </div>
 
@@ -1461,7 +1466,7 @@ function skipAnimation() {
 
             <div class="end-heart-divider" aria-hidden="true">
               <span></span>
-              <b>&#9825;</b>
+              <b><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></b>
               <span></span>
             </div>
 
@@ -1477,7 +1482,7 @@ function skipAnimation() {
               <strong>Stack Petals</strong>
               <p>Create a meaningful gift<br />for someone special.</p>
                 <a :href="shopUrl" aria-label="Discover Stack Petals crafted gifts">
-                Discover Stack Petals <span aria-hidden="true">&#8594;</span>
+                Discover Stack Petals <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
               </a>
             </div>
           </section>
@@ -1486,7 +1491,7 @@ function skipAnimation() {
             <button class="end-read-again" type="button" aria-label="Read the letter again" @click="goToScreen(0)">
               <img src="/images/envelope-clean.png" alt="" aria-hidden="true" />
               <span>Read again</span>
-              <i aria-hidden="true">&#9825;</i>
+              <i aria-hidden="true"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></i>
             </button>
             <button class="end-keepsake-link" type="button" @click="goToScreen(8)">
               <span aria-hidden="true"></span>
@@ -1494,12 +1499,12 @@ function skipAnimation() {
               <span aria-hidden="true"></span>
             </button>
             <details class="end-support-garden">
-              <summary>Support more keepsakes <span aria-hidden="true">&#8599;</span></summary>
+              <summary>Support more keepsakes <span aria-hidden="true"><PhArrowUpRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span></summary>
               <p>If this made you smile, you can help us create the next one.</p>
               <div>
-                <a :href="supportUrl(50)" rel="noopener noreferrer" target="_blank">✦ Leave a ₱50 flower</a>
-                <a :href="supportUrl(100)" rel="noopener noreferrer" target="_blank">✦ Send a ₱100 bouquet</a>
-                <a :href="supportUrl(200)" rel="noopener noreferrer" target="_blank">✦ Help create more</a>
+                <a :href="supportUrl(50)" rel="noopener noreferrer" target="_blank"><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /> Leave a ₱50 flower</a>
+                <a :href="supportUrl(100)" rel="noopener noreferrer" target="_blank"><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /> Send a ₱100 bouquet</a>
+                <a :href="supportUrl(200)" rel="noopener noreferrer" target="_blank"><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /> Help create more</a>
               </div>
             </details>
           </div>
