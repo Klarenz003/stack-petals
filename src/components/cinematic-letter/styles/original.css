@@ -794,7 +794,7 @@
 /* Decorative sprigs belong to the paper background. Keep every letter glyph
    and paragraph above them so the illustration never obscures the message. */
 .flower-book .letter-paper{isolation:isolate;}
-.flower-book .letter-paper .corner-bloom{z-index:0;}
+.flower-book > .corner-bloom{z-index:1;}
 .flower-book .letter-paper > :not(.corner-bloom):not(.letter-paper__sheen){position:relative;z-index:1;}
 .flower-book .letter-paper .letter-paper__sheen{z-index:0;}
 .gift-360-button:disabled{opacity:.55;cursor:not-allowed;transform:none!important;filter:grayscale(.15);}
