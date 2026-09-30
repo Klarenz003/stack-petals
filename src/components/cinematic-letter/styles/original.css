@@ -506,7 +506,7 @@
 .bloom-journey.is-complete #bloom-message{color:var(--occasion-deep,#a77580);font-family:var(--serif);font-weight:500;font-style:italic;font-size:18px;letter-spacing:.02em;text-transform:none}
 /* Three real CSS 3D hinges, readable front faces and embossed reverse sides. */
 .letter-layout{max-width:1100px}
-.flower-book{--book-rx:0deg;--book-ry:0deg;position:relative;margin:30px auto 0;max-width:590px;perspective:1800px;transform-style:preserve-3d;transform:rotateX(var(--book-rx)) rotateY(var(--book-ry));transition:transform .4s cubic-bezier(.2,.7,.2,1);touch-action:pan-y}
+.flower-book{--book-rx:0deg;--book-ry:0deg;position:relative;margin:30px auto 0;max-width:590px;perspective:1800px;transform-style:preserve-3d;isolation:isolate;transform:rotateX(var(--book-rx)) rotateY(var(--book-ry));transition:transform .4s cubic-bezier(.2,.7,.2,1);touch-action:pan-y}
 /* First chapter starts intentionally blank, then the paper, folds, and words arrive in sequence. */
 .letter-section .chapter-tag,.letter-section .flower-book,.letter-section .flower-book__controls,.letter-section .scroll-note{opacity:0;visibility:hidden;pointer-events:none}
 .letter-section.is-intro-active .chapter-tag,.letter-section.is-intro-active .flower-book,.letter-section.is-intro-active .flower-book__controls,.letter-section.is-intro-active .scroll-note{visibility:visible}
@@ -794,7 +794,9 @@
 /* Decorative sprigs belong to the paper background. Keep every letter glyph
    and paragraph above them so the illustration never obscures the message. */
 .flower-book .letter-paper{isolation:isolate;}
-.flower-book > .corner-bloom{z-index:1;}
+.flower-book > .corner-bloom{z-index:-1;transform:translateZ(-20px);}
+.flower-book > .corner-bloom--tl{transform:translateZ(-20px) rotate(-16deg);}
+.flower-book > .corner-bloom--br{transform:translateZ(-20px) rotate(167deg);}
 .flower-book .letter-paper > :not(.corner-bloom):not(.letter-paper__sheen){position:relative;z-index:1;}
 .flower-book .letter-paper .letter-paper__sheen{z-index:0;}
 .gift-360-button:disabled{opacity:.55;cursor:not-allowed;transform:none!important;filter:grayscale(.15);}
