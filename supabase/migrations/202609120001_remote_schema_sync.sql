@@ -1,0 +1,4 @@
+-- Reconciliation marker for the migration already applied on the linked
+-- Supabase project. The remote schema is authoritative for this version.
+-- This file intentionally contains no SQL so `supabase db push` can continue
+-- with the migrations that are present in this repository.
