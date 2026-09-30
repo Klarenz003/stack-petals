@@ -1,3 +1,5 @@
+import { PhFlower } from '@phosphor-icons/vue';
+import { setIconText } from '@/utils/phosphorDom';
 // Decorative blooming-button and six-note effects from the original HTML.
 export function initBlooms(rootElement) {
 const cleanups = [];
@@ -63,7 +65,7 @@ const listen = (target, event, handler, options) => {
   function progress() {
     if(!message) return;
     const n=discovered.size;
-    message.textContent=n===6?'Your little garden is in full bloom ✿':n===0?'A little garden awaits · 0 of 6 flowers discovered':n+' of 6 flowers discovered · keep blooming';
+    setIconText(message, PhFlower, n===6?'Your little garden is in full bloom':n===0?'A little garden awaits · 0 of 6 flowers discovered':n+' of 6 flowers discovered · keep blooming');
     message.parentElement?.classList.toggle('is-complete',n===6);
     cards.forEach((card,i)=>card.classList.toggle('reason-card--discovered',discovered.has(i)));
     [...budRow.children].forEach((bud,i)=>bud.classList.toggle('is-picked',discovered.has(i)));
@@ -100,11 +102,11 @@ const listen = (target, event, handler, options) => {
     cleanups.push(() => finalBloom.disconnect());
   }
   // 3D panels now wait for the center paper to finish arriving before unfolding.
-  function setBook(open){book?.classList.toggle('is-unfolded',open);bookToggle?.setAttribute('aria-pressed',String(open));book?.querySelectorAll('.flower-leaf').forEach(wing=>{wing.setAttribute('aria-hidden',String(!open)); wing.inert=!open});if(bookToggle)bookToggle.textContent=open?'✿   Fold the flower pages':'✿   Unfold the flower pages'}
+  function setBook(open){book?.classList.toggle('is-unfolded',open);bookToggle?.setAttribute('aria-pressed',String(open));book?.querySelectorAll('.flower-leaf').forEach(wing=>{wing.setAttribute('aria-hidden',String(!open)); wing.inert=!open});setIconText(bookToggle, PhFlower, open?'Fold the flower pages':'Unfold the flower pages')}
   setBook(false);
   listen(bookToggle, 'click', ()=>setBook(!book.classList.contains('is-unfolded')));
   listen(foldAccess, 'click', ()=>scope.querySelector('#reasons-section')?.scrollIntoView({behavior:reduced.matches?'auto':'smooth'}));
-  listen(scope, 'stackpetals:letter-enter', ()=>{
+  listen(document, 'stackpetals:letter-enter', ()=>{
     window.setTimeout(()=>setBook(true),reduced.matches?0:180);
   });
   if(!reduced.matches && window.matchMedia('(hover:hover) and (pointer:fine)').matches && book){
