@@ -37,7 +37,7 @@ onMounted(async () => {
     p_public_token: token,
   })
   const resolved = Array.isArray(data) ? data[0] : data
-  gift.value = resolved || null
+  gift.value = resolveError ? null : (resolved || null)
   if (resolveError || !gift.value) {
     error.value = 'This gift code is unavailable or has been revoked.'
   }
@@ -81,7 +81,7 @@ function continueToLetterBuilder() {
     <section class="gift-claim-card">
       <p class="gift-claim-eyebrow">A Stack Petals keepsake</p>
       <h1 v-if="loading">Preparing your gift…</h1>
-      <template v-else-if="gift">
+      <template v-else-if="gift && !error">
         <h1>Make this gift yours.</h1>
         <p class="gift-claim-copy">{{ gift.product_name }} is ready for a personal letter.</p>
         <label class="gift-claim-label">
@@ -93,7 +93,7 @@ function continueToLetterBuilder() {
         </button>
         <small>{{ giftFeatureCopy }}</small>
       </template>
-      <p v-else class="gift-claim-error">{{ error }}</p>
+      <p v-else class="gift-claim-error">{{ error || 'This gift link is unavailable.' }}</p>
     </section>
   </main>
 </template>
