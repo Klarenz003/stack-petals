@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { PhArrowRight } from '@phosphor-icons/vue'
+
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Images, MessageCircleHeart, Music2, QrCode, Rotate3D } from 'lucide-vue-next'
+import { PhImages as Images, PhChatCircleDots as MessageCircleHeart, PhMusicNotes as Music2, PhQrCode as QrCode, PhCube as Rotate3D } from '@phosphor-icons/vue'
 import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
 import HomeBouquetExperience from '@/components/HomeBouquetExperience.vue'
@@ -9,6 +11,7 @@ import type { Feature } from '@/types'
 
 const router = useRouter()
 const products = useProductsStore()
+const isLoading = ref(true)
 
 const featuredProducts = computed(() => products.featuredProducts.slice(0, 4))
 const seasonalTheme = computed(() => {
@@ -19,8 +22,9 @@ const seasonalTheme = computed(() => {
   return { className: 'season-everyday', label: 'Make an ordinary day unforgettable' }
 })
 
-onMounted(() => {
-  products.fetchProducts()
+onMounted(async () => {
+  await products.fetchProducts()
+  requestAnimationFrame(() => { isLoading.value = false })
 })
 
 const features: Feature[] = [
@@ -42,7 +46,11 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
 
 <template>
   <div class="home-page" :class="seasonalTheme.className">
-    <section class="hero">
+    <section v-if="isLoading" class="home-hero-skeleton" aria-label="Loading homepage" aria-busy="true">
+      <div class="home-skeleton-copy"><span class="skeleton-line skeleton-kicker"></span><span class="skeleton-line skeleton-title"></span><span class="skeleton-line skeleton-title skeleton-title-short"></span><span class="skeleton-line skeleton-tagline"></span><div class="home-skeleton-actions"><span></span><span></span></div><span class="skeleton-line skeleton-capabilities"></span></div>
+      <div class="home-skeleton-art"><span class="skeleton-bouquet"></span><span class="skeleton-phone"></span></div>
+    </section>
+    <section v-else class="hero">
       <div class="hero-left">
         <span class="hero-kicker">{{ seasonalTheme.label }}</span>
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
@@ -50,7 +58,7 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
         <div class="buttons">
           <button class="primary hero-primary" @click="router.push('/products')">Shop Gifts</button>
           <button class="hero-process-link" @click="router.push('/process')">
-            See how it works <span aria-hidden="true">&rarr;</span>
+            See how it works <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
           </button>
         </div>
         <div class="hero-capabilities" aria-label="QR keepsake features">
@@ -81,10 +89,13 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
         <h2>Featured Products</h2>
       </div>
       <div class="grid wide-grid featured-grid">
-        <ProductCard v-for="product in featuredProducts" :key="product.name" :product="product" />
+        <template v-if="isLoading">
+          <div v-for="index in 4" :key="index" class="home-product-skeleton"><span></span><i></i><b></b></div>
+        </template>
+        <ProductCard v-for="product in featuredProducts" v-else :key="product.name" :product="product" />
       </div>
       <button v-if="products.featuredProducts.length > featuredProducts.length" class="featured-view-all" @click="router.push('/products')">
-        View all gifts <span aria-hidden="true">&rarr;</span>
+        View all gifts <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
       </button>
     </section>
 
@@ -100,7 +111,7 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       <div class="experience-journey" aria-label="The Stack Petals QR experience">
         <div v-for="(item, index) in experienceSteps" :key="item.label" class="experience-step">
           <span class="experience-step-number">0{{ index + 1 }}</span>
-          <span class="experience-step-icon"><component :is="item.icon" :size="22" stroke-width="1.6" /></span>
+          <span class="experience-step-icon"><component :is="item.icon" :size="22" weight="regular" /></span>
           <strong>{{ item.label }}</strong>
         </div>
       </div>
@@ -124,3 +135,15 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
     </section>
   </div>
 </template>
+
+<style scoped>
+.home-hero-skeleton { min-height: min(820px, 78svh); display: grid; grid-template-columns: 1fr 1.35fr; align-items: center; gap: clamp(20px, 5vw, 80px); padding: clamp(44px, 7vw, 100px) 5%; overflow: hidden; }
+.home-skeleton-copy { display: grid; gap: 16px; max-width: 560px; }
+.skeleton-line, .home-skeleton-actions span, .skeleton-bouquet, .skeleton-phone, .home-product-skeleton span, .home-product-skeleton i, .home-product-skeleton b { display: block; background: linear-gradient(110deg, rgba(228,204,198,.48) 8%, rgba(255,246,242,.92) 18%, rgba(228,204,198,.48) 33%); background-size: 220% 100%; animation: home-skeleton-shimmer 1.35s linear infinite; }
+.skeleton-line { height: 18px; border-radius: 999px; width: 82%; }.skeleton-kicker { width: 42%; height: 12px; }.skeleton-title { width: 94%; height: clamp(48px, 7vw, 92px); border-radius: 14px; }.skeleton-title-short { width: 78%; margin-top: -9px; }.skeleton-tagline { width: 62%; height: 18px; margin-top: 10px; }.skeleton-capabilities { width: 52%; height: 12px; margin-top: 10px; }
+.home-skeleton-actions { display: flex; gap: 18px; margin-top: 16px; }.home-skeleton-actions span { width: 150px; height: 54px; border-radius: 12px; }.home-skeleton-actions span + span { width: 120px; background: transparent; border: 1px solid rgba(207,169,163,.42); }
+.home-skeleton-art { position: relative; min-height: 520px; }.skeleton-bouquet { position: absolute; inset: 5% 15% 4% 5%; border-radius: 48% 52% 42% 45%; transform: rotate(-8deg); }.skeleton-phone { position: absolute; right: 3%; top: 18%; width: 23%; height: 64%; border-radius: 28px; border: 8px solid rgba(92,73,78,.18); }
+.home-product-skeleton { min-height: 330px; padding: 16px; border: 1px solid rgba(211,177,170,.35); border-radius: 18px; }.home-product-skeleton span { height: 220px; border-radius: 12px; }.home-product-skeleton i { width: 62%; height: 16px; margin-top: 18px; border-radius: 999px; }.home-product-skeleton b { width: 38%; height: 13px; margin-top: 12px; border-radius: 999px; }
+@keyframes home-skeleton-shimmer { to { background-position: -220% 0; } }
+@media (max-width: 760px) { .home-hero-skeleton { min-height: 720px; grid-template-columns: 1fr; padding-top: 48px; }.home-skeleton-art { min-height: 300px; }.skeleton-phone { right: 8%; top: 8%; height: 78%; } }
+</style>
