@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { PhArrowRight } from '@phosphor-icons/vue'
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { gsap } from 'gsap'
 import { useRouter } from 'vue-router'
 import { PhImages as Images, PhChatCircleDots as MessageCircleHeart, PhMusicNotes as Music2, PhQrCode as QrCode, PhCube as Rotate3D } from '@phosphor-icons/vue'
 import { useProductsStore } from '@/stores/products'
@@ -12,6 +13,8 @@ import type { Feature } from '@/types'
 const router = useRouter()
 const products = useProductsStore()
 const isLoading = ref(true)
+const homeRoot = ref<HTMLElement | null>(null)
+let homeRevealContext: gsap.Context | null = null
 
 const featuredProducts = computed(() => products.featuredProducts.slice(0, 4))
 const seasonalTheme = computed(() => {
@@ -24,7 +27,31 @@ const seasonalTheme = computed(() => {
 
 onMounted(async () => {
   await products.fetchProducts()
-  requestAnimationFrame(() => { isLoading.value = false })
+  requestAnimationFrame(async () => {
+    isLoading.value = false
+    await nextTick()
+    const root = homeRoot.value
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    homeRevealContext?.revert()
+    homeRevealContext = gsap.context(() => {
+      const copy = gsap.utils.toArray<HTMLElement>('.hero-left > *')
+      const art = gsap.utils.toArray<HTMLElement>('.hero-right')
+      const features = gsap.utils.toArray<HTMLElement>('.feature-bar .feature')
+      gsap.set([...copy, ...art, ...features], { opacity: 0 })
+      gsap.set(copy, { y: 24 })
+      gsap.set(art, { y: 18, scale: 0.97 })
+      gsap.set(features, { y: 12 })
+      const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } })
+      timeline.to(copy, { opacity: 1, y: 0, duration: 0.62, stagger: 0.07 })
+        .to(art, { opacity: 1, y: 0, scale: 1, duration: 0.9 }, '-=0.42')
+        .to(features, { opacity: 1, y: 0, duration: 0.48, stagger: 0.08 }, '-=0.5')
+    }, root)
+  })
+})
+
+onBeforeUnmount(() => {
+  homeRevealContext?.revert()
+  homeRevealContext = null
 })
 
 const features: Feature[] = [
@@ -45,7 +72,7 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
 </script>
 
 <template>
-  <div class="home-page" :class="seasonalTheme.className">
+  <div ref="homeRoot" class="home-page" :class="seasonalTheme.className">
     <section v-if="isLoading" class="home-hero-skeleton" aria-label="Loading homepage" aria-busy="true">
       <div class="home-skeleton-copy"><span class="skeleton-line skeleton-kicker"></span><span class="skeleton-line skeleton-title"></span><span class="skeleton-line skeleton-title skeleton-title-short"></span><span class="skeleton-line skeleton-tagline"></span><div class="home-skeleton-actions"><span></span><span></span></div><span class="skeleton-line skeleton-capabilities"></span></div>
       <div class="home-skeleton-art"><span class="skeleton-bouquet"></span><span class="skeleton-phone"></span></div>
