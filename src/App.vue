@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
+import { gsap } from 'gsap'
 import { useRoute } from 'vue-router'
 import { useCanvas } from '@/composables/useCanvas'
 import { useCartStore } from '@/stores/cart'
@@ -45,6 +46,11 @@ onMounted(() => market.detectMarket())
 function finishStartupLoading() {
   sessionStorage.setItem(STARTUP_LOADER_KEY, 'ready')
   showStartupLoader.value = false
+}
+
+function revealPage(element: Element) {
+  if (isLetterPage.value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  gsap.fromTo(element, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.46, ease: 'power2.out', clearProps: 'transform,opacity' })
 }
 
 // 'slide-left' when going forward, 'slide-right' when going back
@@ -96,7 +102,7 @@ watch(
 
   <!-- Always rendered -->
   <RouterView v-slot="{ Component }">
-    <Transition :name="transitionName" mode="out-in">
+    <Transition :name="transitionName" mode="out-in" @after-enter="revealPage">
       <component :is="Component" :key="route.name" />
     </Transition>
   </RouterView>
