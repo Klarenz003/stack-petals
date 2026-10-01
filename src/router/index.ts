@@ -43,6 +43,9 @@ const router = createRouter({
     { path: '/letter-test', name: 'letter-test', component: LetterExperienceTestPage, meta: { hideNav: true } },
     { path: '/gift/claim/:token', name: 'gift-claim', component: GiftClaimPage, meta: { hideNav: true } },
     { path: '/gift/create/:token', name: 'gift-create', component: () => import('@/pages/GiftLetterCreatePage.vue'), meta: { hideNav: true } },
+    { path: '/letter-v2/claim/:token', name: 'letter-v2-claim', component: () => import('@/pages/LetterV2ClaimPage.vue'), meta: { hideNav: true } },
+    { path: '/letter-v2/create/:token', name: 'letter-v2-create', component: () => import('@/pages/LetterV2CreatePage.vue'), meta: { hideNav: true } },
+    { path: '/letter-v2/:id', name: 'letter-v2', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {
