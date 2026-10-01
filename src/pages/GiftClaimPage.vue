@@ -7,7 +7,9 @@ import { getGiftCapabilities } from '@/utils/giftCapabilities'
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
+const claiming = ref(false)
 const error = ref('')
+const activationCode = ref('')
 const gift = ref<{
   id: string
   product_name: string
@@ -26,13 +28,33 @@ const giftFeatureCopy = computed(() => {
 async function saveClaimAndOpenBuilder(token: string, claimed: NonNullable<typeof gift.value>) {
   localStorage.setItem('stack-petals:gift-claim', JSON.stringify({
     token,
-    activationCode: '',
+    activationCode: activationCode.value.trim().toUpperCase(),
     productName: claimed.product_name,
     has360Viewer: claimed.has_360_view,
     hasPhotoUpload: claimed.has_photo_upload,
     qrId: claimed.id,
   }))
   await router.replace(`/gift/create/${token}`)
+}
+
+function continueToLetterBuilder() {
+  if (!gift.value || claiming.value) return
+  claiming.value = true
+  error.value = ''
+  void (async () => {
+    const token = String(route.params.token || '').trim()
+    const { data, error: claimError } = await supabase.rpc('claim_gift_qr', {
+      p_public_token: token,
+      p_activation_code: activationCode.value.trim().toUpperCase() || null,
+    })
+    const claimed = Array.isArray(data) ? data[0] : data
+    if (claimError || !claimed) {
+      error.value = 'Enter the activation code printed with this gift.'
+      claiming.value = false
+      return
+    }
+    await saveClaimAndOpenBuilder(token, claimed)
+  })()
 }
 
 onMounted(async () => {
@@ -59,18 +81,7 @@ onMounted(async () => {
     return
   }
 
-  const { data: claimData, error: claimError } = await supabase.rpc('claim_gift_qr', {
-    p_public_token: token,
-    p_activation_code: null,
-  })
-  const claimed = Array.isArray(claimData) ? claimData[0] : claimData
-  if (claimError || !claimed) {
-    error.value = 'This gift could not be claimed. Please ask the sender for a new QR code.'
-    loading.value = false
-    return
-  }
-
-  await saveClaimAndOpenBuilder(token, claimed)
+  loading.value = false
 })
 </script>
 
@@ -80,8 +91,15 @@ onMounted(async () => {
       <p class="gift-claim-eyebrow">A Stack Petals keepsake</p>
       <h1 v-if="loading">Opening your gift…</h1>
       <template v-else-if="gift && !error">
-        <h1>Preparing your letter.</h1>
-        <p class="gift-claim-copy">{{ gift.product_name }} is being opened for personalization.</p>
+        <h1>Unlock your letter.</h1>
+        <p class="gift-claim-copy">Enter the activation code included with {{ gift.product_name }} to personalize it.</p>
+        <label class="gift-claim-label">
+          Activation code
+          <input v-model="activationCode" autocomplete="one-time-code" placeholder="XXXX-XXXX" @keyup.enter="continueToLetterBuilder" />
+        </label>
+        <button class="gift-claim-button" type="button" :disabled="claiming || !activationCode.trim()" @click="continueToLetterBuilder">
+          {{ claiming ? 'Opening...' : 'Create the letter' }}
+        </button>
         <small>{{ giftFeatureCopy }}</small>
       </template>
       <p v-else class="gift-claim-error">{{ error || 'This gift link is unavailable.' }}</p>
