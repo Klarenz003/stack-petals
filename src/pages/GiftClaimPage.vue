@@ -7,9 +7,7 @@ import { getGiftCapabilities } from '@/utils/giftCapabilities'
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
-const claiming = ref(false)
 const error = ref('')
-const activationCode = ref('')
 const gift = ref<{
   id: string
   product_name: string
@@ -24,6 +22,18 @@ const giftFeatureCopy = computed(() => {
     ? 'Your message, petal notes, and memories can be added next.'
     : 'Your message and petal notes can be added next.'
 })
+
+async function saveClaimAndOpenBuilder(token: string, claimed: NonNullable<typeof gift.value>) {
+  localStorage.setItem('stack-petals:gift-claim', JSON.stringify({
+    token,
+    activationCode: '',
+    productName: claimed.product_name,
+    has360Viewer: claimed.has_360_view,
+    hasPhotoUpload: claimed.has_photo_upload,
+    qrId: claimed.id,
+  }))
+  await router.replace(`/gift/create/${token}`)
+}
 
 onMounted(async () => {
   const token = String(route.params.token || '').trim()
@@ -40,57 +50,38 @@ onMounted(async () => {
   gift.value = resolveError ? null : (resolved || null)
   if (resolveError || !gift.value) {
     error.value = 'This gift code is unavailable or has been revoked.'
-  }
-  loading.value = false
-})
-
-function continueToLetterBuilder() {
-  if (!gift.value) return
-  if (gift.value.status === 'published' && gift.value.letter_id) {
-    router.push(`/letter/${gift.value.letter_id}`)
+    loading.value = false
     return
   }
-  claiming.value = true
-  void (async () => {
-    const token = String(route.params.token || '').trim()
-    const { data, error: claimError } = await supabase?.rpc('claim_gift_qr', {
-      p_public_token: token,
-      p_activation_code: activationCode.value.trim().toUpperCase() || null,
-    }) || { data: null, error: new Error('Supabase is not configured.') }
-    const claimed = Array.isArray(data) ? data[0] : data
-    if (claimError || !claimed) {
-      error.value = 'The activation code is incorrect or this gift has already been revoked.'
-      claiming.value = false
-      return
-    }
-    localStorage.setItem('stack-petals:gift-claim', JSON.stringify({
-      token,
-      activationCode: activationCode.value.trim().toUpperCase(),
-      productName: claimed.product_name,
-      has360Viewer: claimed.has_360_view,
-      hasPhotoUpload: claimed.has_photo_upload,
-      qrId: claimed.id,
-    }))
-  router.push(`/gift/create/${token}`)
-  })()
-}
+
+  if (gift.value.status === 'published' && gift.value.letter_id) {
+    await router.replace(`/letter/${gift.value.letter_id}`)
+    return
+  }
+
+  const { data: claimData, error: claimError } = await supabase.rpc('claim_gift_qr', {
+    p_public_token: token,
+    p_activation_code: null,
+  })
+  const claimed = Array.isArray(claimData) ? claimData[0] : claimData
+  if (claimError || !claimed) {
+    error.value = 'This gift could not be claimed. Please ask the sender for a new QR code.'
+    loading.value = false
+    return
+  }
+
+  await saveClaimAndOpenBuilder(token, claimed)
+})
 </script>
 
 <template>
   <main class="gift-claim-page">
     <section class="gift-claim-card">
       <p class="gift-claim-eyebrow">A Stack Petals keepsake</p>
-      <h1 v-if="loading">Preparing your gift…</h1>
+      <h1 v-if="loading">Opening your gift…</h1>
       <template v-else-if="gift && !error">
-        <h1>Make this gift yours.</h1>
-        <p class="gift-claim-copy">{{ gift.product_name }} is ready for a personal letter.</p>
-        <label class="gift-claim-label">
-          Activation code <span>(optional)</span>
-          <input v-model="activationCode" autocomplete="one-time-code" placeholder="Enter code if provided" />
-        </label>
-        <button class="gift-claim-button" type="button" :disabled="claiming" @click="continueToLetterBuilder">
-          {{ claiming ? 'Opening…' : 'Create the letter' }}
-        </button>
+        <h1>Preparing your letter.</h1>
+        <p class="gift-claim-copy">{{ gift.product_name }} is being opened for personalization.</p>
         <small>{{ giftFeatureCopy }}</small>
       </template>
       <p v-else class="gift-claim-error">{{ error || 'This gift link is unavailable.' }}</p>
