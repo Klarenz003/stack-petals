@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { PhMapPin as MapPin } from '@phosphor-icons/vue'
+import { useRoute } from 'vue-router'
+import { PhMapPin as MapPin, PhArrowUpRight } from '@phosphor-icons/vue'
 import { useMarketStore, type MarketCode } from '@/stores/market'
 import { useCartStore } from '@/stores/cart'
 
 const route = useRoute()
-const router = useRouter()
 const market = useMarketStore()
 const cart = useCartStore()
 const menuOpen = ref(false)
@@ -63,10 +62,10 @@ onBeforeUnmount(() => {
 
 <template>
   <header class="site-header">
-    <div class="logo" @click="router.push('/')">
+    <RouterLink class="logo" to="/" aria-label="Stack Petals home">
       <img src="/images/stack-petals-floral-logo.png" alt="Stack Petals floral logo" />
-      <span class="logo-wordmark">Stack Petals</span>
-    </div>
+      <span class="logo-lockup"><span class="logo-wordmark">Stack Petals</span><small>Flowers. Feelings. Forever.</small></span>
+    </RouterLink>
 
     <label class="market-switcher">
       <MapPin :size="16" weight="regular" aria-hidden="true" />
@@ -92,6 +91,7 @@ onBeforeUnmount(() => {
     </button>
 
     <nav id="site-navigation" :class="{ open: menuOpen }" aria-label="Primary navigation">
+      <span class="mobile-nav-eyebrow">A little something meaningful</span>
       <RouterLink to="/">Home</RouterLink>
       <RouterLink to="/products">Shop</RouterLink>
       <RouterLink to="/about">About</RouterLink>
@@ -100,6 +100,7 @@ onBeforeUnmount(() => {
       <RouterLink to="/reviews">Reviews</RouterLink>
       <RouterLink to="/track">Track Order</RouterLink>
       <RouterLink to="/contact">Contact</RouterLink>
+      <RouterLink class="mobile-nav-shop" to="/products">Find your gift <PhArrowUpRight :size="18" /></RouterLink>
     </nav>
 
     <button

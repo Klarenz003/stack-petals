@@ -146,6 +146,7 @@ function openPrintView() {
 <template>
   <div class="page-section track-page">
     <div class="page-hero">
+      <span class="studio-eyebrow">From our hands to yours</span>
       <h1>Track <span>Order</span></h1>
       <p>Check your handcrafted order from payment review to pickup or delivery.</p>
     </div>
@@ -169,6 +170,7 @@ function openPrintView() {
           {{ loading ? 'Checking...' : 'Check status' }}
         </button>
       </form>
+      <aside v-if="!order" class="studio-lookup-help"><span class="studio-eyebrow">A little reassurance</span><h2>Your gift is in<br /><em>thoughtful hands.</em></h2><p>Follow its journey from payment review to the final handcrafted detail, then pickup or delivery.</p><ol><li><span>01</span>Keep your SP- order reference nearby.</li><li><span>02</span>Use the phone number from checkout.</li><li><span>03</span>Find every update in one place.</li></ol><RouterLink to="/contact" class="studio-text-link">Need a hand? Let’s talk ↗</RouterLink></aside>
 
       <div v-if="order" class="track-result">
         <div class="track-result-header">

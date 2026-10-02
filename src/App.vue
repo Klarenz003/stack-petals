@@ -24,7 +24,7 @@ const preview = usePreviewStore()
 const market  = useMarketStore()
 const route   = useRoute()
 
-const isLetterPage = computed(() => route.name === 'letter' || route.name === 'letter-test' || route.name === 'gift-claim' || route.name === 'letter-v2' || route.name === 'letter-v2-claim' || route.name === 'letter-v2-create')
+const isLetterPage = computed(() => Boolean(route.meta.hideNav))
 const STARTUP_LOADER_KEY = 'stack-petals:startup-ready:v1'
 const startupAssets = [
   '/images/background.png',
@@ -67,6 +67,8 @@ watch(
 </script>
 
 <template>
+  <div :class="isLetterPage ? 'keepsake-shell' : 'storefront-shell'">
+  <a v-if="!isLetterPage" class="storefront-skip-link" href="#storefront-content">Skip to content</a>
   <AppLoadingScreen
     v-if="showStartupLoader"
     :assets="startupAssets"
@@ -101,6 +103,7 @@ watch(
   </template>
 
   <!-- Always rendered -->
+  <div id="storefront-content" :class="{ 'storefront-content': !isLetterPage }" tabindex="-1">
   <RouterView v-slot="{ Component }">
     <!-- Letter renderers swap roots after loading and manage their own animations.
          Route CSS transitions can leave the async renderer invisible on that swap. -->
@@ -109,7 +112,9 @@ watch(
       <component :is="Component" :key="route.name" />
     </Transition>
   </RouterView>
+  </div>
 
   <!-- Footer only on non-letter pages -->
   <TheFooter v-if="!isLetterPage" />
+  </div>
 </template>

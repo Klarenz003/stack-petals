@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+import { ref } from 'vue'
+import { PhX, PhTrash, PhArrowRight } from '@phosphor-icons/vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 import { useCartStore } from '@/stores/cart'
 
 const cart = useCartStore()
+const panel = ref<HTMLElement | null>(null)
+useDialogFocus(panel, () => cart.cartOpen, () => { cart.cartOpen = false })
 </script>
 
 <template>
   <div v-if="cart.cartOpen" class="cart-overlay" @click.self="cart.cartOpen = false">
-    <div class="cart-panel">
-      <button class="close-btn" aria-label="Close cart" @click="cart.cartOpen = false">x</button>
-      <h2>Your Cart</h2>
+    <div ref="panel" class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="studio-cart-title" tabindex="-1">
+      <button class="close-btn" aria-label="Close cart" @click="cart.cartOpen = false"><PhX :size="18" /></button>
+      <span class="studio-eyebrow cart-studio-eyebrow">Your next thoughtful gesture</span>
+      <h2 id="studio-cart-title">The gift bag.</h2>
 
       <div v-if="cart.cartItems.length === 0" class="cart-empty-state">
         <span>Stack Petals</span>
@@ -31,12 +37,12 @@ const cart = useCartStore()
               <span :class="{ 'original-price': item.salePrice }">{{ item.salePrice ? item.originalPrice : item.price }}</span>
             </div>
             <div class="qty-controls">
-              <button @click="cart.updateQuantity(index, -1)">-</button>
+              <button :aria-label="`Decrease quantity of ${item.name}`" @click="cart.updateQuantity(index, -1)">−</button>
               <span>{{ item.quantity }}</span>
-              <button @click="cart.updateQuantity(index, 1)">+</button>
+              <button :aria-label="`Increase quantity of ${item.name}`" @click="cart.updateQuantity(index, 1)">+</button>
             </div>
           </div>
-          <button class="remove-btn" aria-label="Remove item" @click="cart.removeFromCart(index)">x</button>
+          <button class="remove-btn" :aria-label="`Remove ${item.name}`" @click="cart.removeFromCart(index)"><PhTrash :size="17" /></button>
         </div>
       </div>
 
@@ -47,7 +53,7 @@ const cart = useCartStore()
         </div>
         <p class="cart-checkout-note">Pickup or delivery fee is finalized during checkout.</p>
         <button class="checkout-btn" @click="cart.openCheckout()">
-          Checkout
+          Make it personal <PhArrowRight :size="18" aria-hidden="true" />
         </button>
       </div>
     </div>

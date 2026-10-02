@@ -18,8 +18,9 @@ const trustStats = [
 </script>
 
 <template>
-  <div class="page-section">
+  <div class="page-section reviews-page">
     <div class="page-hero">
+      <span class="studio-eyebrow">The feeling on the other side</span>
       <h1>Customer <span>Reviews</span></h1>
       <p>Kind words from customers who trusted Stack Petals for handcrafted, personal gifts.</p>
     </div>

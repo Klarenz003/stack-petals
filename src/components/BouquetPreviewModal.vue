@@ -4,12 +4,16 @@ import { PhX } from '@phosphor-icons/vue'
 import type { Product } from '@/types'
 import { useCartStore } from '@/stores/cart'
 import { useFlyToCart } from '@/composables/useFlyToCart'
+import { ref } from 'vue'
+import { useDialogFocus } from '@/composables/useDialogFocus'
 
 const props = defineProps<{ bouquet: Product }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const cart = useCartStore()
 const { flyToCart } = useFlyToCart()
+const panel = ref<HTMLElement | null>(null)
+useDialogFocus(panel, () => true, () => emit('close'))
 
 function addAndClose(event: MouseEvent) {
   const shouldAnimate = cart.shouldAnimateAddToCart(props.bouquet)
@@ -22,12 +26,13 @@ function addAndClose(event: MouseEvent) {
 <template>
   <Transition name="preview" appear>
     <div class="preview-overlay" @click="emit('close')">
-      <button aria-label="Close" class="preview-close" @click.stop="emit('close')"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
 
       <Transition name="preview-card" appear>
-        <div class="preview-content" @click.stop>
+        <div ref="panel" class="preview-content" role="dialog" aria-modal="true" aria-labelledby="studio-preview-title" tabindex="-1" @click.stop>
+          <button aria-label="Close product preview" class="preview-close" @click="emit('close')"><PhX :size="18" /></button>
           <img :src="bouquet.image" :alt="bouquet.name" />
-          <h2>{{ bouquet.name }}</h2>
+          <span class="studio-eyebrow" style="margin-top: 22px">Made for a meaningful moment</span>
+          <h2 id="studio-preview-title">{{ bouquet.name }}</h2>
           <div class="product-price preview-price" :class="{ sale: bouquet.salePrice }">
             <span v-if="bouquet.salePrice" class="sale-price">{{ bouquet.salePrice }}</span>
             <span :class="{ 'original-price': bouquet.salePrice }">{{ bouquet.salePrice ? bouquet.originalPrice : bouquet.price }}</span>

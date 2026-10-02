@@ -92,8 +92,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-section">
+  <div class="page-section gallery-page">
     <div class="page-hero">
+      <span class="studio-eyebrow">A glimpse inside the studio</span>
       <h1>Our <span>Gallery</span></h1>
       <p>Real handcrafted pieces, sweet details, and little moments made to be remembered.</p>
     </div>

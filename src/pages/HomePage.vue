@@ -81,9 +81,10 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       <div class="hero-left">
         <span class="hero-kicker">{{ seasonalTheme.label }}</span>
         <h1>Where Code <br />Meets <span>Blooms</span></h1>
-        <p class="hero-tagline">Engineered with Precision, Crafted with Love.</p>
+        <p class="hero-tagline">Flowers made by hand.<br />A feeling made to last.</p>
+        <p class="studio-hero-description">A handcrafted gift with a story tucked inside. One scan opens your words, memories, and music into a keepsake made just for them.</p>
         <div class="buttons">
-          <button class="primary hero-primary" @click="router.push('/products')">Shop Gifts</button>
+          <button class="primary hero-primary" @click="router.push('/products')">Find your gift <PhArrowRight :size="18" /></button>
           <button class="hero-process-link" @click="router.push('/process')">
             See how it works <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
           </button>
@@ -113,7 +114,8 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
     <section class="products home-featured-products" id="products">
       <div class="home-section-heading product-heading">
         <span>Shop Favorites</span>
-        <h2>Featured Products</h2>
+        <h2>Little gifts. <em>Big feelings.</em></h2>
+        <p>A few favorites, handcrafted for your favorite people.</p>
       </div>
       <div class="grid wide-grid featured-grid">
         <template v-if="isLoading">
@@ -121,10 +123,13 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
         </template>
         <ProductCard v-for="product in featuredProducts" v-else :key="product.name" :product="product" />
       </div>
+      <div v-if="products.fetchError" class="studio-fetch-notice" role="alert"><p>{{ products.fetchError }}</p><button @click="products.fetchProducts()" :disabled="products.loading">Try again</button></div>
       <button v-if="products.featuredProducts.length > featuredProducts.length" class="featured-view-all" @click="router.push('/products')">
         View all gifts <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
       </button>
     </section>
+
+    <section class="studio-occasion-section" aria-labelledby="occasion-title"><div><span class="studio-eyebrow">No perfect words required</span><h2 id="occasion-title">What do you want<br />your gift to <em>say?</em></h2><p>For a milestone, a thank-you, or simply because.</p></div><div class="studio-occasion-grid"><RouterLink v-for="occasion in [{ label: 'I love you.', category: 'Romance', number: '01' }, { label: 'Celebrate you.', category: 'Birthday', number: '02' }, { label: 'Thank you.', category: 'Thank You', number: '03' }, { label: 'Just because.', category: 'All', number: '04' }]" :key="occasion.number" :to="{ path: '/products', query: { occasion: occasion.category } }"><span>{{ occasion.number }}</span><strong>{{ occasion.label }}</strong><PhArrowRight :size="20" aria-hidden="true" /></RouterLink></div></section>
 
     <section class="home-experience">
       <div class="home-section-heading">

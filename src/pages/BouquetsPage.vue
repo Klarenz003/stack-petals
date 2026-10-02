@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import { PhMagnifyingGlass, PhArrowUpRight } from '@phosphor-icons/vue'
 
 const baseFilters = [
   'All',
@@ -26,14 +28,28 @@ const extraFilters = [
 const activeFilter = ref('All')
 const isMoreOpen = ref(false)
 const productsStore = useProductsStore()
+const route = useRoute()
+const search = ref('')
+const sort = ref('featured')
 
 onMounted(() => {
   productsStore.fetchProducts()
 })
 
-const filteredProducts = computed(() =>
-  productsStore.productsByCategory(activeFilter.value)
-)
+const filteredProducts = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  const matching = productsStore.productsByCategory(activeFilter.value).filter(product =>
+    !term || [product.name, product.category, product.badge].some(value => String(value || '').toLowerCase().includes(term)),
+  )
+  return [...matching].sort((a, b) => {
+    if (sort.value === 'price-low') return (a.salePriceAmount ?? a.priceAmount ?? 0) - (b.salePriceAmount ?? b.priceAmount ?? 0)
+    if (sort.value === 'price-high') return (b.salePriceAmount ?? b.priceAmount ?? 0) - (a.salePriceAmount ?? a.priceAmount ?? 0)
+    if (sort.value === 'name') return a.name.localeCompare(b.name)
+    return Number(Boolean(b.featured)) - Number(Boolean(a.featured))
+  })
+})
+
+function resetBrowsing() { search.value = ''; activeFilter.value = 'All'; sort.value = 'featured' }
 
 const filters = computed(() => {
   const productCategories = productsStore.allProducts
@@ -42,6 +58,9 @@ const filters = computed(() => {
 
   return Array.from(new Set([...baseFilters, ...extraFilters, ...productCategories]))
 })
+watch(() => route.query.occasion, value => {
+  activeFilter.value = typeof value === 'string' && filters.value.includes(value) ? value : 'All'
+}, { immediate: true })
 
 const visibleFilters = computed(() => filters.value.filter(filter => baseFilters.includes(filter)))
 const overflowFilters = computed(() => filters.value.filter(filter => !baseFilters.includes(filter)))
@@ -64,17 +83,21 @@ function syncMoreOpen(event: Event) {
 </script>
 
 <template>
-  <div class="page-section">
+  <div class="page-section collection-page">
     <div class="page-hero">
-      <h1>Our <span>Products</span></h1>
+      <span class="studio-eyebrow">The collection · Made by hand, given from the heart</span>
+      <h1>A gift for <span>every feeling.</span></h1>
       <p>Every gift is handcrafted with intention, care, and a little bit of code.</p>
+      <RouterLink to="/process" class="studio-text-link">Discover the keepsake experience <PhArrowUpRight :size="17" /></RouterLink>
     </div>
 
+    <div class="studio-catalog-tools"><label class="studio-catalog-search"><PhMagnifyingGlass :size="19" aria-hidden="true" /><input v-model="search" type="search" placeholder="Find your flowers, occasion, or keepsake…" aria-label="Search the collection" /></label><label class="studio-catalog-sort"><span>Sort by</span><select v-model="sort"><option value="featured">Featured first</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name: A to Z</option></select></label></div>
     <div class="filter-bar">
       <button
         v-for="f in visibleFilters"
         :key="f"
         :class="['filter-btn', { active: activeFilter === f }]"
+        :aria-pressed="activeFilter === f"
         @click="selectFilter(f)"
       >
         {{ f }}
@@ -102,9 +125,11 @@ function syncMoreOpen(event: Event) {
       </details>
     </div>
 
-    <p class="product-result-line">
+    <div v-if="productsStore.fetchError" class="studio-fetch-notice" role="alert"><p>{{ productsStore.fetchError }}</p><button @click="productsStore.fetchProducts()" :disabled="productsStore.loading">Try again</button></div>
+    <p class="product-result-line" aria-live="polite">
       {{ filteredProducts.length }} {{ filteredProducts.length === 1 ? 'item' : 'items' }}
       <span v-if="activeFilter !== 'All'">in {{ activeFilter }}</span>
+      <button v-if="search || activeFilter !== 'All'" class="studio-clear-filters" @click="resetBrowsing">Reset filters</button>
     </p>
 
     <div v-if="productsStore.loading" class="grid wide-grid product-skeleton-grid" aria-busy="true">
@@ -129,11 +154,11 @@ function syncMoreOpen(event: Event) {
     </TransitionGroup>
 
     <div v-if="!productsStore.loading && !filteredProducts.length" class="product-empty-state">
-      <span>Category empty</span>
-      <h2>No products here yet</h2>
-      <p>Try another category or check back soon for new handcrafted pieces.</p>
+      <span>A fresh start</span>
+      <h2>{{ search ? 'No gifts match just yet.' : 'Something lovely is on its way.' }}</h2>
+      <p>Try another name or occasion, or explore the rest of our collection.</p>
       <div class="product-empty-actions">
-        <button type="button" class="co-btn-primary" @click="selectFilter('All')">Show All Products</button>
+        <button type="button" class="co-btn-primary" @click="resetBrowsing">Explore all gifts</button>
         <RouterLink class="co-btn-outline" to="/contact">Request Custom Piece</RouterLink>
       </div>
     </div>

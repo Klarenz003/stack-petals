@@ -5,6 +5,7 @@ import type { ContactInfo } from '@/types'
 import { supabase } from '@/supabaseClient'
 
 const submitted = ref(false)
+const sending = ref(false)
 const form = ref({ name: '', email: '', subject: '', message: '' })
 const submitError = ref('')
 const pickupMapUrl = 'https://www.google.com/maps/search/?api=1&query=Evasco%20Family%2C%20Santa%20Ana%2C%20Taytay%20Rizal'
@@ -33,28 +34,34 @@ const supportCards = [
 ]
 
 const formValid = computed(() =>
-  !!(form.value.name && form.value.email && form.value.message && !emailError.value)
+  !!(form.value.name.trim() && form.value.email.trim() && form.value.message.trim() && !emailError.value)
 )
 
 async function sendMessage() {
-  if (!formValid.value) return
+  if (!formValid.value || sending.value) return
   submitError.value = ''
+  sending.value = true
+  try {
+    const { error } = await supabase.from('messages').insert({
+      name:    form.value.name.trim(),
+      email:   form.value.email.trim(),
+      subject: form.value.subject.trim(),
+      message: form.value.message.trim(),
+    })
 
-  const { error } = await supabase.from('messages').insert({
-    name:    form.value.name,
-    email:   form.value.email,
-    subject: form.value.subject,
-    message: form.value.message,
-  })
+    if (error) {
+      console.error('Failed to send message:', error.message)
+      submitError.value = 'We could not send your message right now. Please try again or contact us on Facebook.'
+      return
+    }
 
-  if (error) {
-    console.error('Failed to send message:', error.message)
-    submitError.value = 'We could not send your message right now. Please try again or contact us on Facebook.'
-    return
+    submitted.value = true
+    form.value = { name: '', email: '', subject: '', message: '' }
+  } catch {
+    submitError.value = 'We could not send your message right now. Please try again or contact us by email.'
+  } finally {
+    sending.value = false
   }
-
-  submitted.value = true
-  form.value = { name: '', email: '', subject: '', message: '' }
 }
 
 const emailError = ref('')
@@ -72,8 +79,9 @@ function validateEmail() {
 </script>
 
 <template>
-  <div class="page-section">
+  <div class="page-section contact-page">
     <div class="page-hero">
+      <span class="studio-eyebrow">A conversation starts here</span>
       <h1>Get in <span>Touch</span></h1>
       <p>Questions about orders, pickup, custom designs, or the QR letter experience? We are here to help.</p>
     </div>
@@ -114,34 +122,34 @@ function validateEmail() {
 
       <!-- Contact form -->
       <div class="contact-form">
-        <div v-if="!submitted">
+        <form v-if="!submitted" @submit.prevent="sendMessage" :aria-busy="sending">
           <h2>Send a Message</h2>
           <p class="contact-form-hint">For order concerns, include your order reference so we can help faster.</p>
           <div class="co-form">
             <label>Name
-              <input v-model="form.name" type="text" placeholder="Your name" />
+              <input v-model="form.name" type="text" placeholder="Your name" autocomplete="name" required />
             </label>
             <label>Email
-              <input v-model="form.email" type="email" placeholder="your@email.com" @input="validateEmail" @blur="validateEmail"/>
+              <input v-model="form.email" type="email" placeholder="your@email.com" autocomplete="email" required @input="validateEmail" @blur="validateEmail"/>
               <small class="field-error" v-if="emailError">{{ emailError }}</small>
             </label>
             <label>Subject
               <input v-model="form.subject" type="text" placeholder="What's this about?" />
             </label>
             <label>Message
-              <textarea v-model="form.message" rows="5" placeholder="Write your message here..."></textarea>
+              <textarea v-model="form.message" rows="5" placeholder="Write your message here..." required></textarea>
             </label>
           </div>
-          <p v-if="submitError" class="field-error contact-submit-error">{{ submitError }}</p>
+          <p v-if="submitError" class="field-error contact-submit-error" role="alert">{{ submitError }}</p>
           <button
             class="co-btn-primary"
             style="width:100%;margin-top:16px"
-            @click="sendMessage"
-            :disabled="!formValid"
+            type="submit"
+            :disabled="!formValid || sending"
           >
-            Send Message
+            {{ sending ? 'Sending your message…' : 'Send your message' }}
           </button>
-        </div>
+        </form>
 
         <div v-else class="contact-success">
           <div class="contact-success-mark">Sent</div>

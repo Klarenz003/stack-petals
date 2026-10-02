@@ -318,7 +318,7 @@ onBeforeUnmount(stopMusicAnimation)
         <span>Ready to make one meaningful?</span>
         <h2>Choose the gift. We will craft the moment around it.</h2>
       </div>
-      <RouterLink to="/shop" class="process-shop-link">
+      <RouterLink to="/products" class="process-shop-link">
         Create your gift <ArrowRight :size="18" />
       </RouterLink>
     </section>

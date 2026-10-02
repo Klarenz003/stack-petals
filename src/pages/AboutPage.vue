@@ -92,7 +92,7 @@ const team = [
 
     <section class="about-cta">
       <div><p class="about-section-label">Find something meaningful</p><h2>Let your next gift hold more than a moment.</h2></div>
-      <RouterLink class="about-cta-link" to="/shop">Explore our creations <ArrowRight :size="18" aria-hidden="true" /></RouterLink>
+      <RouterLink class="about-cta-link" to="/products">Explore our creations <ArrowRight :size="18" aria-hidden="true" /></RouterLink>
     </section>
   </main>
 </template>

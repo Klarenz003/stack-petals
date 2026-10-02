@@ -19,7 +19,7 @@ function handleAddToCart(product: Product, event: MouseEvent) {
 
 <template>
   <article class="card product-card">
-    <div class="card-image-wrap" @click="preview.open(product)">
+    <button class="card-image-wrap" type="button" :aria-label="`View ${product.name}`" @click="preview.open(product)">
       <img
         :src="product.image"
         :alt="product.name"
@@ -27,9 +27,10 @@ function handleAddToCart(product: Product, event: MouseEvent) {
         decoding="async"
       />
       <div v-if="product.badge" class="card-badge">{{ product.badge }}</div>
-    </div>
+      <span class="studio-product-discover">A closer look <span aria-hidden="true">↗</span></span>
+    </button>
     <div class="card-body">
-      <h3 :title="product.name">{{ product.name }}</h3>
+      <h3 :title="product.name"><button class="studio-product-name" type="button" @click="preview.open(product)">{{ product.name }}</button></h3>
       <p class="card-category">{{ product.category || 'Featured' }}</p>
       <div class="product-price" :class="{ sale: product.salePrice }">
         <span v-if="product.salePrice" class="sale-price">{{ product.salePrice }}</span>

@@ -65,6 +65,7 @@ function printReceipt() {
 <template>
   <div class="page-section receipt-page">
     <div class="page-hero receipt-page-hero">
+      <span class="studio-eyebrow">All the little details, kept together</span>
       <h1>Order <span>Receipt</span></h1>
       <p>Your printable Stack Petals proof of order.</p>
     </div>
@@ -88,6 +89,7 @@ function printReceipt() {
           {{ loading ? 'Loading...' : 'View receipt' }}
         </button>
       </form>
+      <aside v-if="!order" class="studio-lookup-help"><span class="studio-eyebrow">Your order, at a glance</span><h2>A keepsake for<br /><em>the practical details.</em></h2><p>Open your receipt to review your gifts and order information, then print it or save a PDF for later.</p><RouterLink to="/track" class="studio-text-link">Looking for an update? Track your order ↗</RouterLink></aside>
 
       <OrderReceiptCard v-if="order" :order="order">
         <template #actions>

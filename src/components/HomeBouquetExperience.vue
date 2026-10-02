@@ -360,7 +360,7 @@ onBeforeUnmount(() => {
 .bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
 .qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
 
-.draggable-phone { position:absolute; left:0; top:0; z-index:1100; width:clamp(226px,16vw,268px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; visibility:hidden; opacity:0; pointer-events:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .18s ease; }
+.draggable-phone { position:absolute; left:0; top:0; z-index:1100; width:clamp(192px,13.6vw,228px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; visibility:hidden; opacity:0; pointer-events:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .18s ease; }
 .draggable-phone.is-positioned { visibility:visible; opacity:1; pointer-events:auto; }
 .draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1),opacity .2s ease,visibility .2s ease; }
 .draggable-phone.is-dragging { cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
@@ -432,7 +432,7 @@ onBeforeUnmount(() => {
   .qr-experience { width:min(calc(100vw - 40px),430px); aspect-ratio:.82/1; border-radius:18px; }
   .bouquet-artwork { left:-3%; bottom:1%; width:79%; height:auto; aspect-ratio:1138/1382; }
   .qr-hotspot { left:47.8%; top:73.2%; width:12%; }
-  .draggable-phone { width:clamp(150px,43vw,178px); }
+  .draggable-phone { width:clamp(128px,36.5vw,152px); }
   .drag-hint { right:2%; bottom:2%; }
   .drag-hint span { font-size:6.5px; padding:6px 9px; }
 }
