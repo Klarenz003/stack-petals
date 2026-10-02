@@ -104,7 +104,8 @@ watch(
   <RouterView v-slot="{ Component }">
     <!-- Letter renderers swap roots after loading and manage their own animations.
          Route CSS transitions can leave the async renderer invisible on that swap. -->
-    <Transition :name="transitionName" :css="!isLetterPage" mode="out-in" @after-enter="revealPage">
+    <component v-if="isLetterPage" :is="Component" :key="route.name" />
+    <Transition v-else :name="transitionName" mode="out-in" @after-enter="revealPage">
       <component :is="Component" :key="route.name" />
     </Transition>
   </RouterView>

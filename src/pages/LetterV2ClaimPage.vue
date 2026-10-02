@@ -3,11 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
+import GiftQrHeader from '@/components/GiftQrHeader.vue'
+import { PhKey, PhArrowRight, PhLockKey, PhFlowerTulip } from '@phosphor-icons/vue'
 
 const route = useRoute(); const router = useRouter()
 const loading = ref(true); const claiming = ref(false); const error = ref(''); const activationCode = ref('')
 const code = ref<{ id:string; product_name:string; has_360_view:boolean; has_photo_upload:boolean; status:string; letter_id:string|null } | null>(null)
-const copy = computed(() => getGiftCapabilities(code.value).hasPhotoUpload ? 'Your message, memories, and LetterPage V2 experience are ready.' : 'Your message and LetterPage V2 experience are ready.')
+const copy = computed(() => getGiftCapabilities(code.value).hasPhotoUpload ? 'Your words, your memories, a letter they’ll keep.' : 'Your words, a letter they’ll keep.')
 
 async function claim() {
   if (!code.value || claiming.value) return
@@ -15,7 +17,7 @@ async function claim() {
   const token = String(route.params.token || '').trim()
   const { data, error: claimError } = await supabase.rpc('claim_letter_v2_qr', { p_public_token: token, p_activation_code: activationCode.value.trim().toUpperCase() || null })
   const claimed = Array.isArray(data) ? data[0] : data
-  if (claimError || !claimed) { error.value = 'Enter the activation code printed with this LetterPage V2 QR card.'; claiming.value = false; return }
+  if (claimError || !claimed) { error.value = 'Please check the activation code printed with your Gift QR card and try again.'; claiming.value = false; return }
   localStorage.setItem('stack-petals:letter-v2-claim', JSON.stringify({ token, qrId: claimed.id, has360Viewer: claimed.has_360_view, hasPhotoUpload: claimed.has_photo_upload, productName: claimed.product_name }))
   await router.replace(`/letter-v2/create/${token}`)
 }
@@ -32,5 +34,29 @@ onMounted(async () => {
 })
 </script>
 
-<template><main class="v2-claim"><section class="v2-card"><p class="eyebrow">Standalone LetterPage V2</p><h1 v-if="loading">Opening your letter…</h1><template v-else-if="code && !error"><h1>Unlock LetterPage V2.</h1><p>{{ code.product_name }} is ready to personalize.</p><label>Activation code<input v-model="activationCode" placeholder="XXXX-XXXX" autocomplete="one-time-code" @keyup.enter="claim"></label><button :disabled="claiming || !activationCode.trim()" @click="claim">{{ claiming ? 'Opening…' : 'Customize the letter' }}</button><small>{{ copy }}</small></template><p v-else class="error">{{ error }}</p></section></main></template>
-<style scoped>.v2-claim{min-height:100vh;display:grid;place-items:center;padding:24px;background:#f8eeee;color:#49343b}.v2-card{width:min(100%,460px);padding:clamp(28px,6vw,56px);border:1px solid #dfbfc1;border-radius:24px;background:#fffdfa;box-shadow:0 22px 70px #5e37411f;text-align:center}.eyebrow{margin:0 0 12px;color:#a05d72;font:600 11px/1.4 'DM Sans';letter-spacing:.24em;text-transform:uppercase}h1{margin:0;font:400 clamp(34px,7vw,54px)/1.05 'Cormorant Garamond'}p{color:#7e6a70;font:16px/1.5 'DM Sans'}label{display:grid;gap:8px;margin-top:20px;text-align:left;color:#74515d;font:600 12px 'DM Sans'}input{box-sizing:border-box;width:100%;padding:13px 14px;border:1px solid #dcb8bd;border-radius:10px;font:15px 'DM Sans'}button{width:100%;margin-top:20px;border:0;border-radius:999px;padding:14px;background:#5e8d79;color:#fff;font:700 14px 'DM Sans';cursor:pointer}button:disabled{opacity:.5}small{display:block;margin-top:14px;color:#947f85;font:12px/1.5 'DM Sans'}.error{color:#a14f5d}</style>
+<template>
+  <main class="gift-studio">
+    <section class="gift-studio-shell gift-studio-shell--activation" aria-labelledby="gift-activation-title" :aria-busy="loading || claiming">
+      <GiftQrHeader />
+      <div class="gift-studio-body">
+        <span class="gift-studio-hero-icon" aria-hidden="true"><PhKey :size="30" weight="light" /></span>
+        <p class="gift-studio-eyebrow">A little surprise, just for you</p>
+        <h1 id="gift-activation-title">{{ loading ? 'Opening your gift…' : 'A little code. A lot of heart.' }}</h1>
+        <p class="gift-studio-intro">{{ loading ? 'We’re finding the letter that belongs to your gift.' : 'Unlock your gift and turn a few heartfelt words into something unforgettable.' }}</p>
+        <div v-if="loading" class="gift-studio-loading" role="status">Checking your Gift QR…</div>
+        <form v-else-if="code" @submit.prevent="claim">
+          <div class="gift-studio-product"><PhFlowerTulip :size="20" aria-hidden="true" /><span>{{ code.product_name }}<small>Ready for your personal touch</small></span></div>
+          <label class="gift-studio-field" for="gift-activation-code">Your activation code
+            <input id="gift-activation-code" v-model="activationCode" class="gift-studio-code" placeholder="XXXX-XXXX" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" :disabled="claiming" :aria-invalid="!!error" :aria-describedby="error ? 'gift-activation-error' : 'gift-activation-hint'" required />
+          </label>
+          <p id="gift-activation-hint" class="gift-studio-hint">You’ll find this code printed with your Gift QR card.</p>
+          <p v-if="error" id="gift-activation-error" class="gift-studio-error" role="alert">{{ error }}</p>
+          <button class="gift-studio-primary" :disabled="claiming || !activationCode.trim()">{{ claiming ? 'Unlocking your gift…' : 'Make it personal' }}<PhArrowRight :size="16" aria-hidden="true" /></button>
+          <p class="gift-studio-reassurance"><PhLockKey :size="14" aria-hidden="true" />{{ copy }}</p>
+        </form>
+        <p v-else class="gift-studio-error" role="alert">{{ error }}</p>
+      </div>
+    </section>
+  </main>
+</template>
+<style src="@/assets/gift-qr-studio.css"></style>

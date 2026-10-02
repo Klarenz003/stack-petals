@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhCamera, PhX, PhHeart, PhWallet, PhPaperclip, PhFlowerTulip } from '@phosphor-icons/vue'
+import MemoryPhotoUpload from '@/components/MemoryPhotoUpload.vue'
+import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhX, PhHeart, PhWallet, PhPaperclip, PhFlowerTulip } from '@phosphor-icons/vue'
 
 import { useCartStore } from '@/stores/cart'
 import { ref, computed, nextTick, watch, defineAsyncComponent } from 'vue'
@@ -55,15 +56,6 @@ if (!Array.isArray(cart.letterData.petalLabels)) {
 }
 const petalSvgSelections = computed(() => cart.letterData.petalSvgSelections)
 const showPetalDiscardPrompt = ref(false)
-const cropQueue = ref<File[]>([])
-const cropSource = ref('')
-const cropZoom = ref(1)
-const cropOffset = ref({ x: 0, y: 0 })
-const cropDragging = ref(false)
-const cropDragStart = ref({ x: 0, y: 0 })
-const cropOffsetStart = ref({ x: 0, y: 0 })
-const cropViewport = ref<HTMLElement | null>(null)
-const cropImage = ref<HTMLImageElement | null>(null)
 const addressStatus = ref('Type the full delivery address so we can estimate the shipping area.')
 const receiptDownloaded = ref(false)
 const referenceCopied = ref(false)
@@ -126,18 +118,6 @@ async function compressImage(file: File, maxSize = 1400, quality = 0.82): Promis
   } finally {
     URL.revokeObjectURL(objectUrl)
   }
-}
-
-// Keep the original file as the crop source. Compression belongs to the
-// saved crop, not to the preview: otherwise the cropper can display a
-// resampled/letterboxed version instead of the photo the customer selected.
-async function rawFileToDataUrl(file: File) {
-  return await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = event => resolve(String(event.target?.result || ''))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
 }
 
 async function submitOrder() {
@@ -354,110 +334,6 @@ const reservationExpiresAt = computed(() => {
 
 const mainMessageWordCount = computed(() => getWordCount(cart.letterData.mainMessage))
 const mainMessageNearLimit = computed(() => mainMessageWordCount.value >= MAIN_LETTER_WORD_LIMIT - 30)
-
-async function handleMemoryUpload(e: Event) {
-  const files = (e.target as HTMLInputElement).files
-  if (files) await queueMemoryFiles(Array.from(files))
-  ;(e.target as HTMLInputElement).value = ''
-}
-
-async function handleMemoryDrop(e: DragEvent) {
-  const files = e.dataTransfer?.files
-  if (files) await queueMemoryFiles(Array.from(files).filter(file => file.type.startsWith('image/')))
-}
-
-async function queueMemoryFiles(files: File[]) {
-  const remaining = Math.max(0, 3 - cart.letterData.memories.length)
-  cropQueue.value = files.filter(file => file.type.startsWith('image/')).slice(0, remaining)
-  await openNextCrop()
-}
-
-async function openNextCrop() {
-  const next = cropQueue.value.shift()
-  if (!next) {
-    cropSource.value = ''
-    return
-  }
-  cropZoom.value = 1
-  cropOffset.value = { x: 0, y: 0 }
-  cropSource.value = await rawFileToDataUrl(next)
-}
-
-function startCropDrag(event: PointerEvent) {
-  cropDragging.value = true
-  cropDragStart.value = { x: event.clientX, y: event.clientY }
-  cropOffsetStart.value = { ...cropOffset.value }
-  ;(event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId)
-}
-
-function moveCropDrag(event: PointerEvent) {
-  if (!cropDragging.value) return
-  const viewport = cropViewport.value
-  const image = cropImage.value
-  const imageWidth = image?.naturalWidth || 0
-  const imageHeight = image?.naturalHeight || 0
-  const viewportWidth = viewport?.clientWidth || 0
-  const viewportHeight = viewport?.clientHeight || 0
-  const imageRatio = imageHeight ? imageWidth / imageHeight : 1
-  const viewportRatio = viewportHeight ? viewportWidth / viewportHeight : 1
-  const baseWidth = imageRatio > viewportRatio ? viewportHeight * imageRatio : viewportWidth
-  const baseHeight = imageRatio > viewportRatio ? viewportHeight : viewportWidth / imageRatio
-  const maxX = Math.max(0, (baseWidth * cropZoom.value - viewportWidth) / 2)
-  const maxY = Math.max(0, (baseHeight * cropZoom.value - viewportHeight) / 2)
-  cropOffset.value = {
-    x: Math.max(-maxX, Math.min(maxX, cropOffsetStart.value.x + event.clientX - cropDragStart.value.x)),
-    y: Math.max(-maxY, Math.min(maxY, cropOffsetStart.value.y + event.clientY - cropDragStart.value.y)),
-  }
-}
-
-function endCropDrag() { cropDragging.value = false }
-
-function clampCropOffset() {
-  const viewport = cropViewport.value
-  const image = cropImage.value
-  if (!viewport || !image?.naturalWidth || !image.naturalHeight) return
-  const viewportWidth = viewport.clientWidth
-  const viewportHeight = viewport.clientHeight
-  const imageRatio = image.naturalWidth / image.naturalHeight
-  const viewportRatio = viewportWidth / viewportHeight
-  const baseWidth = imageRatio > viewportRatio ? viewportHeight * imageRatio : viewportWidth
-  const baseHeight = imageRatio > viewportRatio ? viewportHeight : viewportWidth / imageRatio
-  const maxX = Math.max(0, (baseWidth * cropZoom.value - viewportWidth) / 2)
-  const maxY = Math.max(0, (baseHeight * cropZoom.value - viewportHeight) / 2)
-  cropOffset.value = {
-    x: Math.max(-maxX, Math.min(maxX, cropOffset.value.x)),
-    y: Math.max(-maxY, Math.min(maxY, cropOffset.value.y)),
-  }
-}
-
-async function saveCrop() {
-  if (!cropSource.value) return
-  const image = new Image()
-  image.src = cropSource.value
-  await new Promise<void>(resolve => { image.onload = () => resolve(); image.onerror = () => resolve() })
-  if (!image.naturalWidth || !image.naturalHeight) return openNextCrop()
-
-  const canvas = document.createElement('canvas')
-  canvas.width = 900
-  canvas.height = 600
-  const context = canvas.getContext('2d')
-  if (!context) return openNextCrop()
-  const scale = Math.max(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight) * cropZoom.value
-  const width = image.naturalWidth * scale
-  const height = image.naturalHeight * scale
-  // Dragging happens in CSS pixels while the saved crop is rendered at a
-  // fixed resolution. Convert the same movement into canvas pixels so the
-  // saved image exactly matches what the customer positioned in the frame.
-  const viewportWidth = cropViewport.value?.clientWidth || canvas.width
-  const viewportHeight = cropViewport.value?.clientHeight || canvas.height
-  const offsetX = cropOffset.value.x * (canvas.width / viewportWidth)
-  const offsetY = cropOffset.value.y * (canvas.height / viewportHeight)
-  context.fillStyle = '#fffaf8'
-  context.fillRect(0, 0, canvas.width, canvas.height)
-  context.drawImage(image, (canvas.width - width) / 2 + offsetX, (canvas.height - height) / 2 + offsetY, width, height)
-  cart.letterData.memories.push(canvas.toDataURL('image/jpeg', 0.86))
-  await openNextCrop()
-}
 
 function openLetterExperiencePreview() {
   letterPreviewReturnScrollTop.value = checkoutModal.value?.scrollTop || 0
@@ -874,19 +750,7 @@ watch(
 
           <div class="letter-field">
             <label>Memories</label>
-            <div class="upload-zone" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
-              <input ref="memoryInput" type="file" accept="image/*" multiple style="display:none" @change="handleMemoryUpload" />
-              <div v-if="cart.letterData.memories.length === 0" class="upload-empty">
-                <span><PhCamera class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
-                <p>Add up to 3 photos</p>
-              </div>
-              <div v-else class="memory-grid">
-                <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-item">
-                  <img :src="mem" :alt="`Memory ${idx + 1}`" />
-                  <button aria-label="Remove memory photo" class="memory-remove" @click.stop="cart.letterData.memories.splice(idx, 1)"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
-                </div>
-              </div>
-            </div>
+            <MemoryPhotoUpload v-model="cart.letterData.memories" :disabled="cart.isSubmittingOrder" />
           </div>
         </div>
 
@@ -1050,44 +914,6 @@ watch(
       </div>
     </div>
     </Teleport>
-
-    <div v-if="cropSource" class="memory-crop-overlay">
-      <section class="memory-crop-modal" role="dialog" aria-modal="true" aria-labelledby="memory-crop-title">
-        <button class="petal-editor-close" type="button" aria-label="Cancel photo crop" @click="cropQueue = []; cropSource = ''"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
-        <span class="petals-section-title">Photo memory</span>
-        <h3 id="memory-crop-title">Crop this photo</h3>
-        <p class="petal-editor-help">Drag the image to choose what appears in your letter.</p>
-        <div
-          ref="cropViewport"
-          class="memory-crop-viewport"
-          @pointerdown="startCropDrag"
-          @pointermove="moveCropDrag"
-          @pointerup="endCropDrag"
-          @pointercancel="endCropDrag"
-          @pointerleave="endCropDrag"
-        >
-          <img
-            ref="cropImage"
-            :src="cropSource"
-            alt="Photo crop preview"
-            :style="{
-              left: `calc(50% + ${cropOffset.x}px)`,
-              top: `calc(50% + ${cropOffset.y}px)`,
-              transform: 'translate(-50%, -50%) scale(' + cropZoom + ')'
-            }"
-            draggable="false"
-          />
-          <span class="memory-crop-guide" aria-hidden="true"></span>
-        </div>
-        <label class="memory-crop-zoom">Zoom
-          <input v-model.number="cropZoom" type="range" min="1" max="2.5" step="0.01" @input="clampCropOffset" />
-        </label>
-        <div class="petal-editor-footer">
-          <span>{{ cropQueue.length ? `${cropQueue.length} more photo${cropQueue.length === 1 ? '' : 's'}` : 'Ready to add' }}</span>
-          <button class="co-btn-primary" type="button" @click="saveCrop">Use this crop</button>
-        </div>
-      </section>
-    </div>
 
     <div v-if="activePetalEditor !== null" class="petal-editor-overlay" @click.self="requestPetalDiscard">
       <section class="petal-editor-modal" role="dialog" aria-modal="true" aria-labelledby="petal-editor-title">
