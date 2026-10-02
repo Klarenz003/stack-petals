@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { PhMusicNotes, PhEnvelopeSimple, PhFlower, PhHeart, PhSparkle, PhArrowDown, PhCamera, PhX, PhCaretLeft, PhCaretRight, PhArrowRight, PhArrowUpRight } from '@phosphor-icons/vue'
+import { PhEnvelopeSimple, PhFlower, PhHeart, PhSparkle, PhArrowDown, PhCamera, PhX, PhCaretLeft, PhCaretRight, PhArrowRight, PhArrowUpRight } from '@phosphor-icons/vue'
 
 import { computed, nextTick, ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
@@ -39,7 +39,15 @@ const props = defineProps<{
 }>()
 const letter = ref<Letter | null>(null)
 const pageRoot = ref<HTMLElement | null>(null)
-const hasCinematicLetter = computed(() => Boolean(letter.value) && letter.value?.letter_theme !== 'original')
+// Legacy letters were saved with template="original" before letter_theme was
+// introduced. Treat either marker as the original renderer so old links do not
+// get sent through the cinematic experience or appear blank.
+const isOriginalLetter = computed(() => (
+  !letter.value?.letter_theme ||
+  letter.value.letter_theme === 'original' ||
+  letter.value.template === 'original'
+))
+const hasCinematicLetter = computed(() => Boolean(letter.value) && !isOriginalLetter.value)
 const loading = ref(true)
 const notFound = ref(false)
 const currentScreen = ref(0)
@@ -277,10 +285,13 @@ async function loadLetter() {
     .from('letters')
     .select('*')
     .eq('id', route.params.id)
-    .eq('published', true)
-    .single()
+    .maybeSingle()
 
-  if (error || !data) {
+  // Older original letters may not have been backfilled with published=true.
+  // Keep the public gate for modern letters, while preserving those legacy
+  // links that were already issued with template="original".
+  const legacyOriginal = data?.template === 'original' || data?.letter_theme === 'original'
+  if (error || !data || (!data.published && !legacyOriginal)) {
     notFound.value = true
     loading.value = false
     stopLoadingTextShuffle()
@@ -957,11 +968,11 @@ function skipAnimation() {
         @mousedown.stop
         @touchstart.stop
       >
-        <span class="music-icon"><PhMusicNotes :size="'1em'" aria-hidden="true" /></span>
+        <span class="music-icon" aria-hidden="true">&#9835;</span>
       </button>
 
       <Transition :name="slideDirection" mode="out-in" appear @enter="animateCurrentChapter">
-        <div :key="currentScreen" class="letter-screen-wrapper">
+        <div :key="currentScreen" class="letter-screen-wrapper" :class="{ 'legacy-screen-wrapper': isOriginalLetter }">
           <div class="chapter-petal-trail" aria-hidden="true">
             <span v-for="petal in 5" :key="petal"></span>
           </div>
@@ -5273,6 +5284,15 @@ memories-screen,
   overflow: hidden;
 }
 
+/* Legacy slides have their own stable layout and must not inherit the
+   cinematic wrapper transform state. */
+.letter-screen-wrapper.legacy-screen-wrapper {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+}
+
 /* Forward (next page) */
 .slide-forward-enter-active,
 .slide-forward-leave-active {
@@ -8001,4 +8021,5 @@ memories-screen,
     animation: none;
   }
 }
+
 </style>

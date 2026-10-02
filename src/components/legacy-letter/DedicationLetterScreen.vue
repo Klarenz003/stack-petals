@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import LetterMagicButton from '@/components/LetterMagicButton.vue'
 import LetterScreenDots from '@/components/LetterScreenDots.vue'
+import './opening-slides.css'
 
 defineProps<{ backgroundColor: string; screenIndices: number[]; activeScreen: number }>()
 const emit = defineEmits<{ next: []; select: [screen: number] }>()
@@ -21,13 +22,16 @@ const emit = defineEmits<{ next: []; select: [screen: number] }>()
 </template>
 
 <style>
-.dedication-screen { --screen-pad-top: clamp(36px, 6.2dvh, 62px); --screen-pad-bottom-base: clamp(72px, 9.8dvh, 90px); --screen-content-gap: clamp(5px, .9dvh, 10px); }
-.dedication-screen .screen-content { max-height: none; overflow: visible; }
+.dedication-screen { --screen-pad-top: clamp(36px, 6.2dvh, 62px); --screen-pad-bottom-base: clamp(72px, 9.8dvh, 90px); --screen-content-gap: clamp(5px, .9dvh, 10px); position: relative; display: grid; place-items: center; overflow: hidden; }
+.dedication-screen .screen-content { width: min(100%, 420px); align-self: center; align-items: center; max-height: none; overflow: visible; box-sizing: border-box; }
+.dedication-screen .screen-content { opacity: 1 !important; visibility: visible !important; transform: none !important; filter: none !important; }
 .page2-content { max-width: min(620px, 100%); }
+.dedication-screen .screen-content > * { align-self: center; }
 .page2-logo-divider, .page2-divider { display: grid; grid-template-columns: minmax(48px,1fr) auto minmax(48px,1fr); align-items: center; gap: 12px; width: min(310px,74vw); color: #E59BAA; line-height: 1; }
 .page2-logo-divider { margin: clamp(2px,.5dvh,6px) auto; font-size: 13px; }
 .page2-logo-divider span, .page2-divider span { height: 1px; background: linear-gradient(90deg,transparent,rgba(212,104,122,.36),transparent); }
 .page2-flower-wrap { position: relative; width: min(55vw,248px,25dvh); aspect-ratio: 1; margin: clamp(2px,.4dvh,5px) auto clamp(8px,1.4dvh,16px); display: grid; place-items: center; filter: drop-shadow(0 20px 28px rgba(163,90,105,.14)); animation: page2FlowerFloat 4.8s ease-in-out infinite; }
+.dedication-screen .page2-flower-wrap { width: min(46vw,200px,24dvh) !important; height: auto !important; flex: 0 0 auto !important; }
 .page2-flower-wrap::before, .page2-flower-wrap::after { content: ''; position: absolute; inset: 13%; border: 1px solid rgba(255,255,255,.72); border-radius: 50%; opacity: .72; pointer-events: none; animation: page2HaloBreathe 3.8s ease-in-out infinite; }
 .page2-flower-wrap::after { inset: 22%; border-color: rgba(229,155,170,.22); animation-delay: 1.1s; }
 .page2-flower { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; user-select: none; animation: page2FlowerGlow 3.6s ease-in-out infinite; }
@@ -36,9 +40,18 @@ const emit = defineEmits<{ next: []; select: [screen: number] }>()
 .page2-divider { width: min(330px,72vw); margin: clamp(8px,1.3dvh,14px) auto clamp(4px,.75dvh,8px); }
 .page2-divider i { position: relative; display: inline-grid; place-items: center; color: #E59BAA; font-style: normal; font-size: clamp(18px,4.4vw,24px); animation: softHeartPulse 2.2s ease-in-out infinite; }
 .page2-sub { margin: 0; color: #8F5A66; font-family: 'Cormorant Infant','Cormorant Garamond',serif; font-size: clamp(17px,min(4.4vw,2.35dvh),22px); font-style: italic; line-height: 1.18; }
+@media (max-width: 680px) {
+  .dedication-screen .page2-flower-wrap {
+    width: min(46vw, 200px, 24dvh);
+    flex: 0 0 auto;
+  }
+  .dedication-screen .page2-flower { width: 100%; height: 100%; object-fit: contain; }
+  .dedication-screen .page2-title { max-width: calc(100% - 24px); text-align: center; }
+}
 @keyframes page2FlowerFloat { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-7px) rotate(1.2deg)} }
 @keyframes page2HaloBreathe { 0%,100%{transform:scale(.96);opacity:.42} 50%{transform:scale(1.07);opacity:.82} }
 @keyframes page2FlowerGlow { 0%,100%{filter:saturate(1) brightness(1)} 50%{filter:saturate(1.08) brightness(1.035)} }
 @keyframes softHeartPulse { 0%,100%{transform:translateY(0) scale(1);opacity:.76} 50%{transform:translateY(-1px) scale(1.12);opacity:1} }
 @media (max-height:700px) { .dedication-screen{--screen-pad-top:22px;--screen-pad-bottom-base:56px;--screen-content-gap:4px}.page2-flower-wrap{width:min(48vw,210px,22dvh);margin-bottom:8px}.page2-title{font-size:clamp(31px,min(9.6vw,5.2dvh),48px)}.page2-title em{font-size:clamp(27px,min(8.4vw,4.7dvh),42px)}.page2-sub{font-size:clamp(15px,min(4.2vw,2.2dvh),19px)} }
+@media (max-width:680px) and (max-height:700px) { .dedication-screen .page2-flower-wrap { width:min(46vw,200px,24dvh); } }
 </style>

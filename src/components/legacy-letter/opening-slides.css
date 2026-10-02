@@ -1,0 +1,78 @@
+/* Shared layout belongs to the extracted slides, not the parent's scoped CSS. */
+.chapter-is-animating :is(.letter-invitation-card, .page2-flower-wrap) {
+  animation: none !important;
+}
+
+:is(.welcome-screen, .dedication-screen) .screen-content.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: min(500px, 100%);
+  padding: 0 var(--screen-inline-pad);
+  box-sizing: border-box;
+  gap: var(--screen-content-gap);
+  text-align: center;
+}
+
+:is(.welcome-screen, .dedication-screen) > .screen-dots {
+  position: absolute !important;
+  bottom: var(--screen-dot-bottom) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+}
+
+.welcome-screen .recipient-keepsake {
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  font-style: italic;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.welcome-screen .blooming-flower { display: none; }
+
+.welcome-screen .letter-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 80%;
+  color: #e8b4c0;
+  font-size: 12px;
+}
+
+.welcome-screen .letter-divider span {
+  flex: 1;
+  height: .5px;
+  background: #e8b4c0;
+}
+
+.welcome-screen .letter-invitation-card {
+  aspect-ratio: 1 !important;
+}
+
+:is(.welcome-screen, .dedication-screen) .letter-magic-action {
+  flex: 0 0 auto;
+  width: min(68vw, 278px);
+  min-height: 56px;
+  margin-top: clamp(10px, 1.6dvh, 16px);
+}
+
+@media (max-height: 720px) {
+  :is(.welcome-screen, .dedication-screen) .letter-magic-action {
+    width: min(61vw, 246px);
+    min-height: 50px;
+    margin-top: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.welcome-screen, .dedication-screen) *,
+  :is(.welcome-screen, .dedication-screen) *::before,
+  :is(.welcome-screen, .dedication-screen) *::after {
+    animation: none !important;
+  }
+}

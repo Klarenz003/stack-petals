@@ -99,8 +99,11 @@ function hasTargets(target: MotionTarget): boolean {
 export function useLetterMotion(options: LetterMotionOptions) {
   let timeline: gsap.core.Timeline | null = null
   let animatedElements: HTMLElement[] = []
+  let animationRoot: HTMLElement | null = null
 
   function clearInlineMotion() {
+    animationRoot?.classList.remove('chapter-is-animating')
+    animationRoot = null
     if (!animatedElements.length) return
     gsap.set(animatedElements, {
       clearProps: 'transform,opacity,visibility,filter,clipPath,willChange',
@@ -178,9 +181,12 @@ export function useLetterMotion(options: LetterMotionOptions) {
     }
 
     const travel = mobile ? 10 : 18
+    animationRoot = root
+    root.classList.add('chapter-is-animating')
     timeline = gsap.timeline({
       defaults: { overwrite: 'auto', ease: 'power3.out' },
       onComplete: clearInlineMotion,
+      onInterrupt: clearInlineMotion,
     })
     const tl = timeline
 
@@ -190,17 +196,17 @@ export function useLetterMotion(options: LetterMotionOptions) {
       case 0:
         fromTo(tl, intro, { autoAlpha: 0, y: -travel }, { autoAlpha: 1, y: 0, duration: 0.48, stagger: 0.08 }, 0.04)
         fromTo(tl, title, { autoAlpha: 0, y: travel, scale: 0.96 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.78 }, 0.16)
-        fromTo(tl, hero, { autoAlpha: 0, y: travel * 1.4, rotationX: -18, scale: 0.88 }, { autoAlpha: 1, y: 0, rotationX: 0, scale: 1, duration: 0.9, ease: 'back.out(1.18)' }, 0.3)
+        fromTo(tl, hero, { autoAlpha: 0, y: travel, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.9, ease: 'power3.out' }, 0.3)
         fromTo(tl, detail, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.42, stagger: 0.06 }, 0.55)
-        fromTo(tl, action, { autoAlpha: 0, y: 10, scale: 0.94 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.58, ease: 'back.out(1.5)' }, 0.72)
+        fromTo(tl, action, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.58 }, 0.72)
         break
 
       case 1:
         fromTo(tl, intro, { autoAlpha: 0, scaleX: 0.4 }, { autoAlpha: 1, scaleX: 1, duration: 0.55 }, 0.05)
-        fromTo(tl, hero, { autoAlpha: 0, scale: 0.48, rotation: direction * -16 }, { autoAlpha: 1, scale: 1, rotation: 0, duration: 1.05, ease: 'back.out(1.35)' }, 0.12)
-        fromTo(tl, title, { autoAlpha: 0, y: travel, clipPath: 'inset(0 0 100% 0)' }, { autoAlpha: 1, y: 0, clipPath: 'inset(0 0 0% 0)', duration: 0.75 }, 0.42)
+        fromTo(tl, hero, { autoAlpha: 0, scale: 0.78, rotation: direction * -6 }, { autoAlpha: 1, scale: 1, rotation: 0, duration: 1.05, ease: 'back.out(1.1)' }, 0.12)
+        fromTo(tl, title, { autoAlpha: 0, y: travel }, { autoAlpha: 1, y: 0, duration: 0.75 }, 0.42)
         fromTo(tl, detail, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.46, stagger: 0.09 }, 0.65)
-        fromTo(tl, action, { autoAlpha: 0, scale: 0.9 }, { autoAlpha: 1, scale: 1, duration: 0.55, ease: 'back.out(1.55)' }, 0.82)
+        fromTo(tl, action, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.55 }, 0.82)
         break
 
       case 2:
