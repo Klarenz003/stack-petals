@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MessageCircle, Send, Sparkles, ThumbsDown, ThumbsUp, X } from 'lucide-vue-next'
+import { PhChatCircle as MessageCircle, PhPaperPlaneTilt as Send, PhSparkle as Sparkles, PhThumbsDown as ThumbsDown, PhThumbsUp as ThumbsUp, PhX as X } from '@phosphor-icons/vue'
 import { supabase } from '@/supabaseClient'
 import { useMarketStore } from '@/stores/market'
 

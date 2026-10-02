@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Flower2, Heart, Images, Infinity, MessageSquareText, Music2, QrCode, Rotate3D, Sparkles } from 'lucide-vue-next'
+import { PhArrowRight as ArrowRight, PhFlower as Flower2, PhHeart as Heart, PhImages as Images, PhInfinity as Infinity, PhChatText as MessageSquareText, PhMusicNotes as Music2, PhQrCode as QrCode, PhCube as Rotate3D, PhSparkle as Sparkles } from '@phosphor-icons/vue'
 
 const milestones = [
   { year: 'May 2026', title: 'The first line of code', description: "Stack Petals began as Klarenz Evasco's idea to bring engineering and handmade artistry into one meaningful gift." },

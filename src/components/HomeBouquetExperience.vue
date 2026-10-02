@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhSparkle } from '@phosphor-icons/vue'
+
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   REVEAL_RESET_DELAY_MS,
@@ -339,9 +341,9 @@ onBeforeUnmount(() => {
               draggable="false"
             />
             <div class="keepsafe-phone-brand" aria-hidden="true">
-              <span>&#10022;</span>
+              <span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
               STACK PETALS
-              <span>&#10022;</span>
+              <span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
             </div>
           </div>
         </Transition>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Printer } from 'lucide-vue-next'
+import { PhArrowLeft as ArrowLeft, PhPrinter as Printer } from '@phosphor-icons/vue'
 import OrderReceiptCard from '@/components/OrderReceiptCard.vue'
 import {
   formatPhoneDisplay,

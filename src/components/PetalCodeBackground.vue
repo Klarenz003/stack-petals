@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { PhHeart } from '@phosphor-icons/vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
 
-const symbols = ['</>', '{}', '()', 'const', '</>', '[]', 'let', '{}', '❤️']
+const symbols = ['</>', '{}', '()', 'const', '</>', '[]', 'let', '{}', 'heart']
 
 const density = computed(() => {
   if (['track', 'receipt', 'contact'].includes(String(route.name))) return 10
@@ -26,7 +27,7 @@ const items = computed(() =>
 )
 
 function isPetal(symbol: string) {
-  return symbol === '❀' || symbol === '✦' || symbol === '✧'
+  return symbol === 'heart'
 }
 </script>
 
@@ -46,7 +47,8 @@ function isPetal(symbol: string) {
         '--opacity': item.opacity,
       }"
     >
-      {{ item.symbol }}
+      <PhHeart v-if="item.symbol === 'heart'" :size="'1em'" />
+      <template v-else>{{ item.symbol }}</template>
     </span>
   </div>
 </template>

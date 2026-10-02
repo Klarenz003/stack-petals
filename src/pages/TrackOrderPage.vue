@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ChevronUp, ExternalLink, Printer } from 'lucide-vue-next'
+import { PhCaretDown as ChevronDown, PhCaretUp as ChevronUp, PhArrowSquareOut as ExternalLink, PhPrinter as Printer } from '@phosphor-icons/vue'
 import OrderReceiptCard from '@/components/OrderReceiptCard.vue'
 import {
   formatPhoneDisplay,

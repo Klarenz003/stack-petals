@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhEnvelopeSimple, PhCamera, PhX, PhHeart, PhWallet, PhPaperclip, PhFlowerTulip } from '@phosphor-icons/vue'
+
 import { useCartStore } from '@/stores/cart'
 import { ref, computed, nextTick, watch, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
@@ -560,7 +562,7 @@ watch(
         </div>
         <div class="co-actions">
           <button class="co-btn-outline" @click="cart.closeCheckout()">Cancel</button>
-          <button class="co-btn-primary" @click="cart.checkoutStep = 2">Continue →</button>
+          <button class="co-btn-primary" @click="cart.checkoutStep = 2">Continue <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
         </div>
       </div>
 
@@ -704,7 +706,7 @@ watch(
           </label>
         </div>
         <div class="co-actions">
-          <button class="co-btn-outline" @click="cart.checkoutStep = 1">← Back</button>
+          <button class="co-btn-outline" @click="cart.checkoutStep = 1"><PhArrowLeft class="ui-icon" aria-hidden="true" :size="'1em'" /> Back</button>
           <button class="co-btn-primary" @click="cart.checkoutStep = 3" :disabled="!cart.customerValid">
             {{ cart.isCheckingDeliveryDate ? 'Checking slots...' : 'Continue →' }}
           </button>
@@ -713,7 +715,7 @@ watch(
 
       <!-- STEP 3 — Love Letter -->
       <div v-if="cart.checkoutStep === 3" class="checkout-body letter-step">
-        <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter 💌</h2>
+        <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter <PhEnvelopeSimple class="ui-icon" aria-hidden="true" :size="'1em'" /></h2>
         <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this gift even more special</p>
 
         <label class="letter-toggle">
@@ -831,13 +833,13 @@ watch(
             <div class="upload-zone" @click="($refs.memoryInput as HTMLInputElement).click()" @dragover.prevent @drop.prevent="handleMemoryDrop">
               <input ref="memoryInput" type="file" accept="image/*" multiple style="display:none" @change="handleMemoryUpload" />
               <div v-if="cart.letterData.memories.length === 0" class="upload-empty">
-                <span>📸</span>
+                <span><PhCamera class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
                 <p>Add up to 3 photos</p>
               </div>
               <div v-else class="memory-grid">
                 <div v-for="(mem, idx) in cart.letterData.memories" :key="idx" class="memory-item">
                   <img :src="mem" :alt="`Memory ${idx + 1}`" />
-                  <button class="memory-remove" @click.stop="cart.letterData.memories.splice(idx, 1)">✕</button>
+                  <button aria-label="Remove memory photo" class="memory-remove" @click.stop="cart.letterData.memories.splice(idx, 1)"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
                 </div>
               </div>
             </div>
@@ -845,7 +847,7 @@ watch(
         </div>
 
         <div class="co-actions">
-          <button class="co-btn-outline" @click="cart.checkoutStep = 2">← Back</button>
+          <button class="co-btn-outline" @click="cart.checkoutStep = 2"><PhArrowLeft class="ui-icon" aria-hidden="true" :size="'1em'" /> Back</button>
           <button class="co-btn-primary" @click="continueToPayment" :disabled="cart.isReservingStock">
             {{ cart.isReservingStock ? 'Reserving stock...' : 'Continue →' }}
           </button>
@@ -868,9 +870,7 @@ watch(
           type="button"
           aria-label="Close letter preview"
           @click="closeLetterExperiencePreview"
-        >
-          &times;
-        </button>
+        > <PhX class="ui-icon" aria-hidden="true" :size="'1em'" /> </button>
 
         <div class="checkout-letter-full-preview">
           <LetterPage
@@ -930,7 +930,7 @@ watch(
                 ]"
                 @click="toggleLetterPreviewPetal(i)"
               >
-                <div class="preview-symbol">&#9829;</div>
+                <div class="preview-symbol"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></div>
               </div>
             </div>
 
@@ -940,7 +940,7 @@ watch(
                   v-if="activeLetterPreviewPetalMessage"
                   :key="activeLetterPreviewPetal ?? 'petal-message'"
                 >
-                  <span aria-hidden="true">&#9829;</span>
+                  <span aria-hidden="true"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
                   {{ activeLetterPreviewPetalMessage }}
                 </p>
                 <p v-else class="is-placeholder">Select a petal to reveal its message</p>
@@ -1008,7 +1008,7 @@ watch(
 
     <div v-if="cropSource" class="memory-crop-overlay">
       <section class="memory-crop-modal" role="dialog" aria-modal="true" aria-labelledby="memory-crop-title">
-        <button class="petal-editor-close" type="button" aria-label="Cancel photo crop" @click="cropQueue = []; cropSource = ''">&times;</button>
+        <button class="petal-editor-close" type="button" aria-label="Cancel photo crop" @click="cropQueue = []; cropSource = ''"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
         <span class="petals-section-title">Photo memory</span>
         <h3 id="memory-crop-title">Crop this photo</h3>
         <p class="petal-editor-help">Drag the image to choose what appears in your letter.</p>
@@ -1046,7 +1046,7 @@ watch(
 
     <div v-if="activePetalEditor !== null" class="petal-editor-overlay" @click.self="requestPetalDiscard">
       <section class="petal-editor-modal" role="dialog" aria-modal="true" aria-labelledby="petal-editor-title">
-        <button class="petal-editor-close" type="button" aria-label="Close petal editor" @click="requestPetalDiscard">&times;</button>
+        <button class="petal-editor-close" type="button" aria-label="Close petal editor" @click="requestPetalDiscard"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
         <span class="petals-section-title">Petal {{ activePetalEditor + 1 }}</span>
         <h3 id="petal-editor-title" class="petal-editor-title-row">
           <template v-if="isEditingPetalTitle">
@@ -1063,9 +1063,11 @@ watch(
             <button
               type="button"
               class="petal-title-edit"
+              aria-label="Edit petal title"
+              title="Edit petal title"
               @click="isEditingPetalTitle = true"
             >
-              Edit
+              <PhPencilSimple :size="12" aria-hidden="true" />
             </button>
           </template>
         </h3>
@@ -1142,18 +1144,18 @@ watch(
           <button
             :class="['pay-tab', { active: cart.paymentMethod === 'gcash' }]"
             @click="cart.paymentMethod = 'gcash'"
-          >💙 GCash</button>
+          ><PhWallet class="ui-icon" aria-hidden="true" :size="'1em'" /> GCash</button>
           <button
             :class="['pay-tab', { active: cart.paymentMethod === 'maya' }]"
             @click="cart.paymentMethod = 'maya'"
-          >💚 Maya</button>
+          ><PhWallet class="ui-icon" aria-hidden="true" :size="'1em'" /> Maya</button>
         </div>
 
         <div class="qr-container">
           <div class="qr-box" v-if="cart.paymentMethod === 'gcash'">
             <img src="/images/gcash-qr.jpg" alt="GCash QR" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
             <div class="qr-placeholder" style="display:none">
-              <span>💙</span>
+              <span><PhWallet class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
               <p>GCash QR Code</p>
               <small>Replace with your actual GCash QR<br>(./images/gcash-qr.png)</small>
             </div>
@@ -1161,7 +1163,7 @@ watch(
           <div class="qr-box" v-if="cart.paymentMethod === 'maya'">
             <img src="/images/maya-qr.jpg" alt="Maya QR" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
             <div class="qr-placeholder" style="display:none">
-              <span>💚</span>
+              <span><PhWallet class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
               <p>Maya QR Code</p>
               <small>Replace with your actual Maya QR<br>(./images/maya-qr.png)</small>
             </div>
@@ -1184,24 +1186,24 @@ watch(
             @change="handleProofUpload"
           />
           <div v-if="!cart.paymentProof" class="upload-placeholder">
-            <span>📎</span>
+            <span><PhPaperclip class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
             <p>Click or drag your payment screenshot here</p>
           </div>
           <div v-else class="upload-preview">
             <img :src="cart.paymentProofPreview ?? ''" alt="Payment proof" />
-            <button class="remove-proof" @click.stop="cart.clearProof()">✕</button>
+            <button aria-label="Remove payment proof" class="remove-proof" @click.stop="cart.clearProof()"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
           </div>
         </div>
 
         <div class="co-actions">
-          <button class="co-btn-outline" @click="backFromPayment" :disabled="cart.isSubmittingOrder">← Back</button>
+          <button class="co-btn-outline" @click="backFromPayment" :disabled="cart.isSubmittingOrder"><PhArrowLeft class="ui-icon" aria-hidden="true" :size="'1em'" /> Back</button>
           <button
             class="co-btn-primary order-submit-button"
             :class="{ 'is-animating': cart.isSubmittingOrder }"
             @click="submitOrder"
             :disabled="!cart.paymentProof || cart.isSubmittingOrder"
           >
-            <span class="order-submit-text">Complete Order →</span>
+            <span class="order-submit-text">Complete Order <PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
             <span class="order-submit-loader" aria-hidden="true">
               <span class="submit-road-line submit-line-a"></span>
               <span class="submit-road-line submit-line-b"></span>
@@ -1264,7 +1266,7 @@ watch(
           <div><span>Delivery Date</span><strong>{{ cart.customer.date }}</strong></div>
           <div><span>Confirmation sent to</span><strong>{{ cart.customer.email }}</strong></div>
         </div>
-        <p class="confirm-note">We'll review your payment and confirm your order within 24 hours. 🌷</p>
+        <p class="confirm-note">We'll review your payment and confirm your order within 24 hours. <PhFlowerTulip class="ui-icon" aria-hidden="true" :size="'1em'" /></p>
         <div class="receipt-actions">
           <button class="co-btn-primary" @click="downloadReceipt">
             {{ receiptDownloaded ? 'Receipt Downloaded' : 'Download Receipt' }}
@@ -1282,7 +1284,7 @@ watch(
       </div>
 
       <!-- Close button (not shown on confirmation) -->
-      <button v-if="cart.checkoutStep < 5" class="checkout-close" :disabled="cart.isSubmittingOrder" @click="cart.closeCheckout()">✕</button>
+      <button aria-label="Close" v-if="cart.checkoutStep < 5" class="checkout-close" :disabled="cart.isSubmittingOrder" @click="cart.closeCheckout()"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
     </div>
   </div>
 </template>

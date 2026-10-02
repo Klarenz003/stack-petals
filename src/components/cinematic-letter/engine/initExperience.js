@@ -1,3 +1,5 @@
+import { PhHeart, PhSparkle, PhArrowClockwise, PhPause } from '@phosphor-icons/vue';
+import { setIconText } from '@/utils/phosphorDom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import logoUrl from '../assets/stack-petals-logo.png';
@@ -56,7 +58,7 @@ export function initExperience(rootElement) {
         paragraphs:GIFT.paragraphs, notes:[
           ['Your laugh',GIFT.reasons[0]],['Your kindness',GIFT.reasons[1]],['Being you',GIFT.reasons[2]],
           ['Your heart',GIFT.reasons[3]],['Your smile',GIFT.reasons[4]],['The way you care',GIFT.reasons[5]]],
-        notesHeading:'It’s the little things.', notesIntro:'Six tiny reminders. Tap each one to turn it over.',notesFooter:'And there are still so many more than six... ♡',
+        notesHeading:'It’s the little things.', notesIntro:'Six tiny reminders. Tap each one to turn it over.',notesFooter:'And there are still so many more than six...',
         memoriesHeading:'Little moments, kept forever.', memoriesIntro:'A small gallery of the moments worth returning to.',
         finalHeading:'One last little thing.', finalIntro:'There is one more note, and it’s the most important one.',
         revealHeading:'I’m so glad there is you.', lastNote:GIFT.lastNote, giftTitle:GIFT.giftTitle,giftCaption:GIFT.giftCaption,
@@ -191,7 +193,7 @@ export function initExperience(rootElement) {
       // Fall back to the occasion label only when no recipient was supplied.
       setText('.envelope__letter span',String(GIFT.recipient || profile.label || 'you'));
       setText('.side-label',profile.eyebrow);setText('.bottom-note',profile.closing);setText('.footer-credit',profile.closing);
-        setText('.story-nav__mark',`${profile.label} ✦`);
+        setIconText(rootElement.querySelector('.story-nav__mark'), PhSparkle, profile.label);
       rootElement.querySelector('.letter-paper').setAttribute('aria-label',profile.letterLabel);
       const heading = $('letter-heading');heading.replaceChildren(document.createTextNode(profile.heading+' '));
       const recipient = document.createElement('em');recipient.textContent=GIFT.recipient;heading.appendChild(recipient);
@@ -221,7 +223,7 @@ export function initExperience(rootElement) {
       setText('#surprise-heading',profile.revealHeading);$('final-message').textContent=profile.lastNote;
       setText('#gift-showcase-heading',profile.giftTitle);setText('.gift-card__caption',profile.giftCaption);
       setText('.gift-face--back span',profile.backOfGift);
-      setText('.gift-face--right span',occasion==='sympathy'?'✦':'♡');
+      setIconText(rootElement.querySelector('.gift-face--right span'), occasion==='sympathy'?PhSparkle:PhHeart);
       setText('.gift-face--left span',occasion==='birthday'?'celebrate':occasion==='sympathy'?'be gentle':'always');
       setText('.gift-face--bottom span',occasion==='sympathy'?'with care':occasion==='birthday'?'for today':'made with care');
       setText('.gift-dialog__panel > .eyebrow',profile.label.toUpperCase());
@@ -793,7 +795,7 @@ export function initExperience(rootElement) {
       if(giftView.boxRaf!==null){cancelAnimationFrame(giftView.boxRaf);giftView.boxRaf=null;}
       giftView.boxLastTime=0;
       if(!giftView.opened){
-        $('gift-spin-toggle').textContent='↻   Spin the box';
+        setIconText($('gift-spin-toggle'), PhArrowClockwise, 'Spin the box');
         $('gift-spin-toggle').setAttribute('aria-pressed','false');
       }
     }
@@ -810,7 +812,7 @@ export function initExperience(rootElement) {
     function startBoxSpin(){
       if(giftView.opened || reduceMotion || !$('gift-dialog').open)return;
       stopBoxSpin();giftView.boxSpinning=true;
-      $('gift-spin-toggle').textContent='Ⅱ   Pause box spin';
+      setIconText($('gift-spin-toggle'), PhPause, 'Pause box spin');
       $('gift-spin-toggle').setAttribute('aria-pressed','true');
       giftView.boxRaf=requestAnimationFrame(boxSpinTick);
     }
@@ -836,7 +838,7 @@ export function initExperience(rootElement) {
       if(giftView.raf!==null){cancelAnimationFrame(giftView.raf);giftView.raf=null;}
       giftView.lastTime=0;
       if(giftView.opened){
-        $('gift-spin-toggle').textContent='↻   Rotate product';
+        setIconText($('gift-spin-toggle'), PhArrowClockwise, 'Rotate product');
         $('gift-spin-toggle').setAttribute('aria-pressed','false');
       }
     }
@@ -853,7 +855,7 @@ export function initExperience(rootElement) {
     function startProductSpin(){
       if(GIFT.previewMode || !giftView.opened || reduceMotion || !$('gift-dialog').open)return;
       stopProductSpin();giftView.playing=true;giftView.lastTime=0;
-      $('gift-spin-toggle').textContent='Ⅱ   Pause product rotation';
+      setIconText($('gift-spin-toggle'), PhPause, 'Pause product rotation');
       $('gift-spin-toggle').setAttribute('aria-pressed','true');
       giftView.raf=requestAnimationFrame(productSpinTick);
     }
@@ -909,9 +911,9 @@ export function initExperience(rootElement) {
         : 'Gift box reveal. This bouquet does not include an interactive 360 degree viewer.');
       $('gift-spin-toggle').disabled=!canRotateProduct;
       $('gift-reset-view').disabled=!canRotateProduct;
-      $('gift-spin-toggle').textContent='↻   Rotate product';
+      setIconText($('gift-spin-toggle'), PhArrowClockwise, 'Rotate product');
       $('gift-spin-toggle').setAttribute('aria-pressed','false');
-      $('gift-reset-view').textContent='↻   Reset product';
+      setIconText($('gift-reset-view'), PhArrowClockwise, 'Reset product');
       $('gift-experience-subtitle').textContent=GIFT.previewMode
         ? 'A flower-filled surprise. The 360° viewer is available after checkout.'
         : 'A flower-filled surprise. Drag the gift to view it from every angle.';
@@ -941,7 +943,7 @@ export function initExperience(rootElement) {
       giftStage.setAttribute('aria-label','Spinning three dimensional gift box. Drag to rotate the box, then open to reveal your product.');
       $('gift-spin-toggle').disabled=false;
       $('gift-reset-view').disabled=false;
-      $('gift-reset-view').textContent='↻   Reset box view';
+      setIconText($('gift-reset-view'), PhArrowClockwise, 'Reset box view');
       $('gift-experience-subtitle').textContent='The original spinning gift box, with a surprise waiting inside.';
       $('gift-product-label').textContent='A surprise awaits inside this ribboned box';
       giftView.boxX=-19;giftView.boxY=28;renderBox();
@@ -969,7 +971,7 @@ export function initExperience(rootElement) {
       giftStage.setAttribute('aria-label','Spinning three dimensional gift box. Drag to rotate the box, then open to reveal your product.');
       $('gift-spin-toggle').disabled=false;
       $('gift-reset-view').disabled=false;
-      $('gift-reset-view').textContent='↻   Reset box view';
+      setIconText($('gift-reset-view'), PhArrowClockwise, 'Reset box view');
       $('gift-experience-subtitle').textContent='The original spinning gift box, with a surprise waiting inside.';
       $('gift-product-label').textContent='A surprise awaits inside this ribboned box';
       renderBox();fillProductFrame(0);

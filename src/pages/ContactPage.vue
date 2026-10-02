@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { PhMapPin, PhEnvelopeSimple, PhDeviceMobile, PhClock } from '@phosphor-icons/vue'
 import type { ContactInfo } from '@/types'
 import { supabase } from '@/supabaseClient'
 
@@ -9,11 +10,12 @@ const submitError = ref('')
 const pickupMapUrl = 'https://www.google.com/maps/search/?api=1&query=Evasco%20Family%2C%20Santa%20Ana%2C%20Taytay%20Rizal'
 
 const info: ContactInfo[] = [
-  { icon: '📍', label: 'Pickup Area', value: 'Santa Ana, Taytay, Rizal' },
-  { icon: '📧', label: 'Email', value: 'stack.petals@gmail.com' },
-  { icon: '📱', label: 'Phone', value: '+63 962 270 3704' },
-  { icon: '🕐', label: 'Business Hours', value: 'Mon-Sat, 8:00 AM - 7:00 PM' },
+  { icon: 'location', label: 'Pickup Area', value: 'Santa Ana, Taytay, Rizal' },
+  { icon: 'email', label: 'Email', value: 'stack.petals@gmail.com' },
+  { icon: 'phone', label: 'Phone', value: '+63 962 270 3704' },
+  { icon: 'hours', label: 'Business Hours', value: 'Mon-Sat, 8:00 AM - 7:00 PM' },
 ]
+const contactIcons = { location: PhMapPin, email: PhEnvelopeSimple, phone: PhDeviceMobile, hours: PhClock }
 
 const supportCards = [
   {
@@ -88,7 +90,7 @@ function validateEmail() {
       <div class="contact-info">
         <h2>Contact Details</h2>
         <div v-for="item in info" :key="item.label" class="contact-item">
-          <span class="contact-icon">{{ item.icon }}</span>
+          <span class="contact-icon"><component :is="contactIcons[item.icon as keyof typeof contactIcons]" :size="24" aria-hidden="true" /></span>
           <div>
             <strong>{{ item.label }}</strong>
             <p>{{ item.value }}</p>

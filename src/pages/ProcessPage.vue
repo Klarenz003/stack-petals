@@ -1,25 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { gsap } from 'gsap'
-import {
-  ArrowRight,
-  Box,
-  CheckCircle2,
-  Flower2,
-  Gift,
-  Heart,
-  Images,
-  MessageSquareText,
-  Music2,
-  PackageCheck,
-  QrCode,
-  Rotate3D,
-  ScanLine,
-  Sparkles,
-  Store,
-  Truck,
-  WalletCards,
-} from 'lucide-vue-next'
+import { PhArrowRight as ArrowRight, PhCube as Box, PhCheckCircle as CheckCircle2, PhFlower as Flower2, PhGift as Gift, PhHeart as Heart, PhImages as Images, PhChatText as MessageSquareText, PhMusicNotes as Music2, PhPackage as PackageCheck, PhQrCode as QrCode, PhCube as Rotate3D, PhScan as ScanLine, PhSparkle as Sparkles, PhStorefront as Store, PhTruck as Truck, PhWallet as WalletCards } from '@phosphor-icons/vue'
 
 const orderSteps = [
   {
@@ -200,7 +182,7 @@ onBeforeUnmount(stopMusicAnimation)
       <ol class="process-order-timeline">
         <li v-for="(step, index) in orderSteps" :key="step.title">
           <div class="process-step-marker">
-            <component :is="step.icon" :size="21" stroke-width="1.7" />
+            <component :is="step.icon" :size="21" weight="regular" />
             <span>{{ String(index + 1).padStart(2, '0') }}</span>
           </div>
           <div>
@@ -249,7 +231,7 @@ onBeforeUnmount(stopMusicAnimation)
             @click="selectedExperience = feature.id"
           >
             <span class="process-tab-number">{{ String(index + 1).padStart(2, '0') }}</span>
-            <component :is="feature.icon" :size="21" stroke-width="1.6" />
+            <component :is="feature.icon" :size="21" weight="regular" />
             <span>
               <small>{{ feature.eyebrow }}</small>
               <strong>{{ feature.title }}</strong>
@@ -287,7 +269,7 @@ onBeforeUnmount(stopMusicAnimation)
                   <div class="process-music-record">
                     <span class="process-record-groove groove-one"></span>
                     <span class="process-record-groove groove-two"></span>
-                    <span class="process-record-label"><Flower2 :size="29" stroke-width="1.35" /></span>
+                    <span class="process-record-label"><Flower2 :size="29" weight="regular" /></span>
                   </div>
                   <div class="process-music-tonearm"><span></span></div>
                 </div>
@@ -332,7 +314,7 @@ onBeforeUnmount(stopMusicAnimation)
 
     <section class="process-final-cta">
       <div>
-        <Box :size="28" stroke-width="1.5" />
+        <Box :size="28" weight="regular" />
         <span>Ready to make one meaningful?</span>
         <h2>Choose the gift. We will craft the moment around it.</h2>
       </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, Copy, CreditCard, MapPin, PackageCheck } from 'lucide-vue-next'
+import { PhCheck as Check, PhCopy as Copy, PhCreditCard as CreditCard, PhMapPin as MapPin, PhPackage as PackageCheck } from '@phosphor-icons/vue'
 import type { CustomerOrder } from '@/services/orderLookup'
 
 const props = defineProps<{

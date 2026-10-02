@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhX } from '@phosphor-icons/vue'
+
 import type { Product } from '@/types'
 import { useCartStore } from '@/stores/cart'
 import { useFlyToCart } from '@/composables/useFlyToCart'
@@ -20,7 +22,7 @@ function addAndClose(event: MouseEvent) {
 <template>
   <Transition name="preview" appear>
     <div class="preview-overlay" @click="emit('close')">
-      <button class="preview-close" @click.stop="emit('close')">✕</button>
+      <button aria-label="Close" class="preview-close" @click.stop="emit('close')"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
 
       <Transition name="preview-card" appear>
         <div class="preview-content" @click.stop>

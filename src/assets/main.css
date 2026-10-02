@@ -5003,7 +5003,7 @@ input, textarea, [contenteditable="true"] {
 .petal-editor-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 2px;
 }
 .petal-title-input {
   width: min(100%, 300px);
@@ -5015,19 +5015,31 @@ input, textarea, [contenteditable="true"] {
   font: inherit;
 }
 .petal-title-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: relative;
+  top: -2px;
+  width: 24px;
+  height: 24px;
   border: 0;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: #f8e5e4;
+  padding: 6px;
+  border-radius: 50%;
+  background: transparent;
   color: #9b6573;
   font: 600 10px/1.2 Arial, sans-serif;
   cursor: pointer;
 }
 .petal-title-edit:hover,
 .petal-title-edit:focus-visible {
-  background: #efd2d3;
+  background: #f8e5e4;
   color: #704351;
-  outline: none;
+}
+.petal-title-edit:focus-visible {
+  outline: 2px solid #9b6573;
+  outline-offset: 2px;
 }
 .checkout-modal .petals-grid .checkout-petal-field,
 .checkout-modal .petals-grid .petal-input-wrap {
@@ -9208,4 +9220,9 @@ input, textarea, [contenteditable="true"] {
     flex-direction: column;
     text-align: center;
   }
+}
+.ui-icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex-shrink: 0;
 }

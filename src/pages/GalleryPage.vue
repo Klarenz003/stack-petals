@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhX, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
+
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
 
@@ -173,16 +175,14 @@ onBeforeUnmount(() => {
           :aria-label="selectedImage.title || 'Gallery image preview'"
           @click.self="closeLightbox"
         >
-          <button class="gallery-lightbox-close" type="button" aria-label="Close image preview" @click="closeLightbox">&times;</button>
+          <button class="gallery-lightbox-close" type="button" aria-label="Close image preview" @click="closeLightbox"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
           <button
             v-if="filteredImages.length > 1"
             class="gallery-lightbox-nav previous"
             type="button"
             aria-label="Previous image"
             @click="moveLightbox(-1)"
-          >
-            &#8249;
-          </button>
+          > <PhCaretLeft class="ui-icon" aria-hidden="true" :size="'1em'" /> </button>
           <figure>
             <img :src="selectedImage.image_url" :alt="selectedImage.title || 'Stack Petals gallery image'" />
             <figcaption v-if="selectedImage.title || selectedImage.caption">
@@ -196,9 +196,7 @@ onBeforeUnmount(() => {
             type="button"
             aria-label="Next image"
             @click="moveLightbox(1)"
-          >
-            &#8250;
-          </button>
+          > <PhCaretRight class="ui-icon" aria-hidden="true" :size="'1em'" /> </button>
         </div>
       </Transition>
     </Teleport>

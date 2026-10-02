@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PhHeart, PhArrowRight } from '@phosphor-icons/vue'
+
 import { gsap } from 'gsap'
 import { onBeforeUnmount, onMounted, ref, useAttrs } from 'vue'
 
@@ -222,9 +224,9 @@ onBeforeUnmount(() => {
     </span>
 
     <span ref="labelEl" class="magic-label">
-      <span class="magic-heart" aria-hidden="true">&#9825;</span>
+      <span class="magic-heart" aria-hidden="true"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
       {{ label }}
-      <span class="magic-arrow" aria-hidden="true">&#8594;</span>
+      <span class="magic-arrow" aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
     </span>
 
     <span ref="ornament" class="magic-branch" aria-hidden="true">
@@ -235,7 +237,7 @@ onBeforeUnmount(() => {
       <span v-for="index in 6" :key="index" :ref="setSparkleRef"></span>
     </span>
 
-    <span ref="loveSeal" class="magic-love-seal" aria-hidden="true">&#9825;</span>
+    <span ref="loveSeal" class="magic-love-seal" aria-hidden="true"><PhHeart class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
     <span class="magic-release-petals" aria-hidden="true">
       <span v-for="index in 10" :key="index" :ref="setReleasePetalRef"></span>
     </span>

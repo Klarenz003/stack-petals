@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MapPin } from 'lucide-vue-next'
+import { PhMapPin as MapPin } from '@phosphor-icons/vue'
 import { useMarketStore, type MarketCode } from '@/stores/market'
 import { useCartStore } from '@/stores/cart'
 
@@ -69,7 +69,7 @@ onBeforeUnmount(() => {
     </div>
 
     <label class="market-switcher">
-      <MapPin :size="16" stroke-width="1.8" aria-hidden="true" />
+      <MapPin :size="16" weight="regular" aria-hidden="true" />
       <span class="sr-only">Shopping region</span>
       <select :value="market.code" aria-label="Shopping region" @change="changeMarket">
         <option value="PH">{{ compactMarketLabels ? 'PH' : 'Philippines' }}</option>
