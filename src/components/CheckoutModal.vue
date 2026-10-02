@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhEnvelopeSimple, PhCamera, PhX, PhHeart, PhWallet, PhPaperclip, PhFlowerTulip } from '@phosphor-icons/vue'
+import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhCamera, PhX, PhHeart, PhWallet, PhPaperclip, PhFlowerTulip } from '@phosphor-icons/vue'
 
 import { useCartStore } from '@/stores/cart'
 import { ref, computed, nextTick, watch, defineAsyncComponent } from 'vue'
@@ -534,10 +534,17 @@ watch(
 <template>
   <div
     v-if="cart.checkoutStep > 0"
-    class="checkout-overlay"
+    class="checkout-overlay checkout-luxe-overlay"
     @click.self="shakeModal"
   >
-    <div ref="checkoutModal" class="checkout-modal" :class="{ shake: isShaking }">
+    <div ref="checkoutModal" class="checkout-modal checkout-luxe" :class="{ shake: isShaking }" role="dialog" aria-modal="true" aria-labelledby="checkout-brand-title">
+      <header class="checkout-luxe-header">
+        <div class="checkout-luxe-brand">
+          <span class="checkout-luxe-brand__flower" aria-hidden="true"><PhFlowerTulip :size="25" weight="light" /></span>
+          <div><span class="checkout-luxe-brand__name" id="checkout-brand-title">Stack Petals</span><span class="checkout-luxe-brand__tagline">A gift, made personal.</span></div>
+        </div>
+        <span class="checkout-luxe-step-count">{{ String(cart.checkoutStep).padStart(2, '0') }} <span>/ 05</span></span>
+        <button aria-label="Close checkout" v-if="cart.checkoutStep < 5" class="checkout-close" :disabled="cart.isSubmittingOrder" @click="cart.closeCheckout()"><PhX :size="18" aria-hidden="true" /></button>
 
       <!-- Step indicator -->
       <div class="checkout-steps">
@@ -562,9 +569,12 @@ watch(
         </div>
       </div>
 
+      </header>
       <!-- STEP 1 — Order Summary -->
       <div v-if="cart.checkoutStep === 1" class="checkout-body">
-        <h2>Order Summary</h2>
+        <span class="checkout-section-eyebrow">The beginning of something lovely</span>
+        <h2>Your thoughtful picks.</h2>
+        <p class="checkout-section-intro">A final look at the gifts you’re sending their way.</p>
         <div v-for="item in cart.cartItems" :key="item.name" class="co-item">
           <img :src="item.image" :alt="item.name" />
           <div class="co-item-info">
@@ -572,6 +582,7 @@ watch(
             <span v-if="item.preOrder" class="checkout-preorder-tag">Pre-order • {{ item.prepDays ?? 5 }} day{{ (item.prepDays ?? 5) === 1 ? '' : 's' }} prep</span>
             <span class="co-item-price">{{ item.price }}</span>
           </div>
+          <span class="checkout-item-quantity">× {{ item.quantity }}</span>
         </div>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
           <strong>Pre-order included</strong>
@@ -590,7 +601,9 @@ watch(
 
       <!-- STEP 2 — Customer Details -->
       <div v-if="cart.checkoutStep === 2" class="checkout-body">
-        <h2>Your Details</h2>
+        <span class="checkout-section-eyebrow">From your heart to their doorstep</span>
+        <h2>Where should the joy go?</h2>
+        <p class="checkout-section-intro">Tell us a little about you and how you’d like to receive your gift.</p>
         <div class="co-form">
           <label>Full Name
             <input v-model="cart.customer.name" type="text" placeholder="Juan dela Cruz" />
@@ -678,7 +691,7 @@ watch(
             </div>
           </div>
           <div class="address-detect-card">
-            <p class="map-status">{{ addressStatus }}</p>
+            <p class="map-status">{{ cart.customer.deliveryMethod === 'pickup' ? 'Your gift will be waiting at our store.' : addressStatus }}</p>
             <p v-if="cart.customer.deliveryMethod === 'pickup'" class="address-preview">
               Pick up at Stack Petals. We will contact you when your order is ready.
             </p>
@@ -737,8 +750,9 @@ watch(
 
       <!-- STEP 3 — Love Letter -->
       <div v-if="cart.checkoutStep === 3" class="checkout-body letter-step">
-        <h2 style="text-align: center; margin-bottom: 8px;">Add a Love Letter <PhEnvelopeSimple class="ui-icon" aria-hidden="true" :size="'1em'" /></h2>
-        <p style="text-align: center; color: #999; font-size: 13px; margin-bottom: 32px;">Make this gift even more special</p>
+        <span class="checkout-section-eyebrow">The words make it yours</span>
+        <h2>A little letter. A lot of heart.</h2>
+        <p class="checkout-section-intro">A personal message, little memories, and all the things worth saying.</p>
 
         <label class="letter-toggle">
           <input v-model="cart.letterData.include" type="checkbox" />
@@ -1156,7 +1170,9 @@ watch(
 
       <!-- STEP 4 - Payment -->
       <div v-if="cart.checkoutStep === 4" class="checkout-body">
-        <h2>Payment</h2>
+        <span class="checkout-section-eyebrow">One last little step</span>
+        <h2>Make their day official.</h2>
+        <p class="checkout-section-intro">Pay with your preferred wallet, then attach your payment screenshot.</p>
         <div v-if="cart.hasPreOrderItems" class="checkout-preorder-notice">
           <strong>Pre-order payment</strong>
           <span>These item(s) will be prepared for your selected delivery date. Estimated prep time is {{ cart.preOrderPrepDays }} day{{ cart.preOrderPrepDays === 1 ? '' : 's' }}.</span>
@@ -1314,8 +1330,8 @@ watch(
         </div>
       </div>
 
-      <!-- Close button (not shown on confirmation) -->
-      <button aria-label="Close" v-if="cart.checkoutStep < 5" class="checkout-close" :disabled="cart.isSubmittingOrder" @click="cart.closeCheckout()"><PhX class="ui-icon" aria-hidden="true" :size="'1em'" /></button>
     </div>
   </div>
 </template>
+
+<style src="@/assets/checkout-luxe.css"></style>
