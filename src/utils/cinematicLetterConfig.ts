@@ -1,6 +1,7 @@
 import { getLetterCapabilities } from './letterCapabilities'
 import { getPetalMessages } from './letterDefaults'
 import type { LetterRecord } from '@/types/letter'
+import { getLetterBouquetAssets } from './letterBouquet'
 
 // The cinematic engine consumes a mutable JavaScript config object.
 // @ts-expect-error no public TypeScript declarations for the cinematic config
@@ -21,6 +22,7 @@ export function configureCinematicLetter(
 ) {
   const theme = letter.letter_theme || 'romance'
   const capabilities = getLetterCapabilities(letter)
+  const bouquet = getLetterBouquetAssets(letter)
   const messageParts = String(letter.message || '').split(/\n\s*\n/).filter(Boolean)
   const memories = (letter.memories || []).map((item: any, index: number) => {
     const value = typeof item === 'string' ? item : item?.src || item?.url || item?.image
@@ -31,7 +33,8 @@ export function configureCinematicLetter(
     occasion: theme,
     showOccasionPicker: Boolean(options.showPicker) && !options.preview,
     previewMode: Boolean(options.preview),
-    has360Viewer: capabilities.has360View,
+    useCustomerContent: true,
+    has360Viewer: bouquet.has360View,
     hasPhotoUpload: capabilities.hasPhotoUpload,
     recipient: letter.recipient || 'you',
     sender: letter.sender || 'someone who cares',
@@ -49,12 +52,12 @@ export function configureCinematicLetter(
     photoMemories: memories,
     petalArtworks: letter.petal_artworks || letter.backgrounds?.petal_artworks || [],
     lastNote: closings[theme] || closings.romance,
-    product360: capabilities.has360View ? { mode: 'demo', frameCount: 240 } : { mode: 'none', frameCount: 0 },
+    product360: bouquet.has360View ? { mode: 'urls', frames: bouquet.frames, frameCount: bouquet.frames.length } : { mode: 'none', frameCount: 0 },
   })
 
   return {
     theme,
-    has360Viewer: capabilities.has360View,
+    has360Viewer: bouquet.has360View,
     hasPhotoUpload: capabilities.hasPhotoUpload,
   }
 }

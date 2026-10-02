@@ -4,6 +4,7 @@ import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep, Product } from '@/types'
 import { useMarketStore } from '@/stores/market'
+import { bouquetKey, selectLetterBouquet } from '@/utils/letterBouquet'
 
 const CHECKOUT_RECOVERY_KEY = 'stack-petals-checkout-recovery'
 
@@ -59,6 +60,7 @@ export const useCartStore = defineStore('cart', () => {
   const letterData = ref({
     include: false,
     theme: 'romance',
+    bouquetKey: '',
     fromName: '',
     recipientName: '',
     mainMessage: '',
@@ -133,6 +135,27 @@ export const useCartStore = defineStore('cart', () => {
 
   function clearCheckoutRecovery() {
     localStorage.removeItem(CHECKOUT_RECOVERY_KEY)
+  }
+
+  async function refresh360Eligibility(): Promise<string | null> {
+    const items = [...cartItems.value]
+    const legacyIds = [...new Set(items.filter(item => !item.baseProductId && item.id).map(item => item.id!))]
+    const legacyProductIds = new Map<string, string>()
+    if (legacyIds.length) {
+      const { data, error } = await supabase.from('product_markets').select('id, product_id').in('id', legacyIds)
+      if (error) return 'Could not refresh product eligibility. Please try again.'
+      for (const row of data || []) legacyProductIds.set(row.id, row.product_id)
+    }
+    const productIdFor = (item: CartItem) => item.baseProductId || legacyProductIds.get(item.id || '')
+    const productIds = [...new Set(items.map(productIdFor).filter((id): id is string => Boolean(id)))]
+    if (!productIds.length) return null
+    const { data, error } = await supabase.from('products').select('id, has_360_view').in('id', productIds)
+    if (error) return 'Could not refresh product eligibility. Please try again.'
+    const capabilities = new Map((data || []).map(row => [row.id, Boolean(row.has_360_view)]))
+    for (const item of items) {
+      if (cartItems.value.includes(item)) item.has360Viewer = capabilities.get(productIdFor(item) || '') ?? false
+    }
+    return null
   }
 
   restoreCheckoutRecovery()
@@ -717,16 +740,11 @@ export const useCartStore = defineStore('cart', () => {
 
     // 4. Save letter draft if included
     if (letterData.value.include) {
-      let giftQrId: string | null = null
-      try {
-        const claim = JSON.parse(localStorage.getItem('stack-petals:gift-claim') || 'null')
-        giftQrId = typeof claim?.qrId === 'string' ? claim.qrId : null
-      } catch {
-        giftQrId = null
-      }
-      const { data: insertedLetter, error: letterError } = await supabase.from('letters').insert({
+      const chosenBouquet = letterData.value.theme === 'original'
+        ? undefined
+        : selectLetterBouquet(cartItems.value, letterData.value.bouquetKey)
+      const { error: letterError } = await supabase.from('letters').insert({
         order_id:       insertedOrder.id,
-        gift_qr_id:     giftQrId,
         market_code:    market.code,
         recipient:      letterData.value.recipientName,
         letter_theme:   letterData.value.theme || 'romance',
@@ -734,7 +752,12 @@ export const useCartStore = defineStore('cart', () => {
         message:        letterData.value.mainMessage,
         song_suggestion: letterData.value.songSuggestion.trim(),
         petal_messages: letterData.value.petalMessages,
+        bouquet_image_url: chosenBouquet?.image || '',
         backgrounds: {
+          ...(chosenBouquet ? {
+            selected_bouquet_key: bouquetKey(chosenBouquet),
+            selected_bouquet_name: chosenBouquet.name,
+          } : {}),
           petal_artworks: letterData.value.petalSvgSelections,
           petal_labels: letterData.value.petalLabels,
         },
@@ -746,15 +769,6 @@ export const useCartStore = defineStore('cart', () => {
       }).select('id').single()
 
       if (letterError) console.warn('Letter draft was not created:', letterError)
-      else {
-        try {
-          const claim = JSON.parse(localStorage.getItem('stack-petals:gift-claim') || 'null')
-          if (claim?.token && insertedLetter?.id) {
-            await supabase.rpc('publish_gift_qr', { p_public_token: claim.token, p_letter_id: insertedLetter.id })
-          }
-        } catch { /* QR publishing is best effort; the order remains valid. */ }
-        localStorage.removeItem('stack-petals:gift-claim')
-      }
     }
 
     // 5. Send email notifications if the edge function is available.
@@ -846,6 +860,7 @@ export const useCartStore = defineStore('cart', () => {
     letterData.value = {
       include: false,
       theme: 'romance',
+      bouquetKey: '',
       fromName: '',
       recipientName: '',
       mainMessage: '',
@@ -876,6 +891,7 @@ export const useCartStore = defineStore('cart', () => {
 
       // ── Actions ────────────────────────────────────────────────────
       addToCart, removeFromCart, updateQuantity,
+      refresh360Eligibility,
       cartQuantity, canAddToCart, shouldAnimateAddToCart,
       isProductPreOrder, productAllowsPreOrder,
       openCheckout, closeCheckout, goToPayment,

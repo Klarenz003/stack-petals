@@ -4,10 +4,30 @@ import { PhPencilSimple, PhArrowRight, PhArrowLeft, PhEnvelopeSimple, PhCamera, 
 import { useCartStore } from '@/stores/cart'
 import { ref, computed, nextTick, watch, defineAsyncComponent } from 'vue'
 import { useRouter } from 'vue-router'
+import { bouquetKey, selectLetterBouquet } from '@/utils/letterBouquet'
+import CheckoutBouquetSelector from '@/components/CheckoutBouquetSelector.vue'
 
 const LetterPage = defineAsyncComponent(() => import('@/pages/LetterPage.vue'))
 
 const cart = useCartStore()
+const eligibleBouquets = computed(() => cart.cartItems.filter(item => item.has360Viewer))
+const selectedBouquet = computed(() => selectLetterBouquet(cart.cartItems, cart.letterData.bouquetKey))
+const checking360Eligibility = ref(false)
+const eligibilityError = ref('')
+async function refresh360Eligibility() {
+  if (checking360Eligibility.value) return
+  checking360Eligibility.value = true
+  eligibilityError.value = ''
+  try {
+    eligibilityError.value = await cart.refresh360Eligibility() || ''
+  } catch {
+    eligibilityError.value = 'Could not refresh product eligibility. Please try again.'
+  } finally { checking360Eligibility.value = false }
+}
+watch(() => cart.checkoutStep, step => { if (step === 3) void refresh360Eligibility() }, { immediate: true })
+watch(() => eligibleBouquets.value.map(bouquetKey), keys => {
+  if (!keys.includes(cart.letterData.bouquetKey)) cart.letterData.bouquetKey = keys[0] || ''
+}, { immediate: true })
 const router = useRouter()
 const checkoutModal = ref<HTMLElement | null>(null)
 const isShaking = ref(false)
@@ -72,7 +92,9 @@ const checkoutPreviewLetter = computed(() => ({
   petal_messages: cart.letterData.petalMessages,
   petal_labels: cart.letterData.petalLabels,
   memories: cart.letterData.memories,
+  has_photo_upload: true,
   has_360_view: cart.cartItems.some(item => Boolean(item.has360Viewer)),
+  bouquet_image_url: (cart.letterData.theme === 'original' ? cart.cartItems[0] : selectedBouquet.value)?.image || '',
   petal_artworks: cart.letterData.petalSvgSelections,
 }))
 
@@ -741,6 +763,14 @@ watch(
         </div>
 
         <div v-if="cart.letterData.include" class="letter-card">
+          <CheckoutBouquetSelector
+            v-if="cart.letterData.theme !== 'original'"
+            v-model="cart.letterData.bouquetKey"
+            :items="cart.cartItems"
+            :loading="checking360Eligibility"
+            :error="eligibilityError"
+            @refresh="refresh360Eligibility"
+          />
           <div class="letter-field">
             <label for="checkout-letter-from">From</label>
             <input
@@ -874,6 +904,7 @@ watch(
 
         <div class="checkout-letter-full-preview">
           <LetterPage
+            :key="JSON.stringify(checkoutPreviewLetter)"
             :preview-letter="checkoutPreviewLetter"
             :preview="true"
           />

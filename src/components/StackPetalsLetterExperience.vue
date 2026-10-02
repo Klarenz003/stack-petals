@@ -5,14 +5,16 @@ import KeepsakeStory from './cinematic-letter/KeepsakeStory.vue'
 import GiftAndSurprise from './cinematic-letter/GiftAndSurprise.vue'
 // These DOM controllers are intentionally JavaScript; keep their boundary explicit.
 import cinematicStyles from './cinematic-letter/styles/original.css?inline'
-import { onBeforeUnmount } from 'vue'
+import { computed, onBeforeUnmount } from 'vue'
 import { useCinematicExperience } from '@/composables/useCinematicExperience'
 import type { LetterRecord } from '@/types/letter'
 import { configureCinematicLetter } from '@/utils/cinematicLetterConfig'
+import { getLetterBouquetAssets } from '@/utils/letterBouquet'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = useCinematicExperience()
 const { theme } = configureCinematicLetter(props.letter, props)
+const bouquetImage = computed(() => getLetterBouquetAssets(props.letter).image)
 
 // The cinematic stylesheet contains intentionally generic selectors (for example
 // `.hero`) because it was originally a standalone page. Keep it mounted only
@@ -91,7 +93,7 @@ onBeforeUnmount(() => {
 <div class="luxe-atmosphere__stars" id="luxe-stars"></div>
 </div>
   <InvitationAndCurtain />
-  <KeepsakeStory />
+  <KeepsakeStory :bouquet-image="bouquetImage" />
   <GiftAndSurprise />
 </div>
 </template>

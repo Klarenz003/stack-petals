@@ -6410,6 +6410,21 @@ input, textarea, [contenteditable="true"] {
 .checkout-letter-full-preview > .letter-page .letter-message-text {
   line-height: 1.65;
 }
+/* Hide preview scrollbars on desktop too, including nested original slides.
+   Keep overflow scrolling intact so long messages and chapters stay accessible. */
+.letter-experience-modal,
+.checkout-letter-full-preview,
+.checkout-letter-full-preview * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.letter-experience-modal::-webkit-scrollbar,
+.checkout-letter-full-preview::-webkit-scrollbar,
+.checkout-letter-full-preview *::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
 .checkout-letter-full-preview > .letter-page .letter-message-box {
   overflow-x: hidden;
   overflow-y: auto;

@@ -167,7 +167,7 @@ export function initExperience(rootElement) {
 
     const $ = id => rootElement.querySelector(`#${id}`);
     const $$ = selector => rootElement.querySelectorAll(selector);
-    const paramOccasion = new URLSearchParams(window.location.search).get('occasion');
+    const paramOccasion = GIFT.showOccasionPicker ? new URLSearchParams(window.location.search).get('occasion') : null;
     let occasion = OCCASIONS[paramOccasion] ? paramOccasion : (OCCASIONS[GIFT.occasion] ? GIFT.occasion : 'romance');
     const picker = $('occasion-picker');
     picker.hidden = !GIFT.showOccasionPicker;
@@ -181,6 +181,13 @@ export function initExperience(rootElement) {
     function setText(selector,value) { const el=rootElement.querySelector(selector); if(el) el.textContent=value; }
     function renderOccasion() {
       const profile = {...OCCASIONS[occasion], ...(GIFT.custom[occasion] || {})};
+      // Occasion profiles supply the visual design, not replacement letters.
+      // Always retain checkout/admin content when rendering a customer letter.
+      if (GIFT.useCustomerContent) {
+        profile.paragraphs = GIFT.paragraphs;
+        profile.notes = profile.notes.map(([label], i) => [label, GIFT.reasons[i] || '']);
+        profile.lastNote = GIFT.lastNote;
+      }
       document.body.dataset.occasion = occasion;
       document.body.style.setProperty('--gift-hue',profile.hue);
       document.title = `${profile.label} Letter — Stack Petals`;
@@ -769,7 +776,7 @@ export function initExperience(rootElement) {
     let giftBoxFadeTimer = null;
     let giftProductRiseTimer = null;
     const giftView = {
-      opened:false, frames:DEMO_PRODUCT_FRAMES, ownsUrls:[], isDemo:true, frame:0,
+      opened:false, frames:product360.mode === 'demo' ? DEMO_PRODUCT_FRAMES : [], ownsUrls:[], isDemo:product360.mode === 'demo', frame:0,
       playing:false, raf:null, lastTime:0, dragging:false, pointerId:null, startX:0,
       startY:0, startFrame:0, pointerMoved:false, preload:[], boxX:-19,
       boxY:28, boxRaf:null, boxLastTime:0, boxSpinning:false
@@ -999,10 +1006,11 @@ export function initExperience(rootElement) {
       gift360Button.title = 'The 360° viewer becomes available after checkout.';
       setText('.gift-card__caption','The full gift experience and 360° viewer become available after checkout.');
     }
-    gift360Button.addEventListener('click',async()=>{
-      if (GIFT.previewMode) return;
-      await startMusic();
+    gift360Button.addEventListener('click',()=>{
+      if (GIFT.previewMode || !GIFT.has360Viewer) return;
       openGiftDialog();
+      // Audio buffering or autoplay restrictions must not delay the popup.
+      void startMusic();
     });
     $('gift-dialog-close').addEventListener('click',closeGiftDialog);
     $('gift-dialog').addEventListener('click',e=>{if(e.target===$('gift-dialog'))closeGiftDialog();});
@@ -1070,6 +1078,10 @@ export function initExperience(rootElement) {
       if(document.hidden){stopBoxSpin();stopProductSpin();}
       else if($('gift-dialog').open&&!reduceMotion){giftView.opened?startProductSpin():startBoxSpin();}
     });
+    if(product360.mode==='urls' && Array.isArray(product360.frames)){
+      setFrameSource(product360.frames,{isDemo:false,name:'your bouquet'});
+    }
+    $('gift-upload').hidden = product360.mode !== 'demo';
     if(product360.mode==='folder'){
       const n=Number(product360.frameCount)||240;
       if(n>=2&&n<=300){
@@ -1168,6 +1180,10 @@ export function initExperience(rootElement) {
     }
 
   return () => {
+    if (music) music.stop();
+    stopProductSpin();stopBoxSpin();clearGiftBoxFade();
+    giftView.ownsUrls.forEach(url => URL.revokeObjectURL(url));
+    giftView.preload = [];
     luxeCleanup.splice(0).forEach(cleanup => cleanup());
   };
 }

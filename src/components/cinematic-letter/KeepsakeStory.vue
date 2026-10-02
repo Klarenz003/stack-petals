@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { PhHeart, PhSparkle, PhArrowUpRight, PhFlower, PhArrowLeft, PhArrowRight, PhArrowClockwise } from '@phosphor-icons/vue'
+import { ref, watch } from 'vue'
+const props = defineProps<{ bouquetImage?: string }>()
+const imageFailed = ref(false)
+watch(() => props.bouquetImage, () => { imageFailed.value = false })
 </script>
 <template>
   <!-- The four-chapter flower letter, six notes, photo memories and final gift chapter. -->
@@ -167,7 +171,8 @@ import { PhHeart, PhSparkle, PhArrowUpRight, PhFlower, PhArrowLeft, PhArrowRight
 <div aria-labelledby="gift-showcase-heading" class="gift-showcase reveal">
 <div class="gift-card">
 <div class="gift-portrait-wrap">
-<svg aria-hidden="true" class="gift-portrait" viewBox="0 0 420 360">
+<img v-if="bouquetImage && !imageFailed" class="gift-portrait gift-bouquet-photo" :src="bouquetImage" alt="Your gift bouquet" loading="lazy" @error="imageFailed = true" />
+<svg v-else aria-hidden="true" class="gift-portrait" viewBox="0 0 420 360">
 <defs>
 <linearGradient id="gift-glow" x1="0" x2="1" y1="0" y2="1">
 <stop offset="0%" stop-color="#fff8f6"></stop>

@@ -1,6 +1,7 @@
 export interface LetterRecord {
   id: string
-  order_id: string
+  order_id: string | null
+  letter_v2_qr_id?: string | null
   recipient: string
   sender: string
   message: string

@@ -298,12 +298,17 @@ async function loadLetter() {
     return
   }
 
-  letter.value = data
   if (data.bouquet_image_url?.trim()) {
     bouquetImage.value = normalizeImageSrc(data.bouquet_image_url)
   } else {
     await loadBouquetImage(data.order_id)
   }
+  // Resolve the order image before mounting the cinematic DOM controller.
+  // Standalone letters deliberately keep an empty image for the gift artwork.
+  if (data.order_id && !data.bouquet_image_url && bouquetImage.value !== '/images/b5.png') {
+    data.bouquet_image_url = bouquetImage.value
+  }
+  letter.value = data
   await preloadInitialLetterAssets(data)
   await waitForMinimumLoadingTime(loadingStartedAt)
   loading.value = false
@@ -340,7 +345,7 @@ function stopLoadingTextShuffle() {
   loadingTextTimer = null
 }
 
-async function loadBouquetImage(orderId: string) {
+async function loadBouquetImage(orderId: string | null) {
   if (!orderId) return
 
   const { data, error } = await supabase
@@ -765,10 +770,14 @@ onMounted(() => {
           ? (props.previewLetter.backgrounds as any).petal_labels
           : []),
       petal_artworks: props.previewLetter.petal_artworks || [],
-      memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: props.previewLetter.backgrounds || {}, music_url: '',
-      bouquet_image_url: '', published: true, template: 'original', letter_theme: props.previewLetter.letter_theme || 'romance',
+      memories: props.previewLetter.memories || [], angle_photos: [], backgrounds: props.previewLetter.backgrounds || {}, music_url: props.previewLetter.music_url || '',
+      bouquet_image_url: props.previewLetter.bouquet_image_url || '', published: true,
+      template: props.previewLetter.letter_theme === 'original' ? 'original' : 'love',
+      letter_theme: props.previewLetter.letter_theme || 'romance',
       has_360_view: Boolean(props.previewLetter.has_360_view),
+      has_photo_upload: props.previewLetter.has_photo_upload ?? true,
     }
+    if (props.previewLetter.bouquet_image_url) bouquetImage.value = normalizeImageSrc(props.previewLetter.bouquet_image_url)
     loading.value = false
     notFound.value = false
     syncVisibleViewportHeight()
