@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProductsStore } from '@/stores/products'
 import ProductCard from '@/components/ProductCard.vue'
+import CatalogSortMenu from '@/components/CatalogSortMenu.vue'
 import { PhMagnifyingGlass, PhArrowUpRight } from '@phosphor-icons/vue'
 
 const baseFilters = [
@@ -91,7 +92,10 @@ function syncMoreOpen(event: Event) {
       <RouterLink to="/process" class="studio-text-link">Discover the keepsake experience <PhArrowUpRight :size="17" /></RouterLink>
     </div>
 
-    <div class="studio-catalog-tools"><label class="studio-catalog-search"><PhMagnifyingGlass :size="19" aria-hidden="true" /><input v-model="search" type="search" placeholder="Find your flowers, occasion, or keepsake…" aria-label="Search the collection" /></label><label class="studio-catalog-sort"><span>Sort by</span><select v-model="sort"><option value="featured">Featured first</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="name">Name: A to Z</option></select></label></div>
+    <div class="studio-catalog-tools">
+      <label class="studio-catalog-search"><PhMagnifyingGlass :size="19" aria-hidden="true" /><input v-model="search" type="search" placeholder="Find your flowers, occasion, or keepsake…" aria-label="Search the collection" /></label>
+      <CatalogSortMenu v-model="sort" />
+    </div>
     <div class="filter-bar">
       <button
         v-for="f in visibleFilters"

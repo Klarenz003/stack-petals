@@ -39,6 +39,7 @@ const router = createRouter({
     { path: '/track',    name: 'track',     component: TrackOrderPage },
     { path: '/receipt',  name: 'receipt',   component: ReceiptPage },
     { path: '/contact',  name: 'contact',   component: ContactPage  },
+    { path: '/town-preview', name: 'town-preview', component: () => import('@/pages/TownPreviewPage.vue'), meta: { hideNav: true } },
     { path: '/letter/:id', name: 'letter', component: () => import('@/pages/LetterPage.vue'), meta: { hideNav: true } },
     { path: '/letter-test', name: 'letter-test', component: LetterExperienceTestPage, meta: { hideNav: true } },
     { path: '/gift/claim/:token', name: 'gift-claim', component: GiftClaimPage, meta: { hideNav: true } },

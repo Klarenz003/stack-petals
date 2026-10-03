@@ -39,8 +39,8 @@ function handleAddToCart(product: Product, event: MouseEvent) {
     </div>
     <div class="card-footer">
       <div v-if="cart.isProductPreOrder(product)" class="preorder-note">
-        <strong>Available for Pre-order</strong>
-        <span>Estimated prep time: {{ product.prepDays ?? 5 }} day{{ (product.prepDays ?? 5) === 1 ? '' : 's' }}</span>
+        <strong>Pre-order available</strong>
+        <span>Estimated prep: {{ product.prepDays ?? 5 }} day{{ (product.prepDays ?? 5) === 1 ? '' : 's' }}</span>
         <span v-if="product.deliveryRestrictions">{{ product.deliveryRestrictions }}</span>
       </div>
       <button

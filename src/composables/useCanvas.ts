@@ -28,8 +28,11 @@ export function useCanvas() {
   let pointerDownHandler: ((event: PointerEvent) => void) | null = null
   let pointerMoveHandler: ((event: PointerEvent) => void) | null = null
   let pointerUpHandler: ((event: PointerEvent) => void) | null = null
+  let motionQuery: MediaQueryList | null = null
+  let resumeHandler: (() => void) | null = null
 
   onMounted(() => {
+    motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
     const cc = document.getElementById('circuit-canvas') as HTMLCanvasElement
     const pc = document.getElementById('petal-canvas') as HTMLCanvasElement
     if (!cc || !pc) return
@@ -170,6 +173,7 @@ export function useCanvas() {
       cc.width = pc.width = window.innerWidth
       cc.height = pc.height = window.innerHeight
       circuit = buildCircuit()
+      if (motionQuery?.matches) resumeHandler?.()
     }
     window.addEventListener('resize', resizeHandler)
     resizeHandler()
@@ -206,15 +210,26 @@ export function useCanvas() {
         pctx.restore()
       })
 
-      rafId = requestAnimationFrame(loop)
+      rafId = !motionQuery?.matches && !document.hidden ? requestAnimationFrame(loop) : null
     }
 
+    resumeHandler = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      rafId = null
+      if (!document.hidden) loop()
+    }
+    motionQuery.addEventListener('change', resumeHandler)
+    document.addEventListener('visibilitychange', resumeHandler)
     loop()
   })
 
   onBeforeUnmount(() => {
     if (rafId !== null) cancelAnimationFrame(rafId)
     if (resizeHandler) window.removeEventListener('resize', resizeHandler)
+    if (resumeHandler) {
+      motionQuery?.removeEventListener('change', resumeHandler)
+      document.removeEventListener('visibilitychange', resumeHandler)
+    }
     if (pointerDownHandler) document.removeEventListener('pointerdown', pointerDownHandler)
     if (pointerMoveHandler) document.removeEventListener('pointermove', pointerMoveHandler)
     if (pointerUpHandler) {

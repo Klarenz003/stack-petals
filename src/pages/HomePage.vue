@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { PhArrowRight } from '@phosphor-icons/vue'
+import { PhArrowRight, PhFlower, PhPackage, PhCalendarBlank, PhQuotes } from '@phosphor-icons/vue'
 
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { gsap } from 'gsap'
@@ -68,7 +68,12 @@ const experienceSteps = [
   { label: 'Explore 360\u00b0', icon: Rotate3D },
 ]
 
-const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or delivery', 'Pre-order ready']
+const trustItems = [
+  { title: 'Made by hand', description: 'Flowers crafted with care.', icon: PhFlower },
+  { title: 'A story inside', description: 'Your QR keepsake, included.', icon: QrCode },
+  { title: 'Your way to gift', description: 'Choose pickup or delivery.', icon: PhPackage },
+  { title: 'Worth planning for', description: 'Pre-order for your moment.', icon: PhCalendarBlank },
+]
 </script>
 
 <template>
@@ -149,14 +154,26 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
       </div>
     </section>
 
-    <section class="home-promise" aria-label="The Stack Petals promise">
+    <section class="home-promise promise-studio" aria-label="The Stack Petals promise">
+      <PhFlower class="promise-watermark" :size="280" weight="thin" aria-hidden="true" />
       <div class="home-promise-copy">
-        <span aria-hidden="true">&ldquo;</span>
-        <p>A gift they can hold today, then scan, hear, and revisit whenever the moment calls.</p>
-        <small>The Stack Petals experience</small>
+        <div class="promise-eyebrow"><i aria-hidden="true"></i> More than a bouquet</div>
+        <PhQuotes class="promise-quote-mark" :size="32" weight="fill" aria-hidden="true" />
+        <blockquote>
+          <p>A gift they can hold today.<br />A feeling they can <em>revisit.</em></p>
+        </blockquote>
+        <p class="promise-description">Your words, memories, and music—tucked into a keepsake that stays close, long after the moment.</p>
+        <div class="promise-signature"><i aria-hidden="true"></i><small>The Stack Petals experience</small></div>
       </div>
-      <div class="home-promise-trust" aria-label="Stack Petals benefits">
-        <span v-for="item in trustItems" :key="item">{{ item }}</span>
+      <div class="promise-benefits">
+        <p class="promise-benefits-heading">Thoughtful in every detail</p>
+        <ul class="home-promise-trust" aria-label="Stack Petals benefits">
+          <li v-for="item in trustItems" :key="item.title" class="promise-benefit">
+            <div class="promise-benefit-icon"><component :is="item.icon" :size="24" weight="duotone" aria-hidden="true" /></div>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.description }}</p>
+          </li>
+        </ul>
       </div>
     </section>
 
@@ -169,6 +186,57 @@ const trustItems = ['Handcrafted flowers', 'QR experience included', 'Pickup or 
 </template>
 
 <style scoped>
+.home-promise.promise-studio {
+  position: relative; isolation: isolate; overflow: hidden;
+  width: min(1250px, calc(100% - 64px)); margin: 0 auto 60px;
+  display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr);
+  align-items: center; gap: clamp(32px,5vw,72px); padding: clamp(32px,4.5vw,64px);
+  border: 1px solid #d3ded0; border-radius: 28px;
+  background: radial-gradient(ellipse at 0% 0%,#f6f8f1,transparent 65%),#e7eee5;
+  box-shadow: 0 14px 40px #42553e06;
+}
+.promise-studio::after { content: ''; position: absolute; inset: 10px; border: 1px solid #ffffff75; border-radius: 19px; pointer-events: none; z-index: -1; }
+.promise-watermark { position: absolute; left: -95px; bottom: -105px; color: #53744b; opacity: .055; transform: rotate(-20deg); z-index: -1; pointer-events: none; }
+.promise-studio .home-promise-copy { display: block; min-width: 0; }
+.promise-eyebrow { display: flex; align-items: center; gap: 10px; color: #53634f; font-size: 10px; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; }
+.promise-eyebrow i { width: 22px; height: 1px; background: #8ba184; }
+.promise-quote-mark { display: block; margin: 25px 0 9px; color: #7b9471; }
+.promise-studio blockquote { margin: 0; }
+.promise-studio blockquote p { margin: 0; font: 500 clamp(30px,3vw,42px)/1.15 'Cormorant Garamond',Georgia,serif; letter-spacing: -.025em; color: #354b3e; }
+.promise-studio blockquote em { font-weight: 400; color: #82535f; }
+.promise-studio .home-promise-copy .promise-description { max-width: 365px; margin: 20px 0 25px; font: 400 13px/1.85 'Inter',sans-serif; color: #52614f; }
+.promise-signature { display: flex; align-items: center; gap: 12px; }
+.promise-signature i { width: 24px; height: 1px; background: #ab8088; }
+.promise-studio .promise-signature small { color: #74565d; font-size: 9px; font-weight: 600; letter-spacing: .12em; line-height: 1.6; }
+.promise-benefits { min-width: 0; }
+.promise-benefits-heading { margin: 0 0 16px; color: #52614f; font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.promise-studio .home-promise-trust { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.promise-benefit { min-width: 0; padding: 20px 18px; border: 1px solid #d2decb; border-radius: 16px; background: #fbfcf6cf; }
+.promise-benefit-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 15px; border: 1px solid #dce4d4; border-radius: 12px; color: #4a6b50; background: #edf2e6; }
+.promise-benefit:nth-child(2) .promise-benefit-icon,
+.promise-benefit:nth-child(4) .promise-benefit-icon { color: #885862; background: #f6ebe9; border-color: #ead6d1; }
+.promise-benefit h3 { margin: 0 0 7px; font: 600 13px/1.4 'Inter',sans-serif; color: #384e3c; }
+.promise-benefit p { margin: 0; font: 400 11px/1.65 'Inter',sans-serif; color: #596751; }
+@media (max-width: 960px) {
+  .home-promise.promise-studio { grid-template-columns: minmax(0,1fr); width: calc(100% - 48px); padding: 40px; gap: 32px; }
+  .promise-studio .home-promise-copy { text-align: center; }
+  .promise-eyebrow,.promise-signature { justify-content: center; }
+  .promise-quote-mark { margin-inline: auto; }
+  .promise-studio .home-promise-copy .promise-description { margin-inline: auto; max-width: 420px; }
+  .promise-benefits-heading { text-align: center; }
+  .promise-benefit { padding: 22px; }
+}
+@media (max-width: 480px) {
+  .home-promise.promise-studio { width: calc(100% - 32px); padding: 30px 20px; margin: 0 auto 35px; border-radius: 22px; gap: 28px; }
+  .promise-studio::after { inset: 7px; border-radius: 16px; }
+  .promise-eyebrow { font-size: 9px; letter-spacing: .12em; }
+  .promise-studio blockquote p { font-size: clamp(28px,7.8vw,34px); }
+  .promise-studio .home-promise-copy .promise-description { font-size: 12px; }
+  .promise-studio .home-promise-trust { gap: 10px; }
+  .promise-benefit { padding: 16px 12px; }
+  .promise-benefit h3 { font-size: 12px; }
+  .promise-benefit p { font-size: 11px; }
+}
 .home-hero-skeleton { min-height: min(820px, 78svh); display: grid; grid-template-columns: 1fr 1.35fr; align-items: center; gap: clamp(20px, 5vw, 80px); padding: clamp(44px, 7vw, 100px) 5%; overflow: hidden; }
 .home-skeleton-copy { display: grid; gap: 16px; max-width: 560px; }
 .skeleton-line, .home-skeleton-actions span, .skeleton-bouquet, .skeleton-phone, .home-product-skeleton span, .home-product-skeleton i, .home-product-skeleton b { display: block; background: linear-gradient(110deg, rgba(228,204,198,.48) 8%, rgba(255,246,242,.92) 18%, rgba(228,204,198,.48) 33%); background-size: 220% 100%; animation: home-skeleton-shimmer 1.35s linear infinite; }

@@ -6,7 +6,6 @@ import {
   REVEAL_RESET_DELAY_MS,
   clampToDocument,
   isTapGesture,
-  viewportToDocumentPosition,
 } from '@/utils/homeBouquetInteraction'
 import { siteUrl } from '@/utils/siteConfig'
 
@@ -14,6 +13,7 @@ type ScanState = 'idle' | 'scanning' | 'detected' | 'revealed'
 
 const scene = ref<HTMLElement | null>(null)
 const phone = ref<HTMLElement | null>(null)
+const phoneHome = ref<HTMLElement | null>(null)
 const scannerWindow = ref<HTMLElement | null>(null)
 const qrHotspot = ref<HTMLElement | null>(null)
 const scanState = ref<ScanState>('idle')
@@ -63,35 +63,25 @@ function clearReturnTimers() {
 }
 
 function clampPosition(x: number, y: number) {
-  if (!phone.value) return { x, y }
-  const root = document.documentElement
-  const body = document.body
+  if (!phone.value || !scene.value) return { x, y }
 
   return clampToDocument(
     { x, y },
     { width: phone.value.offsetWidth, height: phone.value.offsetHeight },
     {
-      width: Math.max(root.scrollWidth, body.scrollWidth, window.innerWidth),
-      height: Math.max(root.scrollHeight, body.scrollHeight, window.innerHeight),
+      width: scene.value.clientWidth,
+      height: scene.value.clientHeight,
     },
+    0,
   )
 }
 
 function setStartPosition(movePhone = !hasDragged.value) {
-  if (!scene.value || !phone.value) return
-  const sceneRect = scene.value.getBoundingClientRect()
-  const isCompact = sceneRect.width < 650
-  const viewportPosition = {
-    x: isCompact
-      ? sceneRect.right - phone.value.offsetWidth - 2
-      : sceneRect.right - phone.value.offsetWidth - 22,
-    y: sceneRect.top + sceneRect.height * (isCompact ? 0.06 : 0.12),
-  }
-  const documentPosition = viewportToDocumentPosition(
-    viewportPosition,
-    { x: window.scrollX, y: window.scrollY },
-  )
-  const next = clampPosition(documentPosition.x, documentPosition.y)
+  if (!scene.value || !phone.value || !phoneHome.value) return
+  // Offset coordinates stay correct while the hero's entrance animation scales it.
+  const dock = phoneHome.value.parentElement
+  if (!dock) return
+  const next = clampPosition(dock.offsetLeft + phoneHome.value.offsetLeft, dock.offsetTop + phoneHome.value.offsetTop)
   Object.assign(homePosition, next)
   if (movePhone) Object.assign(position, next)
 }
@@ -175,12 +165,13 @@ function onPointerDown(event: PointerEvent) {
 function onPointerMove(event: PointerEvent) {
   if (!isDragging.value) return
   event.preventDefault()
-  const next = viewportToDocumentPosition(
-    { x: event.clientX - drag.offsetX, y: event.clientY - drag.offsetY },
-    { x: window.scrollX, y: window.scrollY },
-  )
+  if (!scene.value) return
+  const sceneRect = scene.value.getBoundingClientRect()
+  const scaleX = sceneRect.width / scene.value.clientWidth
+  const scaleY = sceneRect.height / scene.value.clientHeight
+  const next = { x: (event.clientX - drag.offsetX - sceneRect.left) / scaleX, y: (event.clientY - drag.offsetY - sceneRect.top) / scaleY }
   Object.assign(position, clampPosition(next.x, next.y))
-  checkScannerOverlap()
+  nextTick(checkScannerOverlap)
 }
 
 function finishDrag(event: PointerEvent) {
@@ -287,8 +278,11 @@ onBeforeUnmount(() => {
       <span ref="qrHotspot" class="qr-hotspot" aria-hidden="true"></span>
     </div>
 
-    <div v-if="!hasDragged && scanState === 'idle'" class="drag-hint" aria-hidden="true">
-      <span>Drag phone over QR</span><i></i>
+    <div class="phone-dock" aria-hidden="true">
+      <div ref="phoneHome" class="phone-home"></div>
+      <div v-if="!hasDragged && scanState === 'idle'" class="drag-hint">
+        <span>Drag phone over QR</span><i></i>
+      </div>
     </div>
 
     <Transition name="scan-success">
@@ -298,7 +292,6 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <Teleport to="body">
       <div
         ref="phone"
         class="draggable-phone"
@@ -350,17 +343,18 @@ onBeforeUnmount(() => {
       </div>
         <img class="phone-frame" src="/images/home-experience/phone-frame.png" alt="" draggable="false" aria-hidden="true" />
       </div>
-    </Teleport>
   </div>
 </template>
 
 <style scoped>
-.qr-experience { --rose:#cf7285; position:relative; width:min(100%,900px); aspect-ratio:1.34/1; overflow:visible; border-radius:26px; user-select:none; }
-.bouquet-artwork { position:absolute; left:-1%; bottom:-2%; height:105%; aspect-ratio:1138/1382; pointer-events:none; }
+.qr-experience { --rose:#cf7285; --phone-width:32%; position:relative; isolation:isolate; width:100%; max-width:640px; aspect-ratio:1.15/1; overflow:visible; border-radius:26px; user-select:none; }
+.bouquet-artwork { position:absolute; left:0; top:5%; width:62%; height:auto; aspect-ratio:1138/1382; pointer-events:none; }
+.phone-dock { position:absolute; top:12%; right:0; width:var(--phone-width); display:flex; flex-direction:column; align-items:center; gap:18px; pointer-events:none; }
+.phone-home { width:100%; aspect-ratio:2/3; flex:none; }
 .bouquet-artwork>img { display:block; width:100%; height:100%; object-fit:contain; object-position:left bottom; filter:drop-shadow(0 18px 15px rgba(58,65,101,.15)); animation:bouquetBreath 6s ease-in-out infinite; }
 .qr-hotspot { position:absolute; left:47.8%; top:73.2%; width:12%; aspect-ratio:1; border-radius:6px; }
 
-.draggable-phone { position:absolute; left:0; top:0; z-index:1100; width:clamp(192px,13.6vw,228px); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; visibility:hidden; opacity:0; pointer-events:none; will-change:transform; filter:drop-shadow(0 22px 22px rgba(43,37,47,.25)); transition:opacity .18s ease; }
+.draggable-phone { position:absolute; left:0; top:0; z-index:10; width:var(--phone-width); aspect-ratio:2/3; overflow:hidden; border-radius:14%/9.5%; touch-action:none; cursor:grab; user-select:none; visibility:hidden; opacity:0; pointer-events:none; will-change:transform; filter:drop-shadow(0 16px 16px rgba(43,37,47,.2)); transition:opacity .18s ease; }
 .draggable-phone.is-positioned { visibility:visible; opacity:1; pointer-events:auto; }
 .draggable-phone.is-returning { transition:transform .8s cubic-bezier(.22,.72,.24,1),opacity .2s ease,visibility .2s ease; }
 .draggable-phone.is-dragging { cursor:grabbing; transition:none; filter:drop-shadow(0 28px 25px rgba(43,37,47,.32)); }
@@ -388,8 +382,8 @@ onBeforeUnmount(() => {
 .scan-scanning .scanner-screen,.scan-detected .scanner-screen { background:linear-gradient(180deg,rgba(10,15,20,.18),rgba(17,20,25,.06) 43%,rgba(8,12,17,.24)); }
 .scan-detected .scanner-window { animation:detectedPulse .42s ease both; }
 
-.drag-hint { position:absolute; right:3%; bottom:5%; z-index:9; display:grid; justify-items:center; color:#79525c; pointer-events:none; animation:hintFloat 2s ease-in-out infinite; }
-.drag-hint span { padding:7px 12px; border:1px solid rgba(190,108,126,.27); border-radius:999px; background:rgba(255,250,249,.93); font:600 8px/1 Inter,sans-serif; letter-spacing:.04em; }
+.drag-hint { position:relative; width:100%; display:grid; justify-items:center; color:#79525c; pointer-events:none; animation:hintFloat 2s ease-in-out infinite; }
+.drag-hint span { max-width:100%; box-sizing:border-box; padding:8px 10px; border:1px solid rgba(190,108,126,.27); border-radius:999px; background:rgba(255,250,249,.93); font:600 9px/1.4 Inter,sans-serif; text-align:center; text-wrap:balance; letter-spacing:.02em; }
 .drag-hint i { width:22px; height:22px; margin-top:5px; border-right:1px solid #c46a7c; border-bottom:1px solid #c46a7c; transform:rotate(135deg); }
 .scan-success-note { position:absolute; right:2%; bottom:5%; z-index:9; min-width:156px; padding:10px 13px; border:1px solid rgba(95,136,114,.3); border-radius:12px; background:rgba(250,255,252,.94); color:#466b59; text-align:center; pointer-events:none; }
 .scan-success-note strong,.scan-success-note span { display:block; }
@@ -429,12 +423,11 @@ onBeforeUnmount(() => {
 @keyframes hintFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
 
 @media (max-width:620px) {
-  .qr-experience { width:min(calc(100vw - 40px),430px); aspect-ratio:.82/1; border-radius:18px; }
-  .bouquet-artwork { left:-3%; bottom:1%; width:79%; height:auto; aspect-ratio:1138/1382; }
+  .qr-experience { width:100%; max-width:430px; aspect-ratio:1.05/1; border-radius:18px; }
+  .bouquet-artwork { top:8%; }
+  .phone-dock { top:17%; gap:15px; }
   .qr-hotspot { left:47.8%; top:73.2%; width:12%; }
-  .draggable-phone { width:clamp(128px,36.5vw,152px); }
-  .drag-hint { right:2%; bottom:2%; }
-  .drag-hint span { font-size:6.5px; padding:6px 9px; }
+  .drag-hint span { font-size:8px; padding:7px 8px; }
 }
 
 @media (prefers-reduced-motion:reduce) {

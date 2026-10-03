@@ -2,7 +2,7 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { gsap } from 'gsap'
 import { useRoute } from 'vue-router'
-import { useCanvas } from '@/composables/useCanvas'
+import { useCodePatternPreference } from '@/composables/useCodePatternPreference'
 import { useCartStore } from '@/stores/cart'
 import { usePreviewStore } from '@/stores/preview'
 import { useMarketStore } from '@/stores/market'
@@ -14,10 +14,11 @@ import CheckoutModal from '@/components/CheckoutModal.vue'
 import BouquetPreviewModal from '@/components/BouquetPreviewModal.vue'
 import CartNotification from '@/components/CartNotification.vue'
 import PetalCodeBackground from '@/components/PetalCodeBackground.vue'
+import CodePatternToggle from '@/components/CodePatternToggle.vue'
 import AppLoadingScreen from '@/components/AppLoadingScreen.vue'
 import SiteChatbot from '@/components/SiteChatbot.vue'
 
-useCanvas()
+const codePatternsEnabled = useCodePatternPreference()
 
 const cart    = useCartStore()
 const preview = usePreviewStore()
@@ -76,14 +77,13 @@ watch(
   />
 
   <template v-if="!isLetterPage">
-    <canvas id="circuit-canvas"></canvas>
-    <canvas id="petal-canvas"></canvas>
-    <PetalCodeBackground />
+    <PetalCodeBackground v-if="codePatternsEnabled" />
+    <CodePatternToggle v-model="codePatternsEnabled" />
 
-    <button class="cart-btn" @click="cart.cartOpen = true" title="View Cart">
-      <img src="/images/cart-icon.png" alt="Cart" width="28" height="28" />
+    <button class="cart-btn" type="button" @click="cart.cartOpen = true" title="Your gift bag" :aria-label="`Open gift bag, ${cart.cartItems.reduce((total, item) => total + item.quantity, 0)} items`" aria-haspopup="dialog" :aria-expanded="cart.cartOpen">
+      <img src="/images/cart-icon.png" alt="" width="40" height="40" aria-hidden="true" />
       <span v-if="cart.cartItems.length > 0" class="cart-count">
-        {{ cart.cartItems.length }}
+        {{ cart.cartItems.reduce((total, item) => total + item.quantity, 0) }}
       </span>
     </button>
 
@@ -91,7 +91,7 @@ watch(
     <CheckoutModal />
     <CartNotification />
     <SiteChatbot />
-    <TheHeader />
+    <TheHeader v-model:code-patterns-enabled="codePatternsEnabled" />
 
     <Transition name="preview">
       <BouquetPreviewModal
