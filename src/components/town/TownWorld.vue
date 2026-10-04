@@ -12,16 +12,23 @@ import type { Stem } from '@/utils/townStory'
 import { TOWN_ACTIVITIES, type TownAction } from '@/utils/townActivities'
 import { LOCATIONS, WORLD, type Point, type TownLocationId } from '@/utils/townDemo'
 
-const props = defineProps<{ compact?: boolean; player: Point; companion: Point; companionDirection: PetDirection; companionWalking: boolean; walking: boolean; running: boolean; character: string; direction: string; action:TownAction; activityTarget:Point|null; activityStep:number; litNodes:number; nurtured:boolean; petals: (Point & { id: number })[]; nearby: string | null; delivery: boolean; night: boolean; motion: boolean; paused?:boolean; stems: Stem[]; wrapping: string; garden: number; particles: { id: number; x: number; y: number }[] }>()
+const props = defineProps<{ immersive?: boolean; compact?: boolean; player: Point; companion: Point; companionDirection: PetDirection; companionWalking: boolean; walking: boolean; running: boolean; character: string; direction: string; action:TownAction; activityTarget:Point|null; activityStep:number; litNodes:number; nurtured:boolean; petals: (Point & { id: number })[]; nearby: string | null; delivery: boolean; night: boolean; motion: boolean; paused?:boolean; stems: Stem[]; wrapping: string; garden: number; particles: { id: number; x: number; y: number }[] }>()
 const actorMotion=computed(()=>props.motion&&!props.paused)
 const emit = defineEmits<{ walk: [point: Point]; approach: [id: TownLocationId] }>()
 const viewport = ref<HTMLElement | null>(null)
 const scale = ref(1)
 const width = ref(960), height = ref(600), overview = ref(false)
 const closeCamera = computed(() => (props.compact || width.value <= 600) && !overview.value)
-const camera = computed(() => ({ x: closeCamera.value ? Math.min(0, Math.max(width.value - WORLD.width * scale.value, width.value / 2 - props.player.x * scale.value)) : 0, y: closeCamera.value ? Math.min(0, Math.max(height.value - WORLD.height * scale.value, height.value / 2 - props.player.y * scale.value)) : 0 }))
+const camera = computed(() => props.immersive && overview.value
+  ? { x: (width.value - WORLD.width * scale.value) / 2, y: (height.value - WORLD.height * scale.value) / 2 }
+  : { x: closeCamera.value ? Math.min(0, Math.max(width.value - WORLD.width * scale.value, width.value / 2 - props.player.x * scale.value)) : 0, y: closeCamera.value ? Math.min(0, Math.max(height.value - WORLD.height * scale.value, height.value / 2 - props.player.y * scale.value)) : 0 })
 const worldStyle = computed(() => ({ transform: `translate(${camera.value.x}px, ${camera.value.y}px) scale(${scale.value})` }))
-function updateScale() { scale.value = closeCamera.value ? .8 : width.value / WORLD.width }
+function updateScale() {
+  scale.value = props.immersive
+    ? overview.value ? Math.min(width.value / WORLD.width, height.value / WORLD.height) : Math.max(.8, width.value / WORLD.width, height.value / WORLD.height)
+    : closeCamera.value ? .8 : width.value / WORLD.width
+}
+watch(() => props.immersive, updateScale)
 watch(closeCamera, updateScale)
 function toggleMap() { overview.value = !overview.value; updateScale() }
 let observer: ResizeObserver | undefined
