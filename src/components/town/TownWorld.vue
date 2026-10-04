@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { PhFlower, PhCode, PhPackage, PhGameController, PhGift, PhTrophy, PhMapPin } from '@phosphor-icons/vue'
 import TownSprite from './TownSprite.vue'
 import TownActor from './TownActor.vue'
@@ -12,16 +12,17 @@ import type { Stem } from '@/utils/townStory'
 import { TOWN_ACTIVITIES, type TownAction } from '@/utils/townActivities'
 import { LOCATIONS, WORLD, type Point, type TownLocationId } from '@/utils/townDemo'
 
-const props = defineProps<{ player: Point; companion: Point; companionDirection: PetDirection; companionWalking: boolean; walking: boolean; running: boolean; character: string; direction: string; action:TownAction; activityTarget:Point|null; activityStep:number; litNodes:number; nurtured:boolean; petals: (Point & { id: number })[]; nearby: string | null; delivery: boolean; night: boolean; motion: boolean; paused?:boolean; stems: Stem[]; wrapping: string; garden: number; particles: { id: number; x: number; y: number }[] }>()
+const props = defineProps<{ compact?: boolean; player: Point; companion: Point; companionDirection: PetDirection; companionWalking: boolean; walking: boolean; running: boolean; character: string; direction: string; action:TownAction; activityTarget:Point|null; activityStep:number; litNodes:number; nurtured:boolean; petals: (Point & { id: number })[]; nearby: string | null; delivery: boolean; night: boolean; motion: boolean; paused?:boolean; stems: Stem[]; wrapping: string; garden: number; particles: { id: number; x: number; y: number }[] }>()
 const actorMotion=computed(()=>props.motion&&!props.paused)
 const emit = defineEmits<{ walk: [point: Point]; approach: [id: TownLocationId] }>()
 const viewport = ref<HTMLElement | null>(null)
 const scale = ref(1)
 const width = ref(960), height = ref(600), overview = ref(false)
-const closeCamera = computed(() => width.value <= 600 && !overview.value)
+const closeCamera = computed(() => (props.compact || width.value <= 600) && !overview.value)
 const camera = computed(() => ({ x: closeCamera.value ? Math.min(0, Math.max(width.value - WORLD.width * scale.value, width.value / 2 - props.player.x * scale.value)) : 0, y: closeCamera.value ? Math.min(0, Math.max(height.value - WORLD.height * scale.value, height.value / 2 - props.player.y * scale.value)) : 0 }))
 const worldStyle = computed(() => ({ transform: `translate(${camera.value.x}px, ${camera.value.y}px) scale(${scale.value})` }))
 function updateScale() { scale.value = closeCamera.value ? .8 : width.value / WORLD.width }
+watch(closeCamera, updateScale)
 function toggleMap() { overview.value = !overview.value; updateScale() }
 let observer: ResizeObserver | undefined
 const icons = { flowers: PhFlower, studio: PhCode, delivery: PhPackage, arcade: PhGameController, gifts: PhGift, garden: PhTrophy }
@@ -44,7 +45,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div ref="viewport" class="town-map-viewport" :class="{ 'is-night': night, 'no-motion': !motion, 'town-overview': overview }" @click="walk" role="group" aria-label="Interactive Stack Petals Town. Click the ground to walk, or choose a location below.">
-    <button v-if="width <= 600" class="town-map-toggle" type="button" :aria-pressed="overview" @click.stop="toggleMap"><PhMapPin :size="16" weight="regular" />{{ overview ? 'Follow me' : 'Town map' }}</button>
+    <button v-if="compact || width <= 600" class="town-map-toggle" type="button" :aria-pressed="overview" @click.stop="toggleMap"><PhMapPin :size="16" weight="regular" />{{ overview ? 'Follow me' : 'Town map' }}</button>
     <div class="town-world" :style="worldStyle">
       <svg class="town-terrain" viewBox="0 0 960 600" shape-rendering="crispEdges" aria-hidden="true">
         <defs><pattern id="town-grass" width="48" height="48" patternUnits="userSpaceOnUse"><rect width="48" height="48" fill="#d6e0b8" /><path d="M7 14H10V11H13V14H16M32 38H35V35H38V38H41" fill="none" stroke="#b9ca9c" stroke-width="2" /><rect x="24" y="8" width="3" height="3" fill="#e9edcb" /></pattern><pattern id="town-path" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="#e9d9bc" /><path d="M0 0H24V24" stroke="#dcc9a8" stroke-width="1" fill="none" /></pattern></defs>

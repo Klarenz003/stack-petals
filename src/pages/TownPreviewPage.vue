@@ -9,6 +9,8 @@ import TownAtelier from '@/components/town/TownAtelier.vue'
 import TownBouquet from '@/components/town/TownBouquet.vue'
 import TownActor from '@/components/town/TownActor.vue'
 import TownErrands from '@/components/town/TownErrands.vue'
+import TownJoystick from '@/components/town/TownJoystick.vue'
+import type { TouchDirection } from '@/utils/townTouch'
 import { TOWN_ACTIVITIES, activityTarget, canWork, travelDirection, type TownAction, type TownDirection, type ActivityId } from '@/utils/townActivities'
 import { FIRST_DELIVERY, STORY_STEPS, freshStory, restoreStory, gardenLevel, type Stem, type StorySave } from '@/utils/townStory'
 import { petRestSpot, petMovement, type PetDirection } from '@/utils/townPets'
@@ -17,6 +19,7 @@ import { CHALLENGES, LOCATIONS, doorFor, distance, findTownPath, movePlayer, typ
 import '@/assets/town-demo.css'
 import '@/assets/town-story.css'
 import '@/assets/town-activities.css'
+import '@/assets/town-mobile.css'
 
 type Panel = TownLocationId | 'welcome' | 'settings' | 'result' | 'thanks' | 'activity' | null
 const SAVE_KEY = 'stack-petals:town-demo:v1'
@@ -53,6 +56,24 @@ const recipient = ref('Someone special'), message = ref('A little reminder: you 
 const toast = ref(''), particles = ref<{ id: number; x: number; y: number }[]>([])
 const icons = { flowers: PhFlower, studio: PhCode, delivery: PhPackage, arcade: PhGameController, gifts: PhGift, garden: PhTrophy }
 const held = new Set<string>()
+const compactQuery = window.matchMedia('(max-width: 800px), (max-width: 1000px) and (max-height: 550px) and (pointer: coarse)')
+const compact = ref(compactQuery.matches), mobilePanel = ref<'places' | 'activities' | null>(null)
+const touchMove = ref<TouchDirection>({ x: 0, y: 0 }), touchRun = ref(false)
+const touchDisabled = computed(() => !!modal.value || paused.value)
+const mobileAction = computed(() => errand.value ? workReady.value ? 'Get started' : 'Find my stop' : delivery.value ? 'Find Luna' : nearby.value ? 'Enter' : running.value ? 'Keep blooming' : story.stage === 'new' ? 'Meet Milo' : story.stage === 'gather' && stats.petals < 3 ? 'Find a petal' : story.completed ? 'Thank-you' : 'Atelier')
+function compactChanged(event: MediaQueryListEvent) { compact.value = event.matches; mobilePanel.value = null; resetWalk() }
+function moveTouch(direction: TouchDirection) {
+  if (touchDisabled.value) { touchMove.value = { x: 0, y: 0 }; return }
+  touchMove.value = direction
+  if (direction.x || direction.y) { path = []; destination = null }
+}
+function mobileInteract() {
+  if (touchDisabled.value || running.value) return
+  if (errand.value) workReady.value ? openWork() : findWork()
+  else if (delivery.value) walk({ x: 853, y: 337 })
+  else if (nearby.value) interact()
+  else storyAction()
+}
 let path: Point[] = [], destination: TownLocationId | null = null, frame = 0, last = 0, petalId = 0, particleId = 0
 let toastTimer: ReturnType<typeof setTimeout> | undefined, context: gsap.Context | undefined, audio: AudioContext | undefined
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -83,7 +104,7 @@ function save() {
 }
 function startErrand(id:ActivityId) {
   if(errandLocked.value || errand.value || paused.value) return
-  errand.value=id;errandStep.value=0;close();save();notify(TOWN_ACTIVITIES[id].detail)
+  errand.value=id;errandStep.value=0;close();returnToMap();save();notify(TOWN_ACTIVITIES[id].detail)
 }
 function cancelErrand(){errand.value=null;errandStep.value=0;workFeedback.value='';save();notify('Errand tucked away. You can begin again whenever you like.')}
 function equip(action:TownAction){if(errand.value || errandLocked.value)return;pocket.value=action;save()}
@@ -153,18 +174,26 @@ async function sparkle(point: Point) {
   if (!element) return
   gsap.fromTo(element, { y: 0, scale: .5, opacity: 1 }, { y: -45, scale: 1.2, opacity: 0, duration: .8, ease: 'power2.out', onComplete: () => { particles.value = particles.value.filter(item => item.id !== id) } })
 }
-function close() { modal.value = null; held.clear(); last = 0 }
+function close() { modal.value = null; resetWalk() }
 function open(panel: Panel) {
   modal.value = panel; held.clear(); path = []; destination = null; walking.value = false
+  resetWalk()
   if (panel && LOCATIONS.some(item => item.id === panel) && !visited.value.includes(panel)) { visited.value.push(panel); save() }
 }
 useDialogFocus(dialog, () => modal.value !== null, close)
 function walk(point: Point) {
   if (modal.value || paused.value) return
+  returnToMap()
   destination = null; path = findTownPath(player.value, point)
+}
+function returnToMap() {
+  if (!compact.value || !mobilePanel.value) return
+  mobilePanel.value = null
+  void nextTick(() => root.value?.querySelector('.town-play-area')?.scrollIntoView({ block: 'start', behavior: 'instant' }))
 }
 function approach(id: TownLocationId) {
   if (modal.value || paused.value) return
+  returnToMap()
   const location = LOCATIONS.find(item => item.id === id)!
   if (distance(player.value, doorFor(location)) < 57) { open(id); return }
   destination = id; path = findTownPath(player.value, doorFor(location))
@@ -196,7 +225,7 @@ function finishRun() {
   running.value = false; remaining.value = 0; stats.runs++; stats.best = Math.max(stats.best, roundScore.value)
   save(); open('result'); chime()
 }
-function resetWalk() { held.clear(); walking.value = false; sprinting.value = false; last = 0 }
+function resetWalk() { held.clear(); touchMove.value = { x: 0, y: 0 }; touchRun.value = false; walking.value = false; sprinting.value = false; last = 0 }
 function keyDown(event: KeyboardEvent) {
   if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable="true"]')) return
   const key = event.key.toLowerCase()
@@ -217,9 +246,10 @@ function tick(now: number) {
   const dt = last ? Math.min((now - last) / 1000, .05) : 0; last = now
   if (!modal.value && !paused.value) {
     const previousPlayer = player.value
-    const speed = running.value || sprinting.value ? 220 : 160
+    const speed = running.value || sprinting.value || touchRun.value ? 220 : 160
     let dx = Number(['d','arrowright','up-right','down-right'].some(key=>held.has(key))) - Number(['a','arrowleft','up-left','down-left'].some(key=>held.has(key)))
     let dy = Number(['s','arrowdown','down-left','down-right'].some(key=>held.has(key))) - Number(['w','arrowup','up-left','up-right'].some(key=>held.has(key)))
+    if (touchMove.value.x || touchMove.value.y) { dx = touchMove.value.x; dy = touchMove.value.y }
     if (!dx && !dy && path.length) {
       const target = path[0]!, length = distance(player.value, target)
       if (length <= speed * dt + 1) { player.value = target; path.shift() }
@@ -301,6 +331,7 @@ watch(modal, async panel => {
 })
 watch(useMotion, enabled => { if (!enabled) { gsap.killTweensOf('.town-location-marker svg'); particles.value = [] } })
 onMounted(() => {
+  compactQuery.addEventListener('change', compactChanged)
   reduced.addEventListener('change', motionPreference)
   try {
     const stored = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null')
@@ -319,14 +350,17 @@ onMounted(() => {
     }
   } catch { /* Ignore invalid or unavailable demo saves. */ }
   window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp); window.addEventListener('blur', resetWalk)
+  window.addEventListener('resize', resetWalk)
   document.addEventListener('visibilitychange', visibility)
   frame = requestAnimationFrame(tick)
   context = gsap.context(() => { if (useMotion.value) gsap.from('.town-enter', { y: 18, opacity: 0, duration: .7, stagger: .1, ease: 'power2.out', clearProps: 'all' }) }, root.value!)
 })
 onBeforeUnmount(() => {
+  compactQuery.removeEventListener('change', compactChanged)
   reduced.removeEventListener('change', motionPreference)
   cancelAnimationFrame(frame); if (toastTimer) clearTimeout(toastTimer)
   window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', resetWalk)
+  window.removeEventListener('resize', resetWalk)
   document.removeEventListener('visibilitychange', visibility)
   gsap.killTweensOf(root.value?.querySelectorAll('.town-location-marker svg,.town-particle') || []); context?.revert(); void audio?.close()
 })
@@ -352,7 +386,7 @@ onBeforeUnmount(() => {
           <button class="town-icon-button" type="button" :aria-label="paused ? 'Resume game' : 'Pause game'" :disabled="!!modal" @click="paused = !paused; resetWalk()"><component :is="paused ? PhPlay : PhPause" :size="20" weight="fill" /></button>
         </div>
         <div class="town-map-shell">
-          <TownWorld :player="player" :companion="companion" :companion-direction="companionDirection" :companion-walking="companionWalking" :walking="walking" :running="running || sprinting" :character="character" :direction="direction" :action="actorAction" :activity-target="target" :activity-step="errandStep" :lit-nodes="activityWins.lights>0?3:errand==='lights'?errandStep:0" :nurtured="activityWins.blooms>0" :petals="petals" :nearby="nearby?.id || null" :delivery="delivery" :night="night" :motion="useMotion" :paused="paused || !!modal" :stems="story.stems" :wrapping="story.wrapping" :garden="garden" :particles="particles" @walk="walk" @approach="approach" />
+          <TownWorld :compact="compact" :player="player" :companion="companion" :companion-direction="companionDirection" :companion-walking="companionWalking" :walking="walking" :running="running || sprinting || touchRun" :character="character" :direction="direction" :action="actorAction" :activity-target="target" :activity-step="errandStep" :lit-nodes="activityWins.lights>0?3:errand==='lights'?errandStep:0" :nurtured="activityWins.blooms>0" :petals="petals" :nearby="nearby?.id || null" :delivery="delivery" :night="night" :motion="useMotion" :paused="paused || !!modal" :stems="story.stems" :wrapping="story.wrapping" :garden="garden" :particles="particles" @walk="walk" @approach="approach" />
           <div v-if="paused && !modal" class="town-pause-overlay"><PhPause :size="32" weight="duotone" /><h2>A little pause.</h2><p>Your town will be right here.</p><button class="town-button" @click="paused = false; last = 0"><PhPlay :size="18" weight="fill" /> Keep exploring</button></div>
         </div>
         <div class="town-context-bar">
@@ -361,9 +395,14 @@ onBeforeUnmount(() => {
           <button v-else-if="delivery && !modal && !paused" class="town-small-button" @click="walk({ x: 853, y: 337 })">Find Luna <PhArrowRight :size="16" weight="regular" /></button><button v-else-if="nearby && !modal && !paused" class="town-small-button" @click="interact">Enter <PhArrowRight :size="16" weight="regular" /></button><button v-else-if="!modal && !paused && !running && !story.completed" class="town-small-button" @click="storyAction">{{ story.stage === 'new' ? 'Meet Milo' : story.stage === 'gather' && stats.petals < 3 ? 'Find a petal' : 'Atelier' }}<PhArrowRight :size="16" weight="regular" /></button>
         </div>
         <div class="town-controls"><p><PhKeyboard :size="20" weight="regular" /><span><kbd>W A S D</kbd> or arrows · <kbd>Shift</kbd> to run<br /><small>Combine directions for diagonal travel. <kbd>E</kbd> to interact.</small></span></p><div class="town-dpad" aria-label="Eight-way touch movement controls"><button v-for="control in controls" :key="control.key" type="button" :class="control.key" :aria-label="control.label" @pointerdown="press($event, control.key)" @pointerup="held.delete(control.key)" @pointercancel="held.delete(control.key)" @lostpointercapture="held.delete(control.key)"><component :is="control.icon" :size="18" weight="bold" /></button></div></div>
-        <TownErrands :active="errand" :step="errandStep" :ready="workReady" :locked="errandLocked || paused" :tool="pocket" :completed="completedErrands" @start="startErrand" @find="findWork" @work="openWork" @cancel="cancelErrand" @equip="equip" />
+        <div v-if="compact" class="town-touch-deck">
+          <TownJoystick :disabled="touchDisabled" @move="moveTouch" />
+          <div class="town-touch-actions"><button class="town-touch-action" :disabled="touchDisabled || running" @click="mobileInteract"><PhArrowRight :size="24" weight="bold" /><span>{{ mobileAction }}</span></button><button class="town-touch-run" :aria-pressed="touchRun" :disabled="touchDisabled" @click="touchRun = !touchRun"><PhPlay :size="16" :weight="touchRun ? 'fill' : 'regular'" />{{ touchRun ? 'Running' : 'Run' }}</button></div>
+        </div>
+        <nav v-if="compact" class="town-mobile-tabs" aria-label="Town panels"><button :aria-expanded="mobilePanel === 'places'" aria-controls="town-places" @click="mobilePanel = mobilePanel === 'places' ? null : 'places'"><PhMapPin :size="19" weight="duotone" /> Places & story</button><button :aria-expanded="mobilePanel === 'activities'" aria-controls="town-activities" @click="mobilePanel = mobilePanel === 'activities' ? null : 'activities'"><PhSparkle :size="19" weight="duotone" /> Activities & tools</button></nav>
+        <div v-show="!compact || mobilePanel === 'activities'" id="town-activities"><TownErrands :active="errand" :step="errandStep" :ready="workReady" :locked="errandLocked || paused || !!modal" :tool="pocket" :completed="completedErrands" @start="startErrand" @find="findWork" @work="openWork" @cancel="cancelErrand" @equip="equip" /></div>
       </section>
-      <aside class="town-sidebar">
+      <aside v-show="!compact || mobilePanel === 'places'" id="town-places" class="town-sidebar">
         <section class="town-story-card" aria-label="Your first delivery story">
           <p class="town-eyebrow">A LITTLE DELIVERY · CHAPTER 01</p><h2>{{ FIRST_DELIVERY.title }}</h2>
           <div class="town-story-people"><TownSprite sprite="boy-portrait" :scale=".38" /><PhArrowRight :size="16" weight="regular" /><TownSprite sprite="girl-portrait" :scale=".38" /><span>Milo, for Luna</span></div>
@@ -393,7 +432,7 @@ onBeforeUnmount(() => {
         <template v-else-if="modal === 'welcome'">
           <p>Someone needs a little sunshine today. Make a bouquet, bring it to a neighbour, and watch your kindness become a flower in the garden.</p>
           <div class="town-avatar-picker"><button v-for="avatar in ['boy', 'girl']" :key="avatar" :aria-pressed="character === avatar" @click="character = avatar"><TownSprite :sprite="`${avatar}-portrait`" :scale=".85" /><span>{{ avatar === 'boy' ? 'The developer' : 'The florist' }}</span><PhCheck v-if="character === avatar" :size="18" weight="fill" /></button></div>
-          <div class="town-tip"><PhMapPin :size="20" weight="duotone" /><span>Tap a location to walk there. Use the arrow controls, or WASD, to explore freely.</span></div>
+          <div class="town-tip"><PhMapPin :size="20" weight="duotone" /><span>{{ compact ? 'Drag the joystick to explore. Tap Run to move faster, or tap the ground to walk there. Places and activities are tucked below the controls.' : 'Tap a location to walk there. Use the arrow controls, or WASD, to explore freely.' }}</span></div>
           <button class="town-button town-full-button" data-enter-town @click="close"><PhPlay :size="19" weight="fill" /> Enter the town <PhArrowRight :size="18" weight="regular" /></button>
           <small class="town-disclaimer">An independent preview. No purchases, accounts or real deliveries.</small>
         </template>
