@@ -5,6 +5,8 @@ import { defineStore } from 'pinia'
 import type { CartItem, Customer, PaymentMethod, CheckoutStep, Product } from '@/types'
 import { useMarketStore } from '@/stores/market'
 import { bouquetKey, selectLetterBouquet } from '@/utils/letterBouquet'
+import { checkoutErrorMessage } from '@/utils/customerErrors'
+import { reportStorefrontError } from '@/services/errorTracker'
 
 const CHECKOUT_RECOVERY_KEY = 'stack-petals-checkout-recovery'
 
@@ -371,9 +373,8 @@ export const useCartStore = defineStore('cart', () => {
 
       if (error) {
         console.error('Delivery date check failed:', error)
-        deliveryDateMessage.value = error.message?.includes('get_delivery_date_availability')
-          ? 'Delivery slot checking is not ready yet. Please apply the latest Supabase migration.'
-          : 'Could not check delivery slots right now.'
+        reportStorefrontError('checkout.availability', error)
+        deliveryDateMessage.value = 'We couldn’t check availability for this date. Please try again shortly.'
         return
       }
 
@@ -397,6 +398,7 @@ export const useCartStore = defineStore('cart', () => {
       }
     } catch (error) {
       console.error('Delivery date check failed:', error)
+      reportStorefrontError('checkout.availability', error)
       deliveryDateMessage.value = 'Could not check delivery slots right now.'
     } finally {
       isCheckingDeliveryDate.value = false
@@ -468,9 +470,8 @@ export const useCartStore = defineStore('cart', () => {
 
       if (error) {
         console.error('Stock reservation failed:', error)
-        const message = error.message?.includes('reserve_cart_stock')
-          ? 'Stock reservation is not ready yet. Please apply the latest Supabase migration.'
-          : 'Could not reserve stock. Please try again.'
+        reportStorefrontError('checkout.reserve', error)
+        const message = 'We couldn’t hold your items right now. Please try again shortly.'
         stockReservationError.value = message
         showNotification(stockReservationError.value)
         return false
@@ -479,7 +480,7 @@ export const useCartStore = defineStore('cart', () => {
       const result = Array.isArray(data) ? data[0] : data
       if (!result?.success) {
         stockReservationExpiresAt.value = ''
-        stockReservationError.value = result?.message || 'Some items are no longer available.'
+        stockReservationError.value = 'We couldn’t hold all your items. Please review your cart and try again.'
         showNotification(stockReservationError.value)
         return false
       }
@@ -490,8 +491,9 @@ export const useCartStore = defineStore('cart', () => {
       return true
     } catch (error) {
       console.error('Stock reservation failed:', error)
+      reportStorefrontError('checkout.reserve', error)
       stockReservationError.value = error instanceof Error && error.message === 'Stock reservation took too long.'
-        ? 'Stock reservation is taking too long. Please check your Supabase migration/connection and try again.'
+        ? 'Holding your items is taking longer than expected. Please try again shortly.'
         : 'Could not reserve stock. Please try again.'
       showNotification(stockReservationError.value)
       return false
@@ -812,9 +814,8 @@ export const useCartStore = defineStore('cart', () => {
     orderSubmissionPromise = createOrder()
       .catch(error => {
         console.error('Order submit failed:', error)
-        orderSubmitError.value = error instanceof Error
-          ? error.message
-          : 'Could not submit order. Please try again.'
+        reportStorefrontError('checkout.submit', error)
+        orderSubmitError.value = checkoutErrorMessage(error)
         showNotification(orderSubmitError.value)
         throw error
       })

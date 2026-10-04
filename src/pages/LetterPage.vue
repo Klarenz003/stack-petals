@@ -13,6 +13,7 @@ import { useLetterMotion } from '@/composables/useLetterMotion'
 import { useLetterNavigation } from '@/composables/useLetterNavigation'
 import { useMemorySlideshow } from '@/composables/useMemorySlideshow'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
 import { getLetterCapabilities } from '@/utils/letterCapabilities'
@@ -292,6 +293,7 @@ async function loadLetter() {
   // links that were already issued with template="original".
   const legacyOriginal = data?.template === 'original' || data?.letter_theme === 'original'
   if (error || !data || (!data.published && !legacyOriginal)) {
+    if (error) reportStorefrontError('letter.load', error)
     notFound.value = true
     loading.value = false
     stopLoadingTextShuffle()

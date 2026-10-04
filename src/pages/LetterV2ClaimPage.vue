@@ -24,10 +24,10 @@ async function claim() {
 
 onMounted(async () => {
   const token = String(route.params.token || '').trim()
-  if (!token) { error.value = 'This LetterPage V2 link is incomplete.'; loading.value = false; return }
+  if (!token) { error.value = 'This gift link is incomplete.'; loading.value = false; return }
   const { data, error: resolveError } = await supabase.rpc('resolve_letter_v2_qr', { p_public_token: token })
   const resolved = Array.isArray(data) ? data[0] : data
-  if (resolveError || !resolved) error.value = 'This LetterPage V2 QR code is unavailable.'
+  if (resolveError || !resolved) error.value = 'This gift QR code is unavailable.'
   else if (resolved.status === 'published' && resolved.letter_id) { await router.replace(`/letter-v2/${resolved.letter_id}`); return }
   else code.value = resolved
   loading.value = false

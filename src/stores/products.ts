@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 import type { Product } from '@/types'
 import { useMarketStore } from '@/stores/market'
 
@@ -60,6 +61,7 @@ export const useProductsStore = defineStore('products', () => {
       })
     } catch (error) {
       console.error('Failed to fetch products:', error)
+      reportStorefrontError('products.load', error)
       fetchError.value = 'The collection could not refresh. Please try again in a moment.'
     } finally {
       loading.value = false

@@ -1,4 +1,5 @@
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 
 export type CustomerOrderItem = {
   name: string
@@ -60,7 +61,7 @@ export async function lookupCustomerOrder(reference: string, phone: string): Pro
     p_phone: normalizePhilippinePhone(phone),
   })
 
-  if (error) throw error
+  if (error) { reportStorefrontError('order.lookup', error); throw error }
   if (!data || typeof data !== 'object' || !('order' in data)) return null
 
   const lookup = data as unknown as CustomerOrderLookup

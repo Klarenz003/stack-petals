@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { PhMapPin, PhEnvelopeSimple, PhDeviceMobile, PhClock } from '@phosphor-icons/vue'
 import type { ContactInfo } from '@/types'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 
 const submitted = ref(false)
 const sending = ref(false)
@@ -51,13 +52,15 @@ async function sendMessage() {
 
     if (error) {
       console.error('Failed to send message:', error.message)
+      reportStorefrontError('contact.send', error)
       submitError.value = 'We could not send your message right now. Please try again or contact us on Facebook.'
       return
     }
 
     submitted.value = true
     form.value = { name: '', email: '', subject: '', message: '' }
-  } catch {
+  } catch (error) {
+    reportStorefrontError('contact.send', error)
     submitError.value = 'We could not send your message right now. Please try again or contact us by email.'
   } finally {
     sending.value = false

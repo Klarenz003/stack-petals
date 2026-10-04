@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import StackPetalsLetterExperience from '@/components/StackPetalsLetterExperience.vue'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 
 const route = useRoute()
 const loading = ref(true)
@@ -16,7 +17,10 @@ onMounted(async () => {
     .eq('id', String(route.params.id || ''))
     .eq('published', true)
     .single()
-  if (loadError || !data) error.value = 'This LetterPage V2 is unavailable.'
+  if (loadError || !data) {
+    if (loadError) reportStorefrontError('letter.load', loadError)
+    error.value = 'This letter is unavailable.'
+  }
   else letter.value = data
   loading.value = false
 })

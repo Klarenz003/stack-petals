@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
 const route = useRoute()
 const router = useRouter()
@@ -65,8 +66,9 @@ async function publish() {
     const id = Array.isArray(data) ? data[0]?.id : data?.id
     if (!id) throw new Error('The letter could not be created.')
     router.replace(`/letter/${id}`)
-  } catch (caughtError) {
-    error.value = caughtError instanceof Error ? caughtError.message : 'Could not save the letter.'
+  } catch (publishError) {
+    reportStorefrontError('letter.publish', publishError)
+    error.value = 'We couldn’t publish your letter. Your message is still here—please try again. If this continues, contact us for help.'
   } finally {
     saving.value = false
   }

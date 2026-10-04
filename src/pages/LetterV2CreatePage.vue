@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
 import GiftQrHeader from '@/components/GiftQrHeader.vue'
 import MemoryPhotoUpload from '@/components/MemoryPhotoUpload.vue'
@@ -10,8 +11,34 @@ import { PhCheck, PhPaperPlaneTilt } from '@phosphor-icons/vue'
 const themes = ['romance', 'family', 'birthday', 'sympathy', 'friendship', 'graduation']
 const petalMessages = ref<string[]>([...DEFAULT_PETAL_MESSAGES])
 const route = useRoute(); const router = useRouter(); const saving = ref(false); const error = ref(''); const from = ref(''); const to = ref(''); const theme = ref('romance'); const message = ref(''); const memories = ref<string[]>([]); const canUpload = ref(true); const claimValid = ref(false)
-onMounted(() => { try { const claim = JSON.parse(localStorage.getItem('stack-petals:letter-v2-claim') || 'null'); claimValid.value = Boolean(claim?.token === String(route.params.token || '') && claim?.qrId); canUpload.value = getGiftCapabilities(claim).hasPhotoUpload } catch { claimValid.value = false } if (!claimValid.value) error.value = 'Open this page from the LetterPage V2 QR link first.' })
-async function publish() { if (!claimValid.value || saving.value) return; saving.value = true; error.value = ''; try { const { data, error: rpcError } = await supabase.rpc('create_letter_v2', { p_public_token: String(route.params.token || ''), p_from: from.value.trim(), p_to: to.value.trim(), p_theme: theme.value, p_message: message.value.trim(), p_memories: memories.value, p_petal_messages: getPetalMessages(petalMessages.value) }); if (rpcError) throw rpcError; const id = Array.isArray(data) ? data[0]?.id : data?.id; if (!id) throw new Error('The LetterPage V2 letter could not be created.'); localStorage.removeItem('stack-petals:letter-v2-claim'); await router.replace(`/letter-v2/${id}`) } catch (caught) { error.value = caught instanceof Error ? caught.message : 'Could not save the letter.' } finally { saving.value = false } }
+onMounted(() => { try { const claim = JSON.parse(localStorage.getItem('stack-petals:letter-v2-claim') || 'null'); claimValid.value = Boolean(claim?.token === String(route.params.token || '') && claim?.qrId); canUpload.value = getGiftCapabilities(claim).hasPhotoUpload } catch { claimValid.value = false } if (!claimValid.value) error.value = 'Please open this page from your gift QR link first.' })
+
+async function publish() {
+  if (!claimValid.value || saving.value) return
+  saving.value = true
+  error.value = ''
+  try {
+    const { data, error: publishError } = await supabase.rpc('create_letter_v2', {
+      p_public_token: String(route.params.token || ''),
+      p_from: from.value.trim(),
+      p_to: to.value.trim(),
+      p_theme: theme.value,
+      p_message: message.value.trim(),
+      p_memories: memories.value,
+      p_petal_messages: getPetalMessages(petalMessages.value),
+    })
+    if (publishError) throw publishError
+    const id = Array.isArray(data) ? data[0]?.id : data?.id
+    if (!id) throw new Error('The letter could not be created.')
+    localStorage.removeItem('stack-petals:letter-v2-claim')
+    await router.replace(`/letter-v2/${id}`)
+  } catch (publishError) {
+    reportStorefrontError('letter.publish', publishError)
+    error.value = 'We couldn’t publish your letter. Your message is still here—please try again. If this continues, contact us for help.'
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 <template>
   <main class="gift-studio">

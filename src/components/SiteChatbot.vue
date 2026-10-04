@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { PhChatCircle as MessageCircle, PhPaperPlaneTilt as Send, PhSparkle as Sparkles, PhThumbsDown as ThumbsDown, PhThumbsUp as ThumbsUp, PhX as X } from '@phosphor-icons/vue'
 import { supabase } from '@/supabaseClient'
+import { reportStorefrontError } from '@/services/errorTracker'
 import { useMarketStore } from '@/stores/market'
 
 type ChatMessage = {
@@ -104,10 +105,11 @@ async function sendMessage(prefilled?: string) {
   })
 
   if (error || !data?.answer) {
+    reportStorefrontError('chat.send', error)
     messages.value.push({
       id: nextMessageId++,
       role: 'assistant',
-      content: data?.error || 'I am having trouble connecting right now. Please try again or contact Stack Petals.',
+      content: 'I am having trouble connecting right now. Please try again or contact Stack Petals.',
       route: '/contact',
     })
   } else {
