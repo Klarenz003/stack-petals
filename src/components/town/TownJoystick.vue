@@ -19,20 +19,22 @@ function start(event: PointerEvent) {
   if (props.disabled || pointer !== null || (event.pointerType === 'mouse' && event.button !== 0)) return
   event.preventDefault()
   pointer = event.pointerId; active.value = true
-  pad.value?.setPointerCapture(pointer); update(event)
+  try { pad.value?.setPointerCapture(pointer) } catch { /* Window listeners cover capture failures. */ }
+  update(event)
 }
 function move(event: PointerEvent) { if (pointer === event.pointerId && !props.disabled) { event.preventDefault(); update(event) } }
 function reset() {
   const captured = pointer
   pointer = null; active.value = false; offset.value = { x: 0, y: 0 }
-  if (captured !== null && pad.value?.hasPointerCapture(captured)) pad.value.releasePointerCapture(captured)
+  try { if (captured !== null && pad.value?.hasPointerCapture(captured)) pad.value.releasePointerCapture(captured) } catch { /* The browser may already have canceled this touch. */ }
   emit('move', { x: 0, y: 0 })
 }
 function stop(event: PointerEvent) { if (event.pointerId === pointer) reset() }
+function outsideMove(event: PointerEvent) { if (pointer === event.pointerId && !pad.value?.hasPointerCapture?.(pointer)) move(event) }
 watch(() => props.disabled, disabled => { if (disabled) reset() })
 function visibility() { if (document.hidden) reset() }
-onMounted(() => { window.addEventListener('blur',reset); window.addEventListener('resize',reset); document.addEventListener('visibilitychange',visibility) })
-onBeforeUnmount(() => { reset(); window.removeEventListener('blur',reset); window.removeEventListener('resize',reset); document.removeEventListener('visibilitychange',visibility) })
+onMounted(() => { window.addEventListener('blur',reset); window.addEventListener('resize',reset); window.addEventListener('pointerup',stop); window.addEventListener('pointercancel',stop); window.addEventListener('pointermove',outsideMove,{passive:false}); document.addEventListener('visibilitychange',visibility) })
+onBeforeUnmount(() => { reset(); window.removeEventListener('blur',reset); window.removeEventListener('resize',reset); window.removeEventListener('pointerup',stop); window.removeEventListener('pointercancel',stop); window.removeEventListener('pointermove',outsideMove); document.removeEventListener('visibilitychange',visibility) })
 </script>
 
 <template>
