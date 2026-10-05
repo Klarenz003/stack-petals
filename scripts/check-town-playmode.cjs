@@ -11,6 +11,61 @@ await send('Page.addScriptToEvaluateOnNewDocument',{source:`sessionStorage.setIt
 await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await send('Page.navigate',{url:'http://127.0.0.1:5183/town-preview'});
 for(let n=0;n<150;n++){if(await run(`!!document.querySelector('.town-dialog-header button')`))break;await delay(100)}await delay(800);
 await run(`document.querySelector('.town-dialog-header button').click()`);await delay(300);
+assert.equal(await run(`document.querySelector('.town-demo').classList.contains('town-first-story')`),true);
+assert.equal(await run(`getComputedStyle(document.querySelector('#town-activities')).display`),'none');
+assert.equal(await run(`document.querySelectorAll('.town-mobile-tabs button').length`),1);
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.open('arcade')`);
+assert.equal(await run(`!!document.querySelector('.town-dialog')`),false);
+const storyStarted=Date.now();
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.storyAction()`);
+for(let n=0;n<180;n++){if(await run(`!!document.querySelector('[data-accept-story]')`))break;await delay(100)}
+await run(`document.querySelector('[data-accept-story]').click()`);
+for(let count=1;count<=3;count++){
+  if(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.stats.petals>=${count}`))continue;
+  await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.storyAction()`);
+  for(let n=0;n<180;n++){if(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.stats.petals>=${count}`))break;await delay(100)}
+}
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.storyAction()`);
+for(let n=0;n<180;n++){if(await run(`!!document.querySelector('[data-begin-arrangement]')`))break;await delay(100)}
+await run(`document.querySelector('[data-begin-arrangement]').click()`);await delay(100);
+await run(`for(const stem of ['sun','pink','blue'])document.querySelector('[data-stem="'+stem+'"]').click()`);await delay(100);
+await run(`document.querySelector('.town-atelier>.town-button').click()`);await delay(100);
+await run(`document.querySelector('[data-tie-bow]').click()`);await delay(100);
+await run(`document.querySelector('[data-take-bouquet]').click();document.querySelector('.town-demo').__vueParentComponent.setupState.walk({x:853,y:337})`);
+const beats=new Set();
+for(let n=0;n<200;n++){const beat=await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.deliveryScene`);if(beat)beats.add(beat);if(await run(`!!document.querySelector('[data-see-garden]')`))break;await delay(100)}
+assert.deepEqual([...beats],['handoff','thanks','garden']);
+assert.ok(Date.now()-storyStarted<180000,'guided story travel should leave room for reading and crafting within about three minutes');
+assert.equal(await run(`!!document.querySelector('.town-first-bloom')`),true);
+assert.equal(await run(`document.querySelector('.town-demo').classList.contains('town-first-story')`),false);
+await run(`document.querySelector('.town-dialog-header button').click()`);
+console.log('PASS fresh-save onboarding, locked optional places, bouquet crafting, delivery, celebration, and adventure unlock');
+await run(`{const s=document.querySelector('.town-demo').__vueParentComponent.setupState;s.startErrand('blooms');s.findWork()}`);
+for(let n=0;n<150;n++){if(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.workReady`))break;await delay(100)}
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.openWork()`);await delay(100);
+await run(`document.querySelector('.watering-beds button').dispatchEvent(new PointerEvent('pointerdown',{button:0,pointerId:101,bubbles:true}))`);await delay(200);
+await run(`document.querySelector('.watering-beds button').dispatchEvent(new PointerEvent('pointerup',{pointerId:101,bubbles:true}))`);
+assert.equal(await run(`document.querySelector('.watering-beds button').disabled`),false);
+await run(`document.querySelector('.watering-beds button').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`);await delay(1050);
+assert.equal(await run(`document.querySelector('.watering-beds button').disabled`),true);
+await run(`{const s=document.querySelector('.town-demo').__vueParentComponent.setupState;s.close();s.cancelErrand()}`);
+console.log('PASS watering hold cancellation and accessible timed pouring');
+await run(`{const s=document.querySelector('.town-demo').__vueParentComponent.setupState;s.startErrand('lights');s.findWork()}`);
+for(let n=0;n<180;n++){if(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.workReady`))break;await delay(100)}
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.openWork()`);await delay(100);
+assert.equal(await run(`document.querySelector('[data-power-circuit]').disabled`),true);
+await run(`for(let i=0;i<9;i++)document.querySelector('.circuit-help button').click()`);await delay(100);
+assert.equal(await run(`document.querySelector('[data-power-circuit]').disabled`),false);
+await run(`document.querySelector('[data-power-circuit]').click()`);await delay(100);
+assert.equal(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.errandStep`),1);
+await run(`{const s=document.querySelector('.town-demo').__vueParentComponent.setupState;s.cancelErrand();s.startErrand('notes');s.findWork()}`);
+for(let n=0;n<180;n++){if(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.workReady`))break;await delay(100)}
+await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.openWork()`);await delay(100);
+await run(`document.querySelectorAll('.town-note-choices button')[2].click();document.querySelector('[data-give-note]').click()`);await delay(100);
+assert.equal(await run(`document.querySelector('.town-note-response').textContent.includes('seen')`),true);
+await run(`document.querySelector('[data-finish-note]').click()`);await delay(100);
+assert.equal(await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.errand`),null);
+console.log('PASS rotating-wire puzzle, assisted solution, lamp activation, distinct letter response, and note reward');
 for(const [width,height] of [[390,844],[320,740],[768,1024],[844,390]]){
 await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:true});await delay(300);
 const state=await run(`(()=>{let j=document.querySelector('.town-joystick').getBoundingClientRect(),a=document.querySelector('.town-touch-action').getBoundingClientRect();return{overflow:document.documentElement.scrollWidth>innerWidth,joystick:j.width,action:a.height,controls:getComputedStyle(document.querySelector('.town-controls')).display,panels:getComputedStyle(document.querySelector('.town-sidebar')).display,columns:getComputedStyle(document.querySelector('.town-play-area')).gridTemplateColumns}})()`);
@@ -22,10 +77,10 @@ const position=()=>run(`(()=>{const a=document.querySelector('.town-player');ret
 const initial=await position();let center=await run(`(()=>{const r=document.querySelector('.town-joystick').getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height/2}})()`);
 const touch=(type,x,y)=>send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'||type==='touchCancel'?[]:[{x,y,id:1}]});
 await touch('touchStart',center.x,center.y);await touch('touchMove',center.x+33,center.y+33);await delay(180);const moving=await position();assert.ok(moving.x>initial.x+5&&moving.y>initial.y+5,'diagonal movement');await touch('touchEnd');await delay(100);const stopped=await position();await delay(160);assert.deepEqual(await position(),stopped);console.log('PASS diagonal movement and release',initial,moving,stopped);
-await run(`document.querySelector('.town-touch-run').click()`);assert.equal(await run(`document.querySelector('.town-touch-run').getAttribute('aria-pressed')`),'true');
+await run(`document.querySelector('[aria-label="Town settings"]').click()`);await delay(100);await run(`document.querySelector('.town-setting').click()`);assert.equal(await run(`document.querySelector('.town-setting').getAttribute('aria-pressed')`),'true');await run(`document.querySelector('.town-dialog-header button').click()`);
 await touch('touchStart',center.x,center.y);await touch('touchMove',center.x,center.y+33);await delay(120);await touch('touchCancel');await delay(100);const canceled=await position();await delay(150);assert.deepEqual(await position(),canceled);console.log('PASS run toggle and pointer cancellation');
 await run(`document.querySelector('.town-hud button').click()`);assert.equal(await run(`!!document.querySelector('.town-pause-overlay')`),true);assert.equal(await run(`document.querySelector('.town-joystick').classList.contains('disabled')`),true);await run(`document.querySelector('.town-pause-overlay button').click()`);
-await run(`document.querySelector('.town-mobile-tabs button:last-child').click()`);assert.notEqual(await run(`getComputedStyle(document.querySelector('#town-activities')).display`),'none');await run(`document.querySelector('.town-pocket-tools button:nth-of-type(2)').click()`);assert.equal(await run(`document.querySelector('.town-pocket-tools button:nth-of-type(2)').getAttribute('aria-pressed')`),'true');await run(`document.querySelector('.town-mobile-tabs button:last-child').click()`);
+await run(`document.querySelector('.town-mobile-tabs button').click();document.querySelector('.town-journal-activities').click()`);assert.notEqual(await run(`getComputedStyle(document.querySelector('#town-activities')).display`),'none');await run(`document.querySelector('.town-pocket-tools button:nth-of-type(2)').click()`);assert.equal(await run(`document.querySelector('.town-pocket-tools button:nth-of-type(2)').getAttribute('aria-pressed')`),'true');await run(`document.querySelector('.town-mobile-tabs button').click()`);
 await run(`document.querySelector('.town-map-toggle').click()`);assert.equal(await run(`document.querySelector('.town-map-viewport').classList.contains('town-overview')`),true);await run(`document.querySelector('.town-map-toggle').click()`);
 await run(`document.querySelector('.town-mobile-tabs button:first-child').click()`);await run(`document.querySelector('[data-destination="flowers"]').click()`);assert.equal(await run(`getComputedStyle(document.querySelector('.town-sidebar')).display`),'none');
 await send('Emulation.setTouchEmulationEnabled',{enabled:false});await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});await delay(300);assert.equal(await run(`!!document.querySelector('.town-joystick')`),false);assert.notEqual(await run(`getComputedStyle(document.querySelector('.town-controls')).display`),'none');assert.notEqual(await run(`getComputedStyle(document.querySelector('.town-sidebar')).display`),'none');
@@ -57,7 +112,7 @@ await run(`Object.defineProperties(visualViewport,{height:{configurable:true,val
 assert.equal(await run(`document.querySelector('.town-playmode').getBoundingClientRect().height`),620);assert.equal(await run(`document.querySelector('.town-playmode').getBoundingClientRect().top`),15);
 await run(`document.querySelector('.town-playmode').style.setProperty('--town-safe-bottom','34px')`);
 const safeBottom=await run(`(()=>{const r=document.querySelector('.town-playmode').getBoundingClientRect(),t=document.querySelector('.town-mobile-tabs').getBoundingClientRect();return r.bottom-t.bottom})()`);assert.ok(safeBottom>=34);
-await run(`document.querySelector('.town-touch-run').focus({preventScroll:true});document.querySelector('.town-touch-run').click()`);await delay(100);assert.equal(await run(`document.querySelector('.town-touch-run').getAttribute('aria-pressed')`),'true');
+await run(`document.querySelector('[aria-label="Town settings"]').click()`);await delay(100);await run(`document.querySelector('.town-setting').focus({preventScroll:true});document.querySelector('.town-setting').click()`);await run(`document.querySelector('.town-dialog-header button').click()`);
 await run(`document.querySelector('.town-demo').__vueParentComponent.setupState.open('gifts')`);await delay(100);
 await run(`document.querySelector('.town-dialog textarea').focus();Object.defineProperty(visualViewport,'height',{configurable:true,value:340});visualViewport.dispatchEvent(new Event('resize'))`);await delay(100);
 assert.equal(await run(`document.querySelector('.town-playmode').dataset.townKeyboardOpen`),'true');assert.ok(await run(`document.querySelector('.town-dialog').getBoundingClientRect().height<=324`));

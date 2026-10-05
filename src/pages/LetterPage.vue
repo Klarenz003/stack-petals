@@ -13,6 +13,8 @@ import { useLetterMotion } from '@/composables/useLetterMotion'
 import { useLetterNavigation } from '@/composables/useLetterNavigation'
 import { useMemorySlideshow } from '@/composables/useMemorySlideshow'
 import { supabase } from '@/supabaseClient'
+import { loadAccessibleLetter } from '@/services/letterAccess'
+import LetterPasswordGate from '@/components/LetterPasswordGate.vue'
 import { reportStorefrontError } from '@/services/errorTracker'
 import { preloadImageSources } from '@/utils/imagePreloader'
 import { getLetterCriticalImageSources } from '@/utils/letterPreloadAssets'
@@ -51,6 +53,7 @@ const isOriginalLetter = computed(() => (
 const hasCinematicLetter = computed(() => Boolean(letter.value) && !isOriginalLetter.value)
 const loading = ref(true)
 const notFound = ref(false)
+const passwordLocked = ref(false)
 const currentScreen = ref(0)
 const revealedPetals = ref<boolean[]>([false, false, false, false, false, false])
 const activePetal = ref<number | null>(null)
@@ -275,18 +278,25 @@ const visibleScreenIndices = computed(() => getVisibleLetterScreenIndices(totalS
 const finalVisibleScreen = computed(() => visibleScreenIndices.value[visibleScreenIndices.value.length - 1] ?? totalScreens - 1)
 
 // ── Load Letter ────────────────────────────────────────────────────
-async function loadLetter() {
+async function loadLetter(unlockedLetter?: Letter) {
   const loadingStartedAt = performance.now()
   startLoadingTextShuffle()
   loadingLoaded.value = 0
   loadingTotal.value = 1
   hasViewed360.value = false
 
-  const { data, error } = await supabase
-    .from('letters')
-    .select('*')
-    .eq('id', route.params.id)
-    .maybeSingle()
+  let data: Letter | undefined = unlockedLetter
+  let error: unknown
+  if (!data) {
+    try {
+      const result = await loadAccessibleLetter(String(route.params.id))
+      if (result.status === 'locked') {
+        passwordLocked.value = true; loading.value = false; stopLoadingTextShuffle(); return
+      }
+      data = result.letter
+    } catch (loadError) { error = loadError }
+  }
+  passwordLocked.value = false
 
   // Older original letters may not have been backfilled with published=true.
   // Keep the public gate for modern letters, while preserving those legacy
@@ -916,7 +926,8 @@ function skipAnimation() {
 </script>
 
 <template>
-    <ThemedLetterExperience v-if="hasCinematicLetter" :letter="letter!" :preview="props.preview" />
+    <LetterPasswordGate v-if="passwordLocked" :letter-id="String(route.params.id)" @unlocked="loadLetter($event)" />
+    <ThemedLetterExperience v-else-if="hasCinematicLetter" :letter="letter!" :preview="props.preview" />
   <div
     v-else
     ref="pageRoot"

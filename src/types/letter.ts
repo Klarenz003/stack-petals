@@ -14,6 +14,7 @@ export interface LetterRecord {
   music_url: string
   bouquet_image_url: string
   published: boolean
+  requires_password?: boolean
   template: string
   letter_theme?: string | null
   has_360_view?: boolean | null

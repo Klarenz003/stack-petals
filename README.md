@@ -2,6 +2,10 @@
 
 > Vite · Vue 3 · TypeScript · Pinia · Vue Router · Vercel
 
+For the current project-wide setup, architecture, design conventions, and
+maintenance workflow, read **[stack.md](stack.md)**. The migration roadmap below
+is historical; Supabase is already integrated into the application.
+
 ---
 
 ## Quick Start

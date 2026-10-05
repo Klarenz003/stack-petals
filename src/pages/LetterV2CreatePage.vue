@@ -6,15 +6,45 @@ import { reportStorefrontError } from '@/services/errorTracker'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
 import GiftQrHeader from '@/components/GiftQrHeader.vue'
 import MemoryPhotoUpload from '@/components/MemoryPhotoUpload.vue'
+import { passwordError } from '@/utils/letterAccess'
 import { DEFAULT_PETAL_MESSAGES, getPetalMessages } from '@/utils/letterDefaults'
-import { PhCheck, PhPaperPlaneTilt } from '@phosphor-icons/vue'
+import { PhCheck, PhPaperPlaneTilt, PhLockKey, PhArrowRight } from '@phosphor-icons/vue'
 const themes = ['romance', 'family', 'birthday', 'sympathy', 'friendship', 'graduation']
 const petalMessages = ref<string[]>([...DEFAULT_PETAL_MESSAGES])
 const route = useRoute(); const router = useRouter(); const saving = ref(false); const error = ref(''); const from = ref(''); const to = ref(''); const theme = ref('romance'); const message = ref(''); const memories = ref<string[]>([]); const canUpload = ref(true); const claimValid = ref(false)
-onMounted(() => { try { const claim = JSON.parse(localStorage.getItem('stack-petals:letter-v2-claim') || 'null'); claimValid.value = Boolean(claim?.token === String(route.params.token || '') && claim?.qrId); canUpload.value = getGiftCapabilities(claim).hasPhotoUpload } catch { claimValid.value = false } if (!claimValid.value) error.value = 'Please open this page from your gift QR link first.' })
+const password = ref(''); const confirmation = ref(''); const activationCode = ref('')
+const showPassword = ref(false)
+const publishedId = ref(''); const managementToken = ref(''); const changed = ref(false)
+onMounted(() => {
+  try {
+    const claim = JSON.parse(sessionStorage.getItem('stack-petals:letter-v2-claim') || 'null')
+    claimValid.value = Boolean(claim?.token === String(route.params.token || '') && claim?.qrId && claim?.activationCode)
+    activationCode.value = claim?.activationCode || ''
+    canUpload.value = getGiftCapabilities(claim).hasPhotoUpload
+    const receipt = JSON.parse(sessionStorage.getItem(`stack-petals:letter-receipt:${route.params.token}`) || 'null')
+    if (receipt?.id && receipt?.managementToken) { publishedId.value = receipt.id; managementToken.value = receipt.managementToken }
+  } catch { claimValid.value = false }
+  if (!claimValid.value && !publishedId.value) error.value = 'Please activate your Gift QR card again to begin.'
+})
+
+async function changePassword() {
+  error.value = passwordError(password.value, confirmation.value)
+  if (error.value || saving.value) return
+  saving.value = true; changed.value = false
+  try {
+    const { data, error: changeError } = await supabase.rpc('change_gift_letter_password', {
+      p_letter_id: publishedId.value, p_management_token: managementToken.value, p_password: password.value,
+    })
+    if (changeError || !data) throw changeError || new Error('Password change unavailable')
+    password.value = ''; confirmation.value = ''; changed.value = true
+  } catch { error.value = 'We couldn’t change the password. Please try again.' }
+  finally { saving.value = false }
+}
 
 async function publish() {
   if (!claimValid.value || saving.value) return
+  error.value = passwordError(password.value, confirmation.value)
+  if (error.value) return
   saving.value = true
   error.value = ''
   try {
@@ -24,14 +54,19 @@ async function publish() {
       p_to: to.value.trim(),
       p_theme: theme.value,
       p_message: message.value.trim(),
+      p_password: password.value,
+      p_activation_code: activationCode.value,
       p_memories: memories.value,
       p_petal_messages: getPetalMessages(petalMessages.value),
     })
     if (publishError) throw publishError
     const id = Array.isArray(data) ? data[0]?.id : data?.id
     if (!id) throw new Error('The letter could not be created.')
+    publishedId.value = id; managementToken.value = data[0]?.management_token || data?.management_token || ''
+    password.value = ''; confirmation.value = ''; activationCode.value = ''
+    sessionStorage.removeItem('stack-petals:letter-v2-claim')
     localStorage.removeItem('stack-petals:letter-v2-claim')
-    await router.replace(`/letter-v2/${id}`)
+    try { sessionStorage.setItem(`stack-petals:letter-receipt:${route.params.token}`, JSON.stringify({ id, managementToken: managementToken.value })) } catch { /* Receipt still works in this tab. */ }
   } catch (publishError) {
     reportStorefrontError('letter.publish', publishError)
     error.value = 'We couldn’t publish your letter. Your message is still here—please try again. If this continues, contact us for help.'
@@ -43,8 +78,26 @@ async function publish() {
 <template>
   <main class="gift-studio">
     <section class="gift-studio-shell" aria-labelledby="gift-composer-title">
-      <GiftQrHeader composing />
-      <div class="gift-studio-body">
+      <GiftQrHeader :composing="!publishedId" :reading="!!publishedId" />
+      <div v-if="publishedId" class="gift-studio-body">
+        <span class="gift-studio-hero-icon"><PhLockKey :size="30" weight="duotone" aria-hidden="true" /></span>
+        <p class="gift-studio-eyebrow">Sealed with care</p>
+        <h1 id="gift-composer-title">Your words. Just for them.</h1>
+        <p class="gift-studio-intro">Your letter is ready. Share its password privately with your recipient—not on the QR card. They can remember their browser for 30 days.</p>
+        <button class="gift-studio-primary" @click="router.push(`/letter-v2/${publishedId}`)">See your letter<PhArrowRight :size="18" aria-hidden="true" /></button>
+        <details class="gift-password-settings">
+          <summary>Change the letter password</summary>
+          <p class="gift-studio-hint">Changing it signs out every remembered browser. Keep this composer tab open if you want to change it later.</p>
+          <form @submit.prevent="changePassword">
+            <label class="gift-studio-field">New password<input v-model="password" type="password" autocomplete="new-password" minlength="10" required :disabled="saving" /></label>
+            <label class="gift-studio-field">Confirm password<input v-model="confirmation" type="password" autocomplete="new-password" required :disabled="saving" /></label>
+            <p v-if="changed" role="status" class="gift-studio-hint">Password updated. Share the new password privately with your recipient.</p>
+            <p v-if="error" role="alert" class="gift-studio-error">{{ error }}</p>
+            <button class="gift-studio-primary" :disabled="saving">{{ saving ? 'Updating…' : 'Update password' }}</button>
+          </form>
+        </details>
+      </div>
+      <div v-else class="gift-studio-body">
         <p class="gift-studio-eyebrow">The words make it yours</p>
         <h1 id="gift-composer-title">A little letter. A lot of heart.</h1>
         <p class="gift-studio-intro">A personal message, little memories, and all the things worth saying.</p>
@@ -86,10 +139,21 @@ async function publish() {
               <p class="gift-studio-hint">Add up to three photos to make their letter even more personal.</p>
               <MemoryPhotoUpload v-model="memories" :disabled="saving || !claimValid" />
             </section>
+            <section class="gift-studio-form-card" aria-labelledby="gift-privacy-title">
+              <p class="gift-studio-eyebrow"><PhLockKey :size="16" weight="duotone" aria-hidden="true" /> Just for your recipient</p>
+              <h2 id="gift-privacy-title">Seal it with a password.</h2>
+              <p id="gift-password-help" class="gift-studio-hint">Choose at least 10 characters—a few memorable words work well. Share it privately with your recipient, never on the QR card.</p>
+              <div class="gift-studio-name-grid">
+                <label class="gift-studio-field" for="gift-password">Letter password<input id="gift-password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" minlength="10" aria-describedby="gift-password-help" required /></label>
+                <label class="gift-studio-field" for="gift-password-confirm">Confirm password<input id="gift-password-confirm" v-model="confirmation" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" minlength="10" required /></label>
+              </div>
+              <label class="gift-password-show"><input v-model="showPassword" type="checkbox" />Show passwords</label>
+              <p class="gift-studio-hint">No account needed. Your recipient can remember their browser for 30 days after unlocking.</p>
+            </section>
           </fieldset>
           <p v-if="error" class="gift-studio-error" role="alert">{{ error }}</p>
           <div class="gift-studio-publish">
-            <p class="gift-studio-hint">Once published, your Gift QR will open this letter directly—no activation code needed.</p>
+            <p class="gift-studio-hint">Your Gift QR opens a private letter. Only someone with your password can unlock it.</p>
             <button class="gift-studio-primary" :disabled="saving || !claimValid || !to.trim() || !message.trim()">{{ saving ? 'Publishing your letter…' : 'Publish your letter' }}<PhPaperPlaneTilt :size="17" aria-hidden="true" /></button>
           </div>
         </form>

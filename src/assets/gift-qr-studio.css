@@ -1,4 +1,8 @@
 /* Shared customer Gift QR styling, aligned with the homepage and checkout. */
+.gift-password-show { display:flex; align-items:center; gap:10px; margin-top:18px; color:#554a44; font-size:12px; }
+.gift-password-show input { width:18px; height:18px; accent-color:#5f8872; }
+.gift-password-settings { margin-top:28px; padding:20px; border:1px solid #eadbd6; border-radius:16px; background:#fffaf9; }
+.gift-password-settings summary { cursor:pointer; color:#4a6b5a; font-size:13px; font-weight:600; }
 .gift-studio { min-height:100svh; padding:40px 20px; display:grid; place-items:center; background:radial-gradient(ellipse at 15% 5%,#d8a5a726,transparent 55%),var(--sp-bg,#fdf0ef); color:#2d2825; font-family:'DM Sans',sans-serif; }
 .gift-studio *, .gift-studio *::before, .gift-studio *::after { box-sizing:border-box; }
 .gift-studio-shell { width:100%; max-width:720px; min-width:0; overflow:hidden; border:1px solid #fff9; border-radius:28px; background:#fff; box-shadow:0 25px 90px #7a3a4a14; }

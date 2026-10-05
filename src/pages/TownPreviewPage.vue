@@ -10,6 +10,10 @@ import TownBouquet from '@/components/town/TownBouquet.vue'
 import TownActor from '@/components/town/TownActor.vue'
 import TownErrands from '@/components/town/TownErrands.vue'
 import TownJoystick from '@/components/town/TownJoystick.vue'
+import TownWatering from '@/components/town/TownWatering.vue'
+import TownCircuit from '@/components/town/TownCircuit.vue'
+import { deliveryBeat, DELIVERY_SCENE_SECONDS, LUNA_NOTES, type DeliveryBeat } from '@/utils/townMoments'
+import { townPlaceAvailable } from '@/utils/townProgression'
 import type { TouchDirection } from '@/utils/townTouch'
 import { useTownPlayMode } from '@/composables/useTownPlayMode'
 import { TOWN_ACTIVITIES, activityTarget, canWork, travelDirection, type TownAction, type TownDirection, type ActivityId } from '@/utils/townActivities'
@@ -22,6 +26,7 @@ import '@/assets/town-story.css'
 import '@/assets/town-activities.css'
 import '@/assets/town-mobile.css'
 import '@/assets/town-playmode.css'
+import '@/assets/town-cozy.css'
 
 type Panel = TownLocationId | 'welcome' | 'settings' | 'result' | 'thanks' | 'activity' | null
 const SAVE_KEY = 'stack-petals:town-demo:v1'
@@ -35,9 +40,7 @@ const activityWins = reactive({lights:0,blooms:0,notes:0})
 const target = computed(() => errand.value ? activityTarget(errand.value,errandStep.value) : null)
 const workReady = computed(() => !!errand.value && canWork(errand.value,errandStep.value,player.value))
 const errandLocked = computed(() => delivery.value || running.value || story.stage === 'arrange')
-const actorAction = computed<TownAction>(() => delivery.value && story.stage === 'deliver' ? 'bouquet' : errand.value ? TOWN_ACTIVITIES[errand.value].action : pocket.value)
-const repairPattern = computed(() => [[1,0,2],[2,1,0],[0,2,1]][errandStep.value%3]!)
-const workIcons = [PhCode,PhSparkle,PhHeart]
+const actorAction = computed<TownAction>(() => deliveryScene.value === 'handoff' || delivery.value && story.stage === 'deliver' ? 'bouquet' : errand.value ? TOWN_ACTIVITIES[errand.value].action : pocket.value)
 const controls = [
   {key:'up-left',icon:PhArrowUp,label:'Move diagonally up left'}, {key:'arrowup',icon:PhArrowUp,label:'Move up'}, {key:'up-right',icon:PhArrowUp,label:'Move diagonally up right'},
   {key:'arrowleft',icon:PhArrowLeft,label:'Move left'}, {key:'arrowright',icon:PhArrowRight,label:'Move right'},
@@ -47,6 +50,15 @@ const character = ref('boy'), night = ref(false), motion = ref(true), sound = re
 const stats = reactive({ petals: 0, collected: 0, score: 0, crafted: 0, coding: 0, deliveries: 0, runs: 0, best: 0 })
 const visited = ref<string[]>([]), delivery = ref(false), running = ref(false), remaining = ref(30), roundScore = ref(0)
 const story = reactive(freshStory())
+const extrasUnlocked = computed(() => story.completed || completedErrands.value > 0 || stats.runs > 0 || stats.coding > 0 || !!errand.value)
+const availablePlaces = computed(() => LOCATIONS.filter(place => townPlaceAvailable(place.id, extrasUnlocked.value)))
+const celebrating = ref(false)
+const deliveryScene = ref<DeliveryBeat | null>(null)
+let sceneElapsed = 0
+let previousGarden = 0
+const sceneGarden = computed(() => deliveryScene.value && deliveryScene.value !== 'garden' ? previousGarden : garden.value)
+const sceneFocus = computed(() => deliveryScene.value === 'garden' ? { x: 880, y: 465 } : null)
+const selectedNote = ref<string>('comfort'), noteReply = ref('')
 const companion = ref<Point>({ x: 338, y: 340 })
 const companionDirection = ref<PetDirection>('down'), companionWalking = ref(false)
 let trail: { point: Point; time: number }[] = []
@@ -62,8 +74,9 @@ const held = new Set<string>()
 const compactQuery = window.matchMedia('(max-width: 800px), (max-width: 1000px) and (max-height: 550px) and (pointer: coarse)')
 const compact = ref(compactQuery.matches), mobilePanel = ref<'places' | 'activities' | null>(null)
 const touchMove = ref<TouchDirection>({ x: 0, y: 0 }), touchRun = ref(false)
+const quickPace = ref(false)
 const touchLayout = computed(() => compact.value || playMode.value)
-const touchDisabled = computed(() => !!modal.value || paused.value || (playMode.value && !!mobilePanel.value))
+const touchDisabled = computed(() => !!modal.value || !!deliveryScene.value || paused.value || (playMode.value && !!mobilePanel.value))
 const mobileAction = computed(() => errand.value ? workReady.value ? 'Get started' : 'Find my stop' : delivery.value ? 'Find Luna' : nearby.value ? 'Enter' : running.value ? 'Keep blooming' : story.stage === 'new' ? 'Meet Milo' : story.stage === 'gather' && stats.petals < 3 ? 'Find a petal' : story.completed ? 'Thank-you' : 'Atelier')
 function compactChanged(event: MediaQueryListEvent) { compact.value = event.matches; mobilePanel.value = null; resetWalk() }
 function moveTouch(direction: TouchDirection) {
@@ -107,13 +120,14 @@ function save() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ stats, story, visited: visited.value, character: character.value, night: night.value, motion: motion.value, completedErrands:completedErrands.value, pocket:pocket.value, activityWins, errand:errand.value, errandStep:errandStep.value, note:{recipient:recipient.value,message:message.value} })) } catch { /* Private browsing may not permit persistence. Gameplay still works. */ }
 }
 function startErrand(id:ActivityId) {
+  if (!extrasUnlocked.value) { notify('First, a little sunshine for Luna. More adventures open after your first delivery.'); return }
   if(errandLocked.value || errand.value || paused.value) return
   errand.value=id;errandStep.value=0;close();returnToMap();save();notify(TOWN_ACTIVITIES[id].detail)
 }
 function cancelErrand(){errand.value=null;errandStep.value=0;workFeedback.value='';save();notify('Errand tucked away. You can begin again whenever you like.')}
 function equip(action:TownAction){if(errand.value || errandLocked.value)return;pocket.value=action;save()}
 function findWork(){if(target.value) walk(target.value)}
-function openWork(){if(!workReady.value || paused.value)return;workStep.value=0;watered.value=[];workFeedback.value='';open('activity')}
+function openWork(){if(!workReady.value || paused.value)return;workStep.value=0;watered.value=[];workFeedback.value='';noteReply.value='';open('activity')}
 function completeWork(){
   if(!errand.value || !workReady.value)return
   const id=errand.value;void sparkle(player.value);chime();errandStep.value++
@@ -126,11 +140,33 @@ function completeWork(){
   }else notify('A little better already. Your next stop is marked in town.')
   close();save()
 }
-function repair(index:number){
-  if(!workReady.value || errand.value!=='lights')return
-  if(repairPattern.value[workStep.value]!==index){workStep.value=0;workFeedback.value='Almost. Follow the symbols from left to right. There’s no rush.';return}
-  workStep.value++;workFeedback.value='A little connection, made.';chime()
-  if(workStep.value===3)completeWork()
+function giveNote() {
+  if (noteReply.value || !workReady.value || errand.value !== 'notes') return
+  const choice = LUNA_NOTES.find(note => note.id === selectedNote.value)
+  if (choice) { message.value = choice.message; recipient.value = 'Luna'; save() }
+  noteReply.value = choice?.reply ?? 'Your own words, just for me. I’ll keep this little note for a day when I need a smile.'
+  chime()
+}
+function finishDeliveryScene() {
+  if (!deliveryScene.value) return
+  deliveryScene.value = null; celebrating.value = false; companionWalking.value = false
+  open('thanks')
+}
+function advanceDeliveryScene(dt: number) {
+  if (!deliveryScene.value || paused.value || document.hidden) return
+  sceneElapsed += dt
+  const rest = petRestSpot(player.value, companion.value)
+  const before = companion.value, gap = distance(before, rest)
+  if (gap > 1) companion.value = movePlayer(before, (rest.x-before.x)/gap*Math.min(gap,150*dt), (rest.y-before.y)/gap*Math.min(gap,150*dt))
+  const movement = petMovement(before, companion.value, companionDirection.value)
+  companionWalking.value = movement.walking; companionDirection.value = movement.walking ? movement.direction : 'down'
+  const beat = deliveryBeat(sceneElapsed)
+  if (beat !== deliveryScene.value) {
+    deliveryScene.value = beat
+    if (beat === 'thanks') { void sparkle({ x: 853, y: 290 }); chime(true) }
+    if (beat === 'garden') void sparkle({ x: 868, y: 467 })
+  }
+  if (sceneElapsed >= DELIVERY_SCENE_SECONDS) finishDeliveryScene()
 }
 function water(index:number){
   if(!workReady.value || errand.value!=='blooms' || watered.value.includes(index))return
@@ -157,7 +193,7 @@ function storyAction() {
   else if (story.stage === 'deliver') walk({ x: 853, y: 337 })
   else open('thanks')
 }
-function chime() {
+function chime(celebrate = false) {
   if (!sound.value) return
   try {
     audio ||= new AudioContext()
@@ -167,6 +203,12 @@ function chime() {
     oscillator.frequency.exponentialRampToValueAtTime(880, audio.currentTime + .12)
     gain.gain.setValueAtTime(.035, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + .2)
     oscillator.connect(gain); gain.connect(audio.destination); oscillator.start(); oscillator.stop(audio.currentTime + .21)
+    if (celebrate) for (const [index, frequency] of [523.25, 659.25, 783.99].entries()) {
+      const note = audio.createOscillator(), envelope = audio.createGain(), at = audio.currentTime + .15 + index * .16
+      note.type = 'sine'; note.frequency.value = frequency
+      envelope.gain.setValueAtTime(0, at); envelope.gain.linearRampToValueAtTime(.025, at + .03); envelope.gain.exponentialRampToValueAtTime(.001, at + .55)
+      note.connect(envelope); envelope.connect(audio.destination); note.start(at); note.stop(at + .56)
+    }
   } catch { sound.value = false }
 }
 async function sparkle(point: Point) {
@@ -180,13 +222,17 @@ async function sparkle(point: Point) {
 }
 function close() { modal.value = null; resetWalk() }
 function open(panel: Panel) {
+  if (deliveryScene.value) return
+  if (panel && LOCATIONS.some(place => place.id === panel) && !townPlaceAvailable(panel as TownLocationId, extrasUnlocked.value)) {
+    notify('This little place opens after Luna receives her bouquet. One kindness at a time.'); return
+  }
   modal.value = panel; held.clear(); path = []; destination = null; walking.value = false
   resetWalk()
   if (panel && LOCATIONS.some(item => item.id === panel) && !visited.value.includes(panel)) { visited.value.push(panel); save() }
 }
 useDialogFocus(dialog, () => modal.value !== null, close)
 function walk(point: Point) {
-  if (modal.value || paused.value) return
+  if (modal.value || paused.value || deliveryScene.value) return
   returnToMap()
   destination = null; path = findTownPath(player.value, point)
 }
@@ -196,7 +242,8 @@ function returnToMap() {
   if (!playMode.value) void nextTick(() => root.value?.querySelector('.town-play-area')?.scrollIntoView({ block: 'start', behavior: 'instant' }))
 }
 function approach(id: TownLocationId) {
-  if (modal.value || paused.value) return
+  if (modal.value || paused.value || deliveryScene.value) return
+  if (!townPlaceAvailable(id, extrasUnlocked.value)) { notify('Make Luna’s day first. This adventure will be waiting.'); return }
   returnToMap()
   const location = LOCATIONS.find(item => item.id === id)!
   if (distance(player.value, doorFor(location)) < 57) { open(id); return }
@@ -234,6 +281,7 @@ function resetForPlayMode() { resetWalk(); path = []; destination = null }
 function keyDown(event: KeyboardEvent) {
   if (event.target instanceof HTMLElement && event.target.closest('input,textarea,select,[contenteditable="true"]')) return
   const key = event.key.toLowerCase()
+  if (deliveryScene.value) { if (key === 'escape') { event.preventDefault(); finishDeliveryScene() } return }
   if (key === 'escape' && playMode.value && !modal.value) { event.preventDefault(); void exitPlayMode(); return }
   if (modal.value) return
   if (key === 'shift') sprinting.value = true
@@ -250,9 +298,10 @@ function press(event: PointerEvent, key: string) {
 }
 function tick(now: number) {
   const dt = last ? Math.min((now - last) / 1000, .05) : 0; last = now
-  if (!modal.value && !paused.value && !(playMode.value && mobilePanel.value)) {
+  if (deliveryScene.value) { walking.value = false; advanceDeliveryScene(dt) }
+  else if (!modal.value && !paused.value && !(playMode.value && mobilePanel.value)) {
     const previousPlayer = player.value
-    const speed = running.value || sprinting.value || touchRun.value ? 220 : 160
+    const speed = running.value || sprinting.value || touchRun.value || quickPace.value ? 220 : 160
     let dx = Number(['d','arrowright','up-right','down-right'].some(key=>held.has(key))) - Number(['a','arrowleft','up-left','down-left'].some(key=>held.has(key)))
     let dy = Number(['s','arrowdown','down-left','down-right'].some(key=>held.has(key))) - Number(['w','arrowup','up-left','up-right'].some(key=>held.has(key)))
     if (touchMove.value.x || touchMove.value.y) { dx = touchMove.value.x; dy = touchMove.value.y }
@@ -303,15 +352,21 @@ function tick(now: number) {
       if (distance(player.value, doorFor(location)) < 57) open(target)
       else notify('That route is blocked. Try approaching from the plaza.')
     }
-    for (const petal of petals.value.filter(item => distance(item, player.value) < 23)) {
+    for (const petal of petals.value.filter(item => (extrasUnlocked.value || story.stage === 'gather') && distance(item, player.value) < 23)) {
       petals.value = petals.value.filter(item => item.id !== petal.id); collect(petal)
     }
     if (!petals.value.length) petals.value = petalPoints.map(point => ({ ...point, id: ++petalId }))
     if (delivery.value && distance(player.value, { x: 853, y: 337 }) < 43) {
+      previousGarden = garden.value
       delivery.value = false; stats.deliveries++; stats.score += 150
-      if (story.stage === 'deliver' && !story.completed) { story.completed = true; story.stage = 'complete'; open('thanks') }
+      if (story.stage === 'deliver' && !story.completed) {
+        story.completed = true; story.stage = 'complete'; celebrating.value = true
+        deliveryScene.value = 'handoff'; sceneElapsed = 0; direction.value = 'right'
+        resetWalk(); path = []; destination = null; mobilePanel.value = null
+      }
       else notify('Luna: Thank you so much! A little kindness delivered.')
-      void sparkle({ x: 853, y: 290 }); chime(); save()
+      if (!deliveryScene.value) { void sparkle({ x: 853, y: 290 }); chime() }
+      save()
     }
     if (running.value) { remaining.value = Math.max(0, remaining.value - dt); if (!remaining.value) finishRun() }
   } else { walking.value = false; companionWalking.value = false }
@@ -375,7 +430,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <main ref="root" class="town-demo" :class="{ 'town-reduced-motion': !useMotion, 'town-playmode': playMode }">
+  <main ref="root" class="town-demo town-cozy" :class="{ 'town-reduced-motion': !useMotion, 'town-playmode': playMode, 'town-first-story': !extrasUnlocked, 'town-celebrating': celebrating }">
     <header class="town-topbar town-enter">
       <RouterLink v-if="!playMode" to="/" class="town-back"><PhArrowLeft :size="18" weight="regular" /><span>Back to Stack Petals</span></RouterLink>
       <span v-else class="town-play-brand"><PhFlower :size="21" weight="duotone" /> Stack Petals Town</span>
@@ -390,13 +445,15 @@ onBeforeUnmount(() => {
     <div class="town-layout town-enter">
       <section class="town-play-area" aria-label="Town game">
         <div class="town-hud">
+          <div class="town-cozy-objective"><PhHeart :size="20" weight="duotone" /><div><small>{{ !extrasUnlocked ? 'ONE LITTLE KINDNESS' : running ? 'BLOOM RUN' : 'YOUR LITTLE WORLD' }}</small><strong>{{ running ? `${Math.ceil(remaining)}s · ${roundScore} petals` : errand ? TOWN_ACTIVITIES[errand].title : !story.completed ? storyObjective : 'What will you make brighter today?' }}</strong></div></div>
           <div class="town-stat"><PhFlower :size="24" weight="duotone" /><div><small>PETALS</small><strong>{{ stats.petals }}</strong></div></div>
           <div class="town-stat"><component :is="running ? PhTrophy : PhHeart" :size="24" :weight="running ? 'duotone' : 'fill'" /><div><small>{{ running ? 'RUN SCORE' : 'KINDNESSES' }}</small><strong>{{ running ? roundScore : stats.deliveries }}</strong></div></div>
           <div class="town-stat town-timer"><PhClock :size="23" weight="duotone" /><div><small>{{ running ? 'BLOOM RUN' : 'TAKE YOUR TIME' }}</small><strong>{{ running ? `${Math.ceil(remaining)}s` : 'Free roam' }}</strong></div></div>
           <button class="town-icon-button" type="button" :aria-label="paused ? 'Resume game' : 'Pause game'" :disabled="!!modal" @click="paused = !paused; resetWalk()"><component :is="paused ? PhPlay : PhPause" :size="20" weight="fill" /></button>
         </div>
         <div class="town-map-shell">
-<TownWorld :compact="touchLayout" :immersive="playMode" :player="player" :companion="companion" :companion-direction="companionDirection" :companion-walking="companionWalking" :walking="walking" :running="running || sprinting || touchRun" :character="character" :direction="direction" :action="actorAction" :activity-target="target" :activity-step="errandStep" :lit-nodes="activityWins.lights>0?3:errand==='lights'?errandStep:0" :nurtured="activityWins.blooms>0" :petals="petals" :nearby="nearby?.id || null" :delivery="delivery" :night="night" :motion="useMotion" :paused="paused || !!modal" :stems="story.stems" :wrapping="story.wrapping" :garden="garden" :particles="particles" @walk="walk" @approach="approach" />
+<TownWorld :compact="touchLayout" :immersive="playMode" :moment="deliveryScene" :focus="sceneFocus" :player="player" :companion="companion" :companion-direction="companionDirection" :companion-walking="companionWalking" :walking="walking" :running="running || sprinting || touchRun || quickPace" :character="character" :direction="direction" :action="actorAction" :activity-target="target" :activity-step="errandStep" :lit-nodes="activityWins.lights>0?3:errand==='lights'?errandStep:0" :nurtured="activityWins.blooms>0" :petals="petals" :nearby="nearby?.id || null" :delivery="delivery" :night="night" :motion="useMotion" :paused="paused || !!modal" :stems="story.stems" :wrapping="story.wrapping" :garden="sceneGarden" :particles="particles" @walk="walk" @approach="approach" />
+          <div v-if="deliveryScene" class="town-delivery-caption" role="status"><div><small>A LITTLE SUNSHINE, DELIVERED</small><strong>{{ deliveryScene === 'handoff' ? 'A bouquet, made just for Luna.' : deliveryScene === 'thanks' ? 'You made her day a little brighter.' : 'And somewhere, a little kindness grows.' }}</strong></div><button class="town-small-button" @click="finishDeliveryScene">Continue <PhArrowRight :size="16" /></button></div>
           <div v-if="paused && !modal" class="town-pause-overlay"><PhPause :size="32" weight="duotone" /><h2>A little pause.</h2><p>Your town will be right here.</p><button class="town-button" @click="paused = false; last = 0"><PhPlay :size="18" weight="fill" /> Keep exploring</button></div>
         </div>
         <div class="town-context-bar">
@@ -409,8 +466,8 @@ onBeforeUnmount(() => {
           <TownJoystick :disabled="touchDisabled" @move="moveTouch" />
           <div class="town-touch-actions"><button class="town-touch-action" :disabled="touchDisabled || running" @click="mobileInteract"><PhArrowRight :size="24" weight="bold" /><span>{{ mobileAction }}</span></button><button class="town-touch-run" :aria-pressed="touchRun" :disabled="touchDisabled" @click="touchRun = !touchRun"><PhPlay :size="16" :weight="touchRun ? 'fill' : 'regular'" />{{ touchRun ? 'Running' : 'Run' }}</button></div>
         </div>
-        <nav v-if="touchLayout" class="town-mobile-tabs" aria-label="Town panels"><button :aria-expanded="mobilePanel === 'places'" aria-controls="town-places" @click="mobilePanel = mobilePanel === 'places' ? null : 'places'"><PhMapPin :size="19" weight="duotone" /> Places & story</button><button :aria-expanded="mobilePanel === 'activities'" aria-controls="town-activities" @click="mobilePanel = mobilePanel === 'activities' ? null : 'activities'"><PhSparkle :size="19" weight="duotone" /> Activities & tools</button></nav>
-        <div v-show="!touchLayout || mobilePanel === 'activities'" id="town-activities"><TownErrands :active="errand" :step="errandStep" :ready="workReady" :locked="errandLocked || paused || !!modal" :tool="pocket" :completed="completedErrands" @start="startErrand" @find="findWork" @work="openWork" @cancel="cancelErrand" @equip="equip" /></div>
+        <nav v-if="touchLayout" class="town-mobile-tabs" aria-label="Town panels"><button :aria-expanded="!!mobilePanel" aria-controls="town-places town-activities" @click="mobilePanel = mobilePanel ? null : 'places'"><PhMapPin :size="19" weight="duotone" />{{ mobilePanel ? 'Back to town' : 'Town journal' }}</button></nav>
+        <div v-show="extrasUnlocked && (!touchLayout || mobilePanel === 'activities')" id="town-activities"><button v-if="touchLayout" class="town-small-button town-journal-return" @click="mobilePanel = 'places'"><PhArrowLeft :size="16" /> Back to journal</button><TownErrands :active="errand" :step="errandStep" :ready="workReady" :locked="errandLocked || paused || !!modal" :tool="pocket" :completed="completedErrands" @start="startErrand" @find="findWork" @work="openWork" @cancel="cancelErrand" @equip="equip" /></div>
       </section>
       <aside v-show="!touchLayout || mobilePanel === 'places'" id="town-places" class="town-sidebar">
         <section class="town-story-card" aria-label="Your first delivery story">
@@ -419,9 +476,11 @@ onBeforeUnmount(() => {
           <ol class="town-story-steps"><li v-for="(step, index) in STORY_STEPS" :key="step" :class="{ done: index < storyIndex || story.completed, active: index === storyIndex && !story.completed }"><PhCheck v-if="index < storyIndex || story.completed" :size="12" weight="fill" /><span v-else>{{ index + 1 }}</span>{{ step }}</li></ol>
           <p role="status">{{ storyObjective }}</p><button class="town-button town-full-button" :disabled="!!modal || paused" data-story-action @click="storyAction">{{ story.stage === 'new' ? 'Meet Milo' : story.stage === 'gather' && stats.petals < 3 ? 'Find a petal' : story.stage === 'gather' || story.stage === 'arrange' ? 'Visit the atelier' : story.stage === 'deliver' ? 'Find Luna' : 'Read your thank-you' }}<PhArrowRight :size="16" weight="regular" /></button>
         </section>
-        <div class="town-directory-heading"><p class="town-eyebrow">THE NEIGHBOURHOOD</p><h2>Find your little thing.</h2><p>Choose a place and we'll walk you there.</p></div>
-        <button v-for="location in LOCATIONS" :key="location.id" class="town-directory-card" :data-destination="location.id" :disabled="!!modal || paused" @click="approach(location.id)"><span class="town-directory-icon" :style="{ '--location-color': location.color }"><component :is="icons[location.id]" :size="24" weight="duotone" /></span><span><strong>{{ location.name }}</strong><small>{{ location.description }}</small></span><PhCheck v-if="visited.includes(location.id)" :size="17" weight="fill" /><PhArrowRight v-else :size="16" weight="regular" /></button>
-        <div class="town-quest"><PhTrophy :size="22" weight="duotone" /><div><small>YOUR LITTLE MILESTONES</small><strong>{{ achievements.filter(item => item.done).length }} of {{ achievements.length }} unlocked</strong><div class="town-progress"><span :style="{ width: `${achievements.filter(item => item.done).length / achievements.length * 100}%` }"></span></div></div></div>
+        <div v-if="extrasUnlocked" class="town-directory-heading"><p class="town-eyebrow">A WORLD OPENED BY KINDNESS</p><h2>Stay a little longer.</h2><p>The plaza has more little stories for you.</p></div>
+        <p v-else class="town-unlock-note"><PhLock :size="18" weight="duotone" /> More little adventures open after your first delivery. For now, Luna could use a smile.</p>
+        <button v-if="touchLayout && extrasUnlocked" class="town-button town-full-button town-journal-activities" @click="mobilePanel = 'activities'"><PhSparkle :size="18" weight="duotone" /> Little activities & pocket tools</button>
+        <button v-for="location in extrasUnlocked ? availablePlaces : []" :key="location.id" class="town-directory-card" :data-destination="location.id" :disabled="!!modal || paused" @click="approach(location.id)"><span class="town-directory-icon" :style="{ '--location-color': location.color }"><component :is="icons[location.id]" :size="24" weight="duotone" /></span><span><strong>{{ location.name }}</strong><small>{{ location.description }}</small></span><PhCheck v-if="visited.includes(location.id)" :size="17" weight="fill" /><PhArrowRight v-else :size="16" weight="regular" /></button>
+        <div v-if="extrasUnlocked" class="town-quest"><PhTrophy :size="22" weight="duotone" /><div><small>YOUR LITTLE MILESTONES</small><strong>{{ achievements.filter(item => item.done).length }} of {{ achievements.length }} unlocked</strong><div class="town-progress"><span :style="{ width: `${achievements.filter(item => item.done).length / achievements.length * 100}%` }"></span></div></div></div>
         <p class="town-local-note"><PhLock :size="15" weight="regular" /> Just a demo. Progress stays in this browser.</p>
       </aside>
     </div>
@@ -434,16 +493,23 @@ onBeforeUnmount(() => {
         <p class="town-eyebrow">STACK PETALS TOWN</p><h2 id="town-dialog-title">{{ title }}</h2>
         <template v-if="modal === 'activity' && errand">
           <div class="town-work-scene"><TownActor :character="character" :action="actorAction" :motion="useMotion" :scale="1.25"/><component :is="errand==='lights'?PhCode:errand==='blooms'?PhFlower:PhHeart" :size="55" weight="duotone"/></div>
-          <template v-if="errand==='lights'"><p>These little lights need a connection. Match the three symbols below, from left to right, to repair this node.</p><div class="town-work-pattern" aria-label="Repair sequence"><span v-for="(symbol,index) in repairPattern" :key="index" :class="{done:index<workStep}"><component :is="workIcons[symbol]" :size="26" weight="duotone"/><span class="sr-only">{{ ['Code','Sparkle','Heart'][symbol] }}</span></span></div><div class="town-work-choices"><button v-for="(icon,index) in workIcons" :key="index" :aria-label="['Connect code','Connect sparkle','Connect heart'][index]" @click="repair(index)"><component :is="icon" :size="28" weight="duotone"/></button></div></template>
-          <template v-else-if="errand==='blooms'"><p>Every flower deserves a little attention. Give each of these three blooms a drink.</p><div class="town-work-choices"><button v-for="index in [0,1,2]" :key="index" :disabled="watered.includes(index)" :aria-label="`Water flower ${index+1}`" @click="water(index)"><component :is="watered.includes(index)?PhCheck:PhFlower" :size="30" :weight="watered.includes(index)?'fill':'duotone'"/></button></div></template>
-          <template v-else><p>Luna has a quiet moment by the pond. A few kind words can make an ordinary afternoon feel special.</p><div class="town-postcard"><small>FOR {{ recipient.trim() || 'LUNA' }}</small><p>{{ message.trim() || 'You make this little town a brighter place.' }}</p></div><button class="town-button town-full-button" @click="completeWork"><PhHeart :size="20" weight="duotone"/>Give Luna your little note</button></template>
+          <TownCircuit v-if="errand==='lights'" :stop="errandStep" @complete="completeWork" />
+          <TownWatering v-else-if="errand==='blooms'" :watered="watered" @water="water" />
+          <template v-else>
+            <p>Luna has a quiet moment by the pond. What would you like her to hear?</p>
+            <div v-if="!noteReply" class="town-note-choices" role="group" aria-label="Choose a kind message"><button v-for="note in LUNA_NOTES" :key="note.id" :aria-pressed="selectedNote === note.id" @click="selectedNote = note.id"><strong>{{ note.label }}</strong><span>{{ note.message }}</span></button><button :aria-pressed="selectedNote === 'custom'" @click="selectedNote = 'custom'"><strong>My own postcard</strong><span>{{ message }}</span></button></div>
+            <div v-if="noteReply" class="town-npc-dialogue town-note-response"><TownSprite sprite="girl-portrait" :scale=".6" /><div><small>LUNA</small><p>{{ noteReply }}</p></div></div>
+            <button v-if="!noteReply" class="town-button town-full-button" data-give-note @click="giveNote"><PhHeart :size="20" weight="duotone" /> Give Luna this little note</button>
+            <button v-else class="town-button town-full-button" data-finish-note @click="completeWork">Keep this little moment <PhArrowRight :size="18" /></button>
+          </template>
           <p class="town-work-feedback" role="status">{{ workFeedback }}</p>
         </template>
         <template v-else-if="modal === 'welcome'">
           <p>Someone needs a little sunshine today. Make a bouquet, bring it to a neighbour, and watch your kindness become a flower in the garden.</p>
           <div class="town-avatar-picker"><button v-for="avatar in ['boy', 'girl']" :key="avatar" :aria-pressed="character === avatar" @click="character = avatar"><TownSprite :sprite="`${avatar}-portrait`" :scale=".85" /><span>{{ avatar === 'boy' ? 'The developer' : 'The florist' }}</span><PhCheck v-if="character === avatar" :size="18" weight="fill" /></button></div>
-          <div class="town-tip"><PhMapPin :size="20" weight="duotone" /><span>{{ compact ? 'Drag the joystick to explore. Tap Run to move faster, or tap the ground to walk there. Places and activities are tucked below the controls.' : 'Tap a location to walk there. Use the arrow controls, or WASD, to explore freely.' }}</span></div>
-          <button class="town-button town-full-button" data-enter-town @click="close"><PhPlay :size="19" weight="fill" /> Enter the town <PhArrowRight :size="18" weight="regular" /></button>
+          <div class="town-welcome-promise"><PhHeart :size="20" weight="duotone" /><span>One bouquet. One neighbour. A little brighter day.<small>No timer. No perfect scores. Your own pace.</small></span></div>
+          <div class="town-tip"><PhMapPin :size="20" weight="duotone" /><span>{{ compact ? 'Move with the joystick. Your action button helps with the next little step. The journal keeps your story.' : 'Click the ground to walk, or use WASD and arrow keys. Your next little step is always in the journal.' }}</span></div>
+          <button class="town-button town-full-button" data-enter-town @click="close(); storyAction()"><PhHeart :size="19" weight="duotone" />{{ story.stage === 'new' ? 'Meet Milo' : story.completed ? 'Return to your town' : 'Continue your little story' }} <PhArrowRight :size="18" weight="regular" /></button>
           <small class="town-disclaimer">An independent preview. No purchases, accounts or real deliveries.</small>
         </template>
         <template v-else-if="modal === 'flowers'">
@@ -494,6 +560,7 @@ onBeforeUnmount(() => {
           <div class="town-npc-dialogue"><div><small>LUNA · A LITTLE BRIGHTER TODAY</small><p>{{ FIRST_DELIVERY.thanks }}</p></div></div>
           <div class="town-thankyou-card"><small>A NOTE TO KEEP</small><p>{{ FIRST_DELIVERY.card }}</p><span>With love, Luna</span></div>
           <div class="town-tip"><PhFlower :size="20" weight="fill" /><span>Your first flower is growing in the community garden. This thank-you is saved in your browser.</span></div>
+          <div class="town-first-bloom"><PhFlower :size="38" weight="fill" /><div><strong>A flower, because of you.</strong><p>Your first kindness has taken root. The town’s other stories are now open.</p></div></div>
           <button class="town-button town-full-button" data-see-garden @click="close(); approach('garden')">See what kindness grows<PhArrowRight :size="18" weight="regular" /></button>
         </template>
         <template v-else-if="modal === 'arcade' || modal === 'result'">
@@ -511,7 +578,7 @@ onBeforeUnmount(() => {
           <p class="town-disclaimer">A keepsake for this demo town. It stays in your browser and is never sent or published as a customer letter.</p>
         </template>
         <template v-else-if="modal === 'garden'">
-          <button class="town-small-button" :disabled="errandLocked || !!errand" @click="startErrand('blooms')"><PhFlower :size="18" weight="duotone"/>Care for the town's flower beds<PhArrowRight :size="16"/></button>
+          <button v-if="extrasUnlocked" class="town-small-button" :disabled="errandLocked || !!errand" @click="startErrand('blooms')"><PhFlower :size="18" weight="duotone"/>Care for the town's flower beds<PhArrowRight :size="16"/></button>
           <p>{{ garden === 0 ? 'A quiet little patch, waiting for its first act of kindness.' : garden === 1 ? 'Your kindness planted the first bloom. Three deliveries will bring a little garden bench.' : garden === 2 ? 'A place to sit, a few more blooms. Five deliveries will light up the garden.' : 'Flowers, fairy lights, and a place to stay a little longer. You made this happen.' }}</p>
           <div class="town-garden-milestones"><span :class="{ grown: garden >= 1 }"><PhFlower :size="20" weight="duotone" />1 · First bloom</span><span :class="{ grown: garden >= 2 }"><PhHeart :size="20" weight="duotone" />3 · A place to sit</span><span :class="{ grown: garden >= 3 }"><PhSparkle :size="20" weight="duotone" />5 · Fairy lights</span></div>
           <button v-if="story.completed" class="town-small-button" @click="open('thanks')">Luna's thank-you<PhArrowRight :size="16" weight="regular" /></button>
@@ -519,6 +586,7 @@ onBeforeUnmount(() => {
         </template>
         <template v-else-if="modal === 'settings'">
           <p>Your character, your pace. A town that feels like you.</p>
+          <button v-if="touchLayout" class="town-setting" :aria-pressed="quickPace" @click="quickPace = !quickPace"><PhPlay :size="22" weight="duotone" /><span>Walking pace<small>{{ quickPace ? 'A little quicker' : 'Slow and easy' }}</small></span><span class="town-toggle" :class="{ on: quickPace }"></span></button>
           <div class="town-avatar-picker"><button v-for="avatar in ['boy', 'girl']" :key="avatar" :aria-pressed="character === avatar" @click="character = avatar"><TownSprite :sprite="`${avatar}-portrait`" :scale=".65" /><span>{{ avatar === 'boy' ? 'Developer' : 'Florist' }}</span><PhCheck v-if="character === avatar" :size="18" weight="fill" /></button></div>
           <button class="town-setting" :aria-pressed="night" @click="night = !night"><component :is="night ? PhMoon : PhSun" :size="22" weight="duotone" /><span>Town atmosphere<small>{{ night ? 'Quiet evening' : 'Sunny afternoon' }}</small></span><span class="town-toggle" :class="{ on: night }"></span></button>
           <button class="town-setting" :aria-pressed="sound" @click="sound = !sound; chime()"><component :is="sound ? PhSpeakerHigh : PhSpeakerSlash" :size="22" weight="duotone" /><span>Little sound effects<small>{{ sound ? 'On · gentle collectible chimes' : 'Off · a peaceful little town' }}</small></span><span class="town-toggle" :class="{ on: sound }"></span></button>

@@ -18,7 +18,7 @@ async function claim() {
   const { data, error: claimError } = await supabase.rpc('claim_letter_v2_qr', { p_public_token: token, p_activation_code: activationCode.value.trim().toUpperCase() || null })
   const claimed = Array.isArray(data) ? data[0] : data
   if (claimError || !claimed) { error.value = 'Please check the activation code printed with your Gift QR card and try again.'; claiming.value = false; return }
-  localStorage.setItem('stack-petals:letter-v2-claim', JSON.stringify({ token, qrId: claimed.id, has360Viewer: claimed.has_360_view, hasPhotoUpload: claimed.has_photo_upload, productName: claimed.product_name }))
+  sessionStorage.setItem('stack-petals:letter-v2-claim', JSON.stringify({ token, activationCode: activationCode.value.trim().toUpperCase(), qrId: claimed.id, has360Viewer: claimed.has_360_view, hasPhotoUpload: claimed.has_photo_upload, productName: claimed.product_name }))
   await router.replace(`/letter-v2/create/${token}`)
 }
 
