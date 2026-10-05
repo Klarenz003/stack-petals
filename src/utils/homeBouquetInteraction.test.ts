@@ -1,0 +1,42 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createScannerIdleReset, REVEAL_RESET_DELAY_MS } from './homeBouquetInteraction'
+
+afterEach(() => vi.useRealTimers())
+describe('scanner idle reset', () => {
+  it('resets only after a full minute without interaction', () => {
+    vi.useFakeTimers()
+    const reset = vi.fn(), idle = createScannerIdleReset(reset)
+    idle.restart()
+    vi.advanceTimersByTime(59_999)
+    expect(reset).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(reset).toHaveBeenCalledOnce()
+    expect(REVEAL_RESET_DELAY_MS).toBe(60_000)
+  })
+  it('starts a fresh minute after interaction', () => {
+    vi.useFakeTimers()
+    const reset = vi.fn(), idle = createScannerIdleReset(reset)
+    idle.restart()
+    vi.advanceTimersByTime(40_000)
+    idle.restart()
+    vi.advanceTimersByTime(59_999)
+    expect(reset).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(reset).toHaveBeenCalledOnce()
+  })
+  it('can pause while the preview is open and restart after closing', () => {
+    vi.useFakeTimers()
+    const reset = vi.fn(), idle = createScannerIdleReset(reset)
+    idle.restart()
+    idle.cancel()
+    vi.advanceTimersByTime(120_000)
+    expect(reset).not.toHaveBeenCalled()
+    idle.restart()
+    vi.advanceTimersByTime(60_000)
+    expect(reset).toHaveBeenCalledOnce()
+    idle.restart()
+    idle.cancel()
+    vi.advanceTimersByTime(60_000)
+    expect(reset).toHaveBeenCalledOnce()
+  })
+})

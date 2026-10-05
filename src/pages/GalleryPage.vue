@@ -2,16 +2,7 @@
 import { PhX, PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { supabase } from '@/supabaseClient'
-
-interface GalleryImage {
-  id: string
-  image_url: string
-  title: string
-  caption: string
-  category: string
-  focal_position: 'top' | 'center' | 'bottom'
-}
+import { galleryCache, fetchGalleryImages, type GalleryImage } from '@/services/galleryCache'
 
 const fallbackImages: GalleryImage[] = Array.from({ length: 4 }, (_, index) => ({
   id: `fallback-${index + 1}`,
@@ -22,8 +13,9 @@ const fallbackImages: GalleryImage[] = Array.from({ length: 4 }, (_, index) => (
   focal_position: 'center',
 }))
 
-const galleryImages = ref<GalleryImage[]>(fallbackImages)
-const loading = ref(true)
+const cachedGallery = galleryCache.peek('featured')
+const galleryImages = ref<GalleryImage[]>(cachedGallery?.length ? cachedGallery : fallbackImages)
+const loading = ref(cachedGallery === undefined)
 const galleryError = ref('')
 const activeCategory = ref('All')
 const selectedImage = ref<GalleryImage | null>(null)
@@ -37,22 +29,19 @@ const selectedIndex = computed(() => selectedImage.value
   : -1)
 
 async function loadGalleryImages() {
-  loading.value = true
+  loading.value = galleryCache.peek('featured') === undefined
   galleryError.value = ''
-  const { data, error } = await supabase
-    .from('gallery_images')
-    .select('id, image_url, title, caption, category, focal_position')
-    .eq('featured', true)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    galleryError.value = 'We are showing sample gallery pieces while the featured gallery refreshes.'
-  } else if (data?.length) {
-    galleryImages.value = data
+  try {
+    const data = await fetchGalleryImages()
+    galleryImages.value = data.length ? data : fallbackImages
+    if (!categories.value.includes(activeCategory.value)) activeCategory.value = 'All'
+  } catch {
+    galleryError.value = galleryCache.peek('featured')?.length
+      ? 'The gallery could not refresh. You can still browse the pieces below.'
+      : 'We are showing sample gallery pieces while the featured gallery refreshes.'
+  } finally {
+    loading.value = false
   }
-
-  loading.value = false
 }
 
 function openLightbox(image: GalleryImage) {

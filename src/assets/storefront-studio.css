@@ -34,7 +34,7 @@
 .storefront-shell .logo-lockup small { font-size: 8px; letter-spacing: .11em; color: #8d7770; }
 .storefront-shell .market-switcher { order: 3; border-radius: 999px; background: #fffaf7; min-height: 40px; border-color: #e5d6cf; padding-inline: 12px; }
 .storefront-shell .market-switcher select { color: #5e6d60; font-size: 11px; font-weight: 500; }
-.storefront-shell .site-header > nav { justify-content: center; gap: clamp(13px,1.6vw,24px); }
+.storefront-shell .site-header > nav { justify-content: flex-end; gap: clamp(13px,1.6vw,24px); }
 .storefront-shell .site-header > nav a { font-size: 12px; font-weight: 500; color: #685b56; padding: 12px 0; }
 .storefront-shell .site-header > nav a:hover { color: #4a6b5a; }
 .storefront-shell .site-header > nav a.router-link-exact-active { color: #4a6b5a; }

@@ -1,4 +1,17 @@
-export const REVEAL_RESET_DELAY_MS = 12_000
+export const REVEAL_RESET_DELAY_MS = 60_000
+
+/** Restartable inactivity timer; pause it while the keepsake dialog is open. */
+export function createScannerIdleReset(reset: () => void) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const cancel = () => { clearTimeout(timer); timer = undefined }
+  return {
+    cancel,
+    restart() {
+      cancel()
+      timer = setTimeout(() => { timer = undefined; reset() }, REVEAL_RESET_DELAY_MS)
+    },
+  }
+}
 
 type PointerPosition = {
   x: number

@@ -12,9 +12,10 @@ import type { Feature } from '@/types'
 
 const router = useRouter()
 const products = useProductsStore()
-const isLoading = ref(true)
+const isLoading = ref(!products.hasLoaded)
 const homeRoot = ref<HTMLElement | null>(null)
 let homeRevealContext: gsap.Context | null = null
+let disposed = false
 
 const featuredProducts = computed(() => products.featuredProducts.slice(0, 4))
 const seasonalTheme = computed(() => {
@@ -26,12 +27,15 @@ const seasonalTheme = computed(() => {
 })
 
 onMounted(async () => {
-  await products.fetchProducts()
+  const hadContent = products.hasLoaded
+  const refreshing = products.fetchProducts()
+  if (!hadContent) await refreshing
+  if (disposed) return
   requestAnimationFrame(async () => {
     isLoading.value = false
     await nextTick()
     const root = homeRoot.value
-    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (disposed || hadContent || !root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     homeRevealContext?.revert()
     homeRevealContext = gsap.context(() => {
       const copy = gsap.utils.toArray<HTMLElement>('.hero-left > *')
@@ -50,6 +54,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   homeRevealContext?.revert()
   homeRevealContext = null
 })
@@ -89,7 +94,7 @@ const trustItems = [
         <p class="hero-tagline">Flowers made by hand.<br />A feeling made to last.</p>
         <p class="studio-hero-description">A handcrafted gift with a story tucked inside. One scan opens your words, memories, and music into a keepsake made just for them.</p>
         <div class="buttons">
-          <button class="primary hero-primary" @click="router.push('/products')">Find your gift <PhArrowRight :size="18" /></button>
+          <button class="primary hero-primary" @click="router.push('/products')">Shop Gifts <PhArrowRight :size="18" /></button>
           <button class="hero-process-link" @click="router.push('/process')">
             See how it works <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
           </button>
@@ -128,7 +133,7 @@ const trustItems = [
         </template>
         <ProductCard v-for="product in featuredProducts" v-else :key="product.name" :product="product" />
       </div>
-      <div v-if="products.fetchError" class="studio-fetch-notice" role="alert"><p>{{ products.fetchError }}</p><button @click="products.fetchProducts()" :disabled="products.loading">Try again</button></div>
+      <div v-if="products.fetchError" class="studio-fetch-notice" role="alert"><p>{{ products.fetchError }}</p><button @click="products.fetchProducts({ force: true })" :disabled="products.loading">Try again</button></div>
       <button v-if="products.featuredProducts.length > featuredProducts.length" class="featured-view-all" @click="router.push('/products')">
         View all gifts <span aria-hidden="true"><PhArrowRight class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
       </button>

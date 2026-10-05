@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { PhSparkle } from '@phosphor-icons/vue'
+import { PhSparkle, PhEnvelopeOpen } from '@phosphor-icons/vue'
+import HomeKeepsakeDemo from '@/components/HomeKeepsakeDemo.vue'
 
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
-  REVEAL_RESET_DELAY_MS,
   clampToDocument,
   isTapGesture,
+  createScannerIdleReset,
 } from '@/utils/homeBouquetInteraction'
-import { siteUrl } from '@/utils/siteConfig'
 
 type ScanState = 'idle' | 'scanning' | 'detected' | 'revealed'
 
@@ -17,6 +17,8 @@ const phoneHome = ref<HTMLElement | null>(null)
 const scannerWindow = ref<HTMLElement | null>(null)
 const qrHotspot = ref<HTMLElement | null>(null)
 const scanState = ref<ScanState>('idle')
+const demoOpen = ref(false)
+const hasExplored = ref(false)
 const hasDragged = ref(false)
 const isDragging = ref(false)
 const isReturning = ref(false)
@@ -28,7 +30,6 @@ const homePosition = reactive({ x: 0, y: 0 })
 const drag = reactive({ pointerId: -1, offsetX: 0, offsetY: 0, startX: 0, startY: 0 })
 let scanTimer: number | undefined
 let detectedTimer: number | undefined
-let revealedResetTimer: number | undefined
 let returnTimer: number | undefined
 let returnTransitionTimer: number | undefined
 let layoutFrame: number | undefined
@@ -36,6 +37,21 @@ let resizeFrame: number | undefined
 let resizeObserver: ResizeObserver | undefined
 let intersectionObserver: IntersectionObserver | undefined
 let isDisposed = false
+const activityEvents = ['pointerdown', 'pointermove', 'keydown', 'scroll', 'wheel', 'touchstart'] as const
+const idleReset = createScannerIdleReset(() => {
+  if (isDisposed || demoOpen.value || isDragging.value) return
+  clearScanTimers()
+  clearReturnTimers()
+  scanState.value = 'idle'
+  hasDragged.value = false
+  hasExplored.value = false
+  returnPhoneHome()
+})
+function refreshIdleReset() {
+  if (scanState.value === 'revealed' && !demoOpen.value && !isDragging.value) idleReset.restart()
+  else idleReset.cancel()
+}
+watch([scanState, demoOpen, isDragging], refreshIdleReset)
 
 const phoneStyle = computed(() => ({
   transform: isPhonePositioned.value
@@ -43,16 +59,14 @@ const phoneStyle = computed(() => ({
     : 'translate3d(-200vw, -200vh, 0)',
 }))
 const phoneAriaLabel = computed(() => scanState.value === 'revealed'
-  ? 'Stack Petals keepsafe opened. Tap to visit the Stack Petals process page.'
-  : 'Draggable QR scanner phone. Move it over the QR code on the bouquet.')
+  ? 'Keepsake unlocked. Open the sample recipient experience.'
+  : 'QR scanner phone. Drag over the bouquet QR tag to scan. Use arrow keys to move the scanner when focused.')
 
 function clearScanTimers() {
   window.clearTimeout(scanTimer)
   window.clearTimeout(detectedTimer)
-  window.clearTimeout(revealedResetTimer)
   scanTimer = undefined
   detectedTimer = undefined
-  revealedResetTimer = undefined
 }
 
 function clearReturnTimers() {
@@ -119,16 +133,27 @@ function completeScan() {
   detectedTimer = window.setTimeout(() => {
     scanState.value = 'revealed'
     detectedTimer = undefined
-    revealedResetTimer = window.setTimeout(() => {
-      scanState.value = 'idle'
-      revealedResetTimer = undefined
-    }, REVEAL_RESET_DELAY_MS)
   }, 840)
 }
 
-function openProcessPage() {
+function openSurprise() {
   if (scanState.value !== 'revealed') return
-  window.location.assign(siteUrl('/process'))
+  demoOpen.value = true
+  hasExplored.value = true
+}
+
+function moveScannerWithKeyboard(event: KeyboardEvent) {
+  const directions: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+  const direction = directions[event.key]
+  if (!direction || scanState.value === 'revealed') return
+  event.preventDefault()
+  clearReturnTimers()
+  isReturning.value = false
+  hasDragged.value = true
+  isAtHome.value = false
+  const distance = event.shiftKey ? 30 : 10
+  Object.assign(position, clampPosition(position.x + direction[0] * distance, position.y + direction[1] * distance))
+  nextTick(checkScannerOverlap)
 }
 
 function checkScannerOverlap() {
@@ -176,7 +201,7 @@ function onPointerMove(event: PointerEvent) {
 
 function finishDrag(event: PointerEvent) {
   if (event.pointerId !== drag.pointerId) return
-  const shouldOpenProcess = scanState.value === 'revealed' && isTapGesture(
+  const shouldActivate = event.type !== 'pointercancel' && isTapGesture(
     { x: drag.startX, y: drag.startY },
     { x: event.clientX, y: event.clientY },
   )
@@ -185,7 +210,7 @@ function finishDrag(event: PointerEvent) {
   drag.pointerId = -1
   checkScannerOverlap()
   scheduleReturnHome()
-  if (shouldOpenProcess) openProcessPage()
+  if (shouldActivate) openSurprise()
 }
 
 function onResize() {
@@ -257,10 +282,13 @@ onMounted(async () => {
     intersectionObserver.observe(scene.value)
   }
   window.addEventListener('resize', onResize, { passive: true })
+  activityEvents.forEach(event => window.addEventListener(event, refreshIdleReset, { passive: true }))
 })
 
 onBeforeUnmount(() => {
   isDisposed = true
+  idleReset.cancel()
+  activityEvents.forEach(event => window.removeEventListener(event, refreshIdleReset))
   clearScanTimers()
   clearReturnTimers()
   window.cancelAnimationFrame(layoutFrame ?? 0)
@@ -288,23 +316,26 @@ onBeforeUnmount(() => {
     <Transition name="scan-success">
       <div v-if="scanState === 'revealed'" class="scan-success-note" aria-live="polite">
         <strong>Keepsake unlocked</strong>
-        <span>Tap the phone to explore</span>
+        <span>There’s a story waiting inside</span>
       </div>
     </Transition>
+    <div v-if="scanState === 'detected'" class="scan-bloom" aria-hidden="true"><PhSparkle v-for="petal in 5" :key="petal" :size="18" weight="duotone" :style="{ '--bloom-index': petal }" /></div>
 
       <div
         ref="phone"
         class="draggable-phone"
         :class="[`scan-${scanState}`, { 'is-positioned': isPhonePositioned, 'is-dragging': isDragging, 'is-returning': isReturning }]"
         :style="phoneStyle"
-        :role="scanState === 'revealed' ? 'link' : 'application'"
+        role="button"
         :aria-label="phoneAriaLabel"
         tabindex="0"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="finishDrag"
         @pointercancel="finishDrag"
-        @keydown.enter.prevent="openProcessPage"
+        @keydown.enter.prevent="openSurprise"
+        @keydown.space.prevent="openSurprise"
+        @keydown="moveScannerWithKeyboard"
       >
       <div class="phone-display">
         <Transition name="screen-reveal" mode="out-in">
@@ -326,23 +357,20 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div v-else key="keepsafe" class="keepsafe-screen">
-            <img
-              class="keepsafe-page-image"
-              src="/images/home-experience/keepsafe-page.png"
-              alt="Stack Petals keepsafe preview"
-              draggable="false"
-            />
-            <div class="keepsafe-phone-brand" aria-hidden="true">
-              <span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
-              STACK PETALS
-              <span><PhSparkle class="ui-icon" aria-hidden="true" :size="'1em'" /></span>
-            </div>
+          <div v-else key="keepsafe" class="keepsafe-screen unlocked-cover">
+            <span class="unlocked-brand">STACK PETALS</span>
+            <PhSparkle :size="16" weight="duotone" />
+            <span class="unlocked-kicker">A gift with a story inside</span>
+            <strong>A little gift.<br /><em>A lasting feeling.</em></strong>
+            <img src="/images/envelope-clean.png" alt="" draggable="false" />
+            <span class="unlocked-open"><PhEnvelopeOpen :size="12" /> {{ hasExplored ? 'Replay the surprise' : 'Open your surprise' }}</span>
+            <small>Sample recipient experience</small>
           </div>
         </Transition>
       </div>
         <img class="phone-frame" src="/images/home-experience/phone-frame.png" alt="" draggable="false" aria-hidden="true" />
       </div>
+    <HomeKeepsakeDemo v-if="demoOpen" @close="demoOpen = false" />
   </div>
 </template>
 
@@ -393,6 +421,19 @@ onBeforeUnmount(() => {
 .scan-success-enter-from,.scan-success-leave-to { opacity:0; transform:translateY(8px) scale(.96); }
 
 .keepsafe-screen { position:absolute; inset:0; overflow:hidden; background:#fceced; }
+.unlocked-cover { display:flex; flex-direction:column; justify-content:center; align-items:center; gap:6%; padding:18% 8% 10%; text-align:center; color:#985366; background:radial-gradient(ellipse at center,#fff9f4,#f9dfe5); box-sizing:border-box; }
+.unlocked-brand { font:600 5px Inter,sans-serif; letter-spacing:.14em; }
+.unlocked-kicker { font:600 5px/1.4 Inter,sans-serif; letter-spacing:.06em; text-transform:uppercase; }
+.unlocked-cover strong { font:500 clamp(12px,1.25vw,19px)/1.08 'Cormorant Garamond',serif; }
+.unlocked-cover em { color:#c57788; }
+.unlocked-cover img { width:75%; max-height:25%; object-fit:contain; filter:drop-shadow(0 4px 5px #bb738530); }
+.unlocked-open { display:flex; align-items:center; justify-content:center; gap:4px; border:1px solid #d5a2ab; border-radius:999px; padding:6px; font:500 5px/1.3 Inter,sans-serif; background:#fff7f5; }
+.unlocked-cover small { font:500 4px/1.4 Inter,sans-serif; color:#816665; }
+.scan-detected .scanner-screen { box-shadow:inset 0 0 26px #5f887270; }
+.scan-detected .corner { border-color:#c3dfc1; }
+.scan-bloom { position:absolute; left:55%; top:60%; z-index:12; pointer-events:none; color:#bc7b8b; }
+.scan-bloom svg { position:absolute; animation:scanBloom .84s ease-out both; animation-delay:calc(var(--bloom-index) * .04s); }
+@keyframes scanBloom { from { opacity:0; transform:translate(0,0) scale(.3) rotate(0); } 30% { opacity:1; } to { opacity:0; transform:translate(calc(var(--bloom-index) * 15px),calc(var(--bloom-index) * -24px)) scale(1.2) rotate(70deg); } }
 .keepsafe-page-image { display:block; width:100%; height:100%; object-fit:cover; object-position:center; pointer-events:none; user-select:none; }
 .keepsafe-phone-brand {
   position:absolute;
@@ -421,6 +462,11 @@ onBeforeUnmount(() => {
 @keyframes scannerLine { 0%,100%{top:9%;opacity:.48} 50%{top:89%;opacity:1} }
 @keyframes detectedPulse { 0%,100%{background:rgba(255,255,255,.035)} 50%{background:rgba(239,132,153,.18)} }
 @keyframes hintFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+
+/* Keep the compact/touch composition unchanged; create more air on desktop. */
+@media (min-width:961px) {
+  .qr-experience { --phone-width:28%; }
+}
 
 @media (max-width:620px) {
   .qr-experience { width:100%; max-width:430px; aspect-ratio:1.05/1; border-radius:18px; }

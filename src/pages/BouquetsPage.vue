@@ -129,7 +129,7 @@ function syncMoreOpen(event: Event) {
       </details>
     </div>
 
-    <div v-if="productsStore.fetchError" class="studio-fetch-notice" role="alert"><p>{{ productsStore.fetchError }}</p><button @click="productsStore.fetchProducts()" :disabled="productsStore.loading">Try again</button></div>
+    <div v-if="productsStore.fetchError" class="studio-fetch-notice" role="alert"><p>{{ productsStore.fetchError }}</p><button @click="productsStore.fetchProducts({ force: true })" :disabled="productsStore.loading">Try again</button></div>
     <p class="product-result-line" aria-live="polite">
       {{ filteredProducts.length }} {{ filteredProducts.length === 1 ? 'item' : 'items' }}
       <span v-if="activeFilter !== 'All'">in {{ activeFilter }}</span>

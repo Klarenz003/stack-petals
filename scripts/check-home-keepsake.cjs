@@ -1,0 +1,98 @@
+// Run with Vite on 5183 and an isolated Chrome CDP instance on 9243.
+// Backend traffic is mocked; no customer records are read or written.
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+;(async () => {
+  const tabs = await (await fetch('http://127.0.0.1:9243/json')).json()
+  const ws = new WebSocket(tabs.find(tab => tab.type === 'page').webSocketDebuggerUrl)
+  await new Promise(resolve => ws.addEventListener('open', resolve, { once: true }))
+  let id = 0
+  const pending = new Map(), errors = [], requestCounts = new Map()
+  const send = (method, params = {}) => new Promise(resolve => { const n = ++id; pending.set(n, resolve); ws.send(JSON.stringify({ id: n, method, params })) })
+  ws.addEventListener('message', event => {
+    const message = JSON.parse(event.data)
+    if (message.id) { pending.get(message.id)?.(message); pending.delete(message.id) }
+    if (message.method === 'Runtime.exceptionThrown') errors.push(message.params)
+    if (message.method === 'Fetch.requestPaused') {
+      const url = message.params.request.url.split('?')[0]
+      if (message.params.request.method !== 'OPTIONS') requestCounts.set(url, (requestCounts.get(url) ?? 0) + 1)
+      send('Fetch.fulfillRequest', { requestId: message.params.requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: '*' }, { name: 'Access-Control-Allow-Headers', value: '*' }, { name: 'Access-Control-Allow-Methods', value: 'GET,POST,OPTIONS' }], body: Buffer.from('[]').toString('base64') })
+    }
+  })
+  const run = async expression => {
+    const response = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture: true })
+    if (response.result.exceptionDetails) throw Error(JSON.stringify(response.result.exceptionDetails))
+    return response.result.result.value
+  }
+  await send('Runtime.enable'); await send('Page.enable')
+  await send('Fetch.enable', { patterns: [{ urlPattern: '*rest/v1/*' }, { urlPattern: '*functions/v1/*' }] })
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `sessionStorage.setItem('stack-petals:startup-ready:v1','ready')` })
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
+  await send('Page.navigate', { url: 'http://127.0.0.1:5183/' })
+  for (let i = 0; i < 120; i++) { if (await run(`!!document.querySelector('.draggable-phone.is-positioned')`)) break; await delay(100) }
+  await delay(1000)
+  assert.equal(await run(`!!document.querySelector('.scan-demo-launch')`), false)
+  await run(`document.querySelector('.draggable-phone').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`)
+  assert.equal(await run(`!!document.querySelector('.keepsake-demo')`), false)
+  assert.equal(await run(`document.querySelector('.qr-experience').classList.contains('scan-idle')`), true)
+  const drag = await run(`(()=>{const p=document.querySelector('.draggable-phone').getBoundingClientRect(),s=document.querySelector('.scanner-window').getBoundingClientRect(),q=document.querySelector('.qr-hotspot').getBoundingClientRect();const x=p.left+p.width/2,y=p.top+p.height/2;return {x,y,endX:x+(q.left+q.width/2)-(s.left+s.width/2),endY:y+(q.top+q.height/2)-(s.top+s.height/2)}})()`)
+  await send('Input.dispatchMouseEvent',{type:'mousePressed',x:drag.x,y:drag.y,button:'left',buttons:1,clickCount:1})
+  await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:drag.endX,y:drag.endY,button:'left',buttons:1})
+  await delay(2300)
+  await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:drag.endX,y:drag.endY,button:'left',buttons:0,clickCount:1})
+  assert.equal(await run(`document.querySelector('.qr-experience').classList.contains('scan-revealed')`), true)
+  await run(`document.querySelector('.draggable-phone').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`); await delay(800)
+  assert.equal(await run(`document.querySelector('.keepsake-demo').contains(document.activeElement)`), true)
+  assert.equal(await run(`document.body.style.overflow`), 'hidden')
+  assert.equal(await run(`getComputedStyle(document.querySelector('.demo-footer')).backgroundColor`), 'rgba(0, 0, 0, 0)')
+  await run(`document.querySelectorAll('.demo-recipient-grid button')[1].click();document.querySelector('.demo-footer .demo-primary').click()`); await delay(800)
+  assert.equal(await run(`document.querySelector('.demo-letter').textContent.includes('friend who makes life brighter')`), true)
+  await run(`document.querySelectorAll('.demo-progress button')[3].click()`); await delay(800)
+  assert.equal(await run(`document.querySelector('.keepsake-demo audio').paused`), true)
+  await run(`document.querySelector('.demo-music-button').click()`); await delay(800)
+  assert.equal(await run(`document.querySelector('.keepsake-demo audio').paused`), false)
+  await run(`document.querySelector('.demo-footer .demo-primary').click()`); await delay(800)
+  assert.equal(await run(`document.querySelector('.keepsake-demo audio').paused`), true)
+  assert.equal(await run(`document.querySelector('.demo-stage').textContent.includes('Video demonstration')`), true)
+  for (const [width, height] of [[1440, 1000], [390, 844], [320, 740], [844, 390]]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 900 })
+    await delay(300)
+    const bounds = await run(`(()=>{const d=document.querySelector('.keepsake-demo'),r=d.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,overflow:d.scrollWidth>d.clientWidth+1}})()`)
+    assert.ok(bounds.left >= -1 && bounds.right <= width + 1 && bounds.top >= -1 && bounds.bottom <= height + 1)
+    assert.equal(bounds.overflow, false)
+    if (width === 390) {
+      const shot = await send('Page.captureScreenshot', { format: 'png' })
+      fs.writeFileSync(`${process.env.TEMP}/stack-petals-keepsake-mobile.png`, Buffer.from(shot.result.data, 'base64'))
+    }
+    console.log(`PASS keepsake layout ${width}x${height}`)
+  }
+  await run(`document.querySelectorAll('.demo-progress button')[5].click()`); await delay(800)
+  assert.equal(await run(`document.querySelector('.demo-stage a.demo-primary').getAttribute('href')`), '/products?occasion=Friendship')
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' }); await delay(100)
+  assert.equal(await run(`!!document.querySelector('.keepsake-demo')`), false)
+  assert.equal(await run(`document.body.style.overflow`), '')
+  assert.equal(await run(`document.querySelector('.unlocked-open').textContent.includes('Replay')`), true)
+  await run(`document.querySelector('.draggable-phone').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))`); await delay(800)
+  await run(`document.querySelectorAll('.demo-progress button')[5].click()`); await delay(800)
+  await run(`document.querySelector('.demo-stage a.demo-primary').click()`); await delay(400)
+  assert.equal(await run(`location.pathname+location.search`), '/products?occasion=Romance')
+  assert.equal(await run(`document.body.style.overflow`), '')
+  const count = suffix => [...requestCounts].filter(([url]) => url.endsWith(suffix)).reduce((sum, [, calls]) => sum + calls, 0)
+  const navigate = async path => { await run(`document.querySelector('.site-header nav a[href="${path}"]').click()`); await delay(1100) }
+  await navigate('/')
+  assert.equal(await run(`!!document.querySelector('.home-hero-skeleton')`), false)
+  await navigate('/products')
+  assert.equal(count('/get_storefront_products'), 1)
+  await navigate('/gallery'); await navigate('/about'); await navigate('/gallery')
+  assert.equal(count('/gallery_images'), 1)
+  await run(`window.cacheTestNow=Date.now;Date.now=()=>window.cacheTestNow()+120001`)
+  await navigate('/'); await navigate('/gallery')
+  assert.equal(count('/get_storefront_products'), 2)
+  assert.equal(count('/gallery_images'), 2)
+  await run(`Date.now=window.cacheTestNow`)
+  console.log('PASS cached Home/Shop/Gallery navigation and refresh after two-minute expiry')
+  assert.equal(errors.length, 0, JSON.stringify(errors))
+  console.log('PASS scan, recipient choice, opt-in audio, pause on chapter change, Escape, replay, filtered shopping, scroll unlock, no runtime exceptions')
+  await send('Browser.close')
+})().catch(error => { console.error(error); process.exit(1) })

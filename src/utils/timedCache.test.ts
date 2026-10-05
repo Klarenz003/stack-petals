@@ -1,0 +1,36 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createTimedCache } from './timedCache'
+afterEach(() => vi.useRealTimers())
+describe('storefront memory cache', () => {
+  it('reuses empty results and expires after two minutes', async () => {
+    vi.useFakeTimers()
+    const cache = createTimedCache<string, string[]>(), fetcher = vi.fn(async () => [])
+    await cache.load('PH', fetcher)
+    await cache.load('PH', fetcher)
+    expect(fetcher).toHaveBeenCalledOnce()
+    vi.advanceTimersByTime(120_000)
+    expect(cache.isFresh('PH')).toBe(false)
+    expect(cache.peek('PH')).toEqual([])
+    await cache.load('PH', fetcher)
+    expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+  it('isolates keys, deduplicates requests and permits forced refresh', async () => {
+    const cache = createTimedCache<string, string>(), fetcher = vi.fn(async () => 'flowers')
+    await Promise.all([cache.load('PH', fetcher), cache.load('PH', fetcher)])
+    expect(fetcher).toHaveBeenCalledOnce()
+    expect(cache.peek('CA')).toBeUndefined()
+    await cache.load('CA', fetcher)
+    await cache.load('PH', fetcher, true)
+    expect(fetcher).toHaveBeenCalledTimes(3)
+  })
+  it('retains stale content after failed refresh without caching the failure', async () => {
+    vi.useFakeTimers()
+    const cache = createTimedCache<string, string>()
+    await cache.load('gallery', async () => 'previous')
+    vi.advanceTimersByTime(120_000)
+    await expect(cache.load('gallery', async () => { throw Error('offline') })).rejects.toThrow('offline')
+    expect(cache.peek('gallery')).toBe('previous')
+    expect(cache.isFresh('gallery')).toBe(false)
+    expect(await cache.load('gallery', async () => 'new')).toBe('new')
+  })
+})

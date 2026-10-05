@@ -164,7 +164,7 @@ onBeforeUnmount(() => {
       <RouterLink to="/reviews">Reviews</RouterLink>
       <RouterLink to="/track">Track Order</RouterLink>
       <RouterLink to="/contact">Contact</RouterLink>
-      <RouterLink class="mobile-nav-shop" to="/products">Find your gift <PhArrowUpRight :size="18" /></RouterLink>
+      <RouterLink class="mobile-nav-shop" to="/products">Shop Gifts <PhArrowUpRight :size="18" /></RouterLink>
       <div class="mobile-code-preference">
         <span class="mobile-code-preference-label">Make yourself comfortable</span>
         <CodePatternToggle inline :model-value="codePatternsEnabled" @update:model-value="emit('update:codePatternsEnabled', $event)" />
