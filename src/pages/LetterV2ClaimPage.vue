@@ -18,6 +18,10 @@ async function claim() {
   const { data, error: claimError } = await supabase.rpc('claim_letter_v2_qr', { p_public_token: token, p_activation_code: activationCode.value.trim().toUpperCase() || null })
   const claimed = Array.isArray(data) ? data[0] : data
   if (claimError || !claimed) { error.value = 'Please check the activation code printed with your Gift QR card and try again.'; claiming.value = false; return }
+  if (claimed.status === 'published' && claimed.letter_id) {
+    await router.replace(`/letter-v2/${claimed.letter_id}`)
+    return
+  }
   sessionStorage.setItem('stack-petals:letter-v2-claim', JSON.stringify({ token, activationCode: activationCode.value.trim().toUpperCase(), qrId: claimed.id, has360Viewer: claimed.has_360_view, hasPhotoUpload: claimed.has_photo_upload, productName: claimed.product_name }))
   await router.replace(`/letter-v2/create/${token}`)
 }
@@ -40,9 +44,9 @@ onMounted(async () => {
       <GiftQrHeader />
       <div class="gift-studio-body">
         <span class="gift-studio-hero-icon" aria-hidden="true"><PhKey :size="30" weight="light" /></span>
-        <p class="gift-studio-eyebrow">For the sender · Before you gift it</p>
-        <h1 id="gift-activation-title">{{ loading ? 'Opening your gift…' : 'A little code. A lot of heart.' }}</h1>
-        <p class="gift-studio-intro">{{ loading ? 'We’re finding the letter that belongs to your gift.' : 'Activate your card, write your letter, and leave them something to treasure.' }}</p>
+        <p class="gift-studio-eyebrow">{{ code?.letter_id ? 'Your replacement card · Same treasured letter' : 'For the sender · Before you gift it' }}</p>
+        <h1 id="gift-activation-title">{{ loading ? 'Opening your gift…' : code?.letter_id ? 'Your keepsake. A fresh key.' : 'A little code. A lot of heart.' }}</h1>
+        <p class="gift-studio-intro">{{ loading ? 'We’re finding the letter that belongs to your gift.' : code?.letter_id ? 'Your letter is already here. Activate this replacement card to open it again—your letter password stays the same.' : 'Activate your card, write your letter, and leave them something to treasure.' }}</p>
         <div v-if="loading" class="gift-studio-loading" role="status">Checking your Gift QR…</div>
         <form v-else-if="code" @submit.prevent="claim">
           <section class="gift-activation-guide" aria-labelledby="gift-code-guide-title">
@@ -52,11 +56,11 @@ onMounted(async () => {
           <label class="gift-studio-field" for="gift-activation-code">Your activation code
             <input id="gift-activation-code" v-model="activationCode" class="gift-studio-code" placeholder="XXXX-XXXX" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" :disabled="claiming" :aria-invalid="!!error" :aria-describedby="error ? 'gift-activation-hint gift-activation-error' : 'gift-activation-hint'" required />
           </label>
-          <p id="gift-activation-hint" class="gift-studio-hint">Use the code from this card—not your letter password. Activation opens the editor; it does not publish your letter.</p>
+          <p id="gift-activation-hint" class="gift-studio-hint">{{ code.letter_id ? 'This replacement card already holds your letter. Use its NEW activation code to restore access, then unlock with the same letter password.' : 'Use the code from this card—not your letter password. Activation opens the editor; it does not publish your letter.' }}</p>
           <p v-if="error" id="gift-activation-error" class="gift-studio-error" role="alert">{{ error }}</p>
-          <button class="gift-studio-primary" :disabled="claiming || !activationCode.trim()">{{ claiming ? 'Activating your card…' : 'Activate & write your letter' }}<PhArrowRight :size="16" aria-hidden="true" /></button>
+          <button class="gift-studio-primary" :disabled="claiming || !activationCode.trim()">{{ claiming ? 'Activating your card…' : code.letter_id ? 'Activate & open your letter' : 'Activate & write your letter' }}<PhArrowRight :size="16" aria-hidden="true" /></button>
           <p class="gift-studio-reassurance"><PhLockKey :size="14" aria-hidden="true" />{{ copy }}</p>
-          <section class="gift-activation-next" aria-labelledby="gift-activation-next-title">
+          <section v-if="!code.letter_id" class="gift-activation-next" aria-labelledby="gift-activation-next-title">
             <p class="gift-studio-eyebrow">What happens next</p>
             <h2 id="gift-activation-next-title">From your words to their keepsake.</h2>
             <ol>

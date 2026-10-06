@@ -16,6 +16,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
       const r = m.params.request
       let body = []
       if (r.url.includes('/rest/v1/letters?')) body = null
+      if (r.url.endsWith('/resolve_letter_v2_qr') && r.method !== 'OPTIONS') body = [{ id:'replacement-qr',product_name:'Internal replacement name',has_photo_upload:true,has_360_view:false,status:'unused',letter_id:'a1111111-1111-4111-8111-111111111111' }]
+      if (r.url.endsWith('/claim_letter_v2_qr') && r.method !== 'OPTIONS') body = [{ id:'replacement-qr',status:'published',letter_id:'a1111111-1111-4111-8111-111111111111' }]
       if (r.url.endsWith('/read_private_letter') && r.method !== 'OPTIONS') {
         const data = JSON.parse(r.postData)
         body = data.p_password === 'two little flowers' ? { status: 'unlocked', letter: {
@@ -33,6 +35,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     }
   })
   const run = async expression => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (r.result.exceptionDetails) throw Error(JSON.stringify(r.result.exceptionDetails)); return r.result.result.value }
+  const until = async expression => { for(let i=0;i<40;i++){ if(await run(expression)) return; await delay(250) } throw Error(`Timed out: ${expression}`) }
   const shot = async name => { const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true }); fs.writeFileSync(path.join(process.env.TEMP, name), Buffer.from(r.result.data, 'base64')) }
   const fill = async (selector,value) => run(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});el.value=${JSON.stringify(value)};el.dispatchEvent(new Event('input',{bubbles:true}))})()`)
   const click = async selector => { await run(`document.querySelector(${JSON.stringify(selector)}).click()`); await delay(100) }
@@ -46,6 +49,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await send('Runtime.enable'); await send('Page.enable'); await send('DOM.enable')
     await send('Fetch.enable', { patterns: [{ urlPattern: '*rest/v1/*' }, { urlPattern: '*auth/v1/*' }, { urlPattern: '*functions/v1/*' }] })
     await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+    await send('Page.navigate', { url: 'http://127.0.0.1:5183/letter-v2/claim/replacement-test' }); await delay(1600)
+    await until("document.body.textContent.includes('Your keepsake. A fresh key.')")
+    assert.ok(await run("document.body.textContent.includes('Your keepsake. A fresh key.')"))
+    assert.equal(await run("document.querySelectorAll('.gift-activation-next').length"),0)
+    assert.equal(await run("document.body.textContent.includes('Internal replacement name')"),false)
+    await fill('#gift-activation-code','NEW1-CODE'); await submit(); await delay(800)
+    assert.equal(await run('location.pathname'),'/letter-v2/a1111111-1111-4111-8111-111111111111')
+    assert.equal(publish,undefined)
+    assert.equal(await run("sessionStorage.getItem('stack-petals:letter-v2-claim')"),null)
     await send('Page.navigate', { url: 'http://127.0.0.1:5183/letter-v2/create/not-activated' }); await delay(1600)
     assert.equal(await run("document.querySelector('fieldset').disabled"), true)
     assert.equal(publish, undefined)
@@ -117,6 +129,6 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await run("document.querySelector('.personal-surprise button').click()"); await delay(700)
     assert.equal(await run("document.querySelector('.personal-surprise-photo img').src"), surprisePhoto)
     assert.equal(errors.length, 0)
-    console.log('PASS three steps, private password copy/share/save/clear, no password storage, mobile, defaults and recipient reveal')
+    console.log('PASS renewed-card activation opens existing letter without composer; three steps, private password copy/share/save/clear, no password storage, mobile, defaults and recipient reveal')
   } finally { await send('Browser.close'); ws.close() }
 })().catch(e => { console.error(e); process.exitCode = 1 })
