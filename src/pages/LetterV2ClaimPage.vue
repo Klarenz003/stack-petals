@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
 import GiftQrHeader from '@/components/GiftQrHeader.vue'
-import { PhKey, PhArrowRight, PhLockKey, PhFlowerTulip } from '@phosphor-icons/vue'
+import { PhKey, PhArrowRight, PhLockKey } from '@phosphor-icons/vue'
 
 const route = useRoute(); const router = useRouter()
 const loading = ref(true); const claiming = ref(false); const error = ref(''); const activationCode = ref('')
@@ -45,7 +45,6 @@ onMounted(async () => {
         <p class="gift-studio-intro">{{ loading ? 'We’re finding the letter that belongs to your gift.' : 'Activate your card, write your letter, and leave them something to treasure.' }}</p>
         <div v-if="loading" class="gift-studio-loading" role="status">Checking your Gift QR…</div>
         <form v-else-if="code" @submit.prevent="claim">
-          <div class="gift-studio-product"><PhFlowerTulip :size="20" aria-hidden="true" /><span>{{ code.product_name }}<small>Ready for your personal touch</small></span></div>
           <section class="gift-activation-guide" aria-labelledby="gift-code-guide-title">
             <span class="gift-activation-guide-icon" aria-hidden="true"><PhKey :size="23" weight="light" /></span>
             <div><h2 id="gift-code-guide-title">Find the code on the back.</h2><p>Turn your card over and gently scratch off the sticker covering the activation code. Enter the revealed code below, including the hyphen.</p><p class="gift-activation-guide-note">No sticker on your card? Use the activation code printed on the back. Keep it private while setting up your letter.</p></div>
