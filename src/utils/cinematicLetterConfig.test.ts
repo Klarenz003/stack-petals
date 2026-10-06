@@ -4,6 +4,23 @@ import { configureCinematicLetter } from './cinematicLetterConfig'
 import { GIFT } from '@/components/cinematic-letter/config/gift.js'
 
 describe('cinematic letter configuration', () => {
+  it('renders Gift QR note titles and artwork saved in protected metadata', () => {
+    configureCinematicLetter({
+      letter_v2_qr_id: 'qr-test', petal_messages: ['You light up my day.', 'Two', 'Three', 'Four', 'Five', 'Six'],
+      backgrounds: { petal_labels: ['My sunshine', 'Two', 'Three', 'Four', 'Five', 'Six'], petal_artworks: [3, 4, 5, 2, 1, 0] },
+    })
+    expect(GIFT.petalLabels[0]).toBe('My sunshine')
+    expect(GIFT.reasons[0]).toBe('You light up my day.')
+    expect(GIFT.petalArtworks).toEqual([3, 4, 5, 2, 1, 0])
+  })
+  it('resets personal surprise content between letters and respects photo restrictions', () => {
+    configureCinematicLetter({ letter_v2_qr_id: 'qr-test', backgrounds: { final_surprise: { title: 'For you', message: 'Always loved', photo: 'data:image/jpeg;base64,YQ==' } }, has_photo_upload: false })
+    expect(GIFT.isGiftQrLetter).toBe(true)
+    expect(GIFT.personalSurprise).toEqual({ title: 'For you', message: 'Always loved', photo: null })
+    configureCinematicLetter({})
+    expect(GIFT.personalSurprise).toBeNull()
+    expect(GIFT.isGiftQrLetter).toBe(false)
+  })
   it('retains customer text, labels, artwork and memories in checkout previews for every theme', () => {
     for (const theme of ['romance', 'family', 'birthday', 'sympathy', 'friendship', 'graduation']) {
       const notes = ['one', 'two', 'three', 'four', 'five', 'six']

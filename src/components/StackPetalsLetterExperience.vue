@@ -10,11 +10,13 @@ import { useCinematicExperience } from '@/composables/useCinematicExperience'
 import type { LetterRecord } from '@/types/letter'
 import { configureCinematicLetter } from '@/utils/cinematicLetterConfig'
 import { getLetterBouquetAssets } from '@/utils/letterBouquet'
+import { getLetterSurprise } from '@/utils/letterSurprise'
 
 const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; showPicker?: boolean }>()
 const root = useCinematicExperience()
 const { theme } = configureCinematicLetter(props.letter, props)
 const bouquetImage = computed(() => getLetterBouquetAssets(props.letter).image)
+const surprise = computed(() => getLetterSurprise(props.letter.backgrounds?.final_surprise, props.letter.has_photo_upload !== false))
 
 // The cinematic stylesheet contains intentionally generic selectors (for example
 // `.hero`) because it was originally a standalone page. Keep it mounted only
@@ -93,7 +95,7 @@ onBeforeUnmount(() => {
 <div class="luxe-atmosphere__stars" id="luxe-stars"></div>
 </div>
   <InvitationAndCurtain />
-  <KeepsakeStory :bouquet-image="bouquetImage" />
+  <KeepsakeStory :bouquet-image="bouquetImage" :surprise="surprise" :gift-qr="Boolean(letter.letter_v2_qr_id)" />
   <GiftAndSurprise />
 </div>
 </template>

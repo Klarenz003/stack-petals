@@ -762,7 +762,7 @@ function screenBg(screenKey: string): string {
     screen9: 'rgba(255,240,243,0.3)',
   }
   const overlay = gradients[screenKey] || gradients.screen1
-  if (custom) {
+  if (typeof custom === 'string' && custom) {
     return custom
   }
   return overlay

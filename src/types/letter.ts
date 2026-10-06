@@ -10,7 +10,7 @@ export interface LetterRecord {
   petal_artworks?: number[]
   memories: string[]
   angle_photos: string[]
-  backgrounds: Record<string, string | null>
+  backgrounds: Record<string, unknown>
   music_url: string
   bouquet_image_url: string
   published: boolean

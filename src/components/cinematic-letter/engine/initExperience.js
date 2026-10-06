@@ -999,7 +999,7 @@ export function initExperience(rootElement) {
       gift360Button.disabled = true;
       gift360Button.hidden = true;
       gift360Button.setAttribute('aria-hidden','true');
-      setText('.gift-card__caption','A keepsake gift box is included with this letter.');
+      setText('.gift-card__caption','A little reminder of the care behind your gift.');
     } else if (GIFT.previewMode) {
       gift360Button.disabled = true;
       gift360Button.setAttribute('aria-disabled','true');

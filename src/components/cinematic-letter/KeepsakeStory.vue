@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { PhHeart, PhSparkle, PhArrowUpRight, PhFlower, PhArrowLeft, PhArrowRight, PhArrowClockwise } from '@phosphor-icons/vue'
 import { ref, watch } from 'vue'
-const props = defineProps<{ bouquetImage?: string }>()
+import LetterPersonalSurprise from '@/components/LetterPersonalSurprise.vue'
+import type { LetterSurprise } from '@/utils/letterSurprise'
+const props = defineProps<{ bouquetImage?: string; surprise?: LetterSurprise | null; giftQr?: boolean }>()
 const imageFailed = ref(false)
 watch(() => props.bouquetImage, () => { imageFailed.value = false })
 </script>
@@ -168,7 +170,8 @@ watch(() => props.bouquetImage, () => { imageFailed.value = false })
 <span class="eyebrow">P.S. BEFORE YOU GO...</span>
 <h2 id="final-heading">One <em>last</em><br>little thing.</br></h2>
 <p>There is one more note, and it's the most important one.</p>
-<div aria-labelledby="gift-showcase-heading" class="gift-showcase reveal">
+<LetterPersonalSurprise v-if="surprise" :surprise="surprise" />
+<div v-show="!giftQr || Boolean(bouquetImage)" aria-labelledby="gift-showcase-heading" class="gift-showcase reveal">
 <div class="gift-card">
 <div class="gift-portrait-wrap">
 <img v-if="bouquetImage && !imageFailed" class="gift-portrait gift-bouquet-photo" :src="bouquetImage" alt="Your gift bouquet" loading="lazy" @error="imageFailed = true" />

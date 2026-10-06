@@ -56,4 +56,11 @@
 .gift-studio-publish { border-top:1px solid #eadbd6; margin-top:26px; padding-top:14px; }
 .gift-studio-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
 @media(max-width:600px) { .gift-studio { padding:16px 10px; }.gift-studio-shell { border-radius:22px; }.gift-studio-header { padding:22px 20px; }.gift-studio-body { padding:28px 20px; }.gift-studio h1 { font-size:28px; }.gift-studio-form-card { padding:18px; }.gift-studio-name-grid { grid-template-columns:1fr; gap:0; }.gift-studio-field :is(input,textarea) { font-size:16px; }.gift-studio-progress { gap:12px; }.gift-studio-progress li { font-size:10px; gap:7px; }.gift-studio-memory-grid { gap:8px; } }
+.gift-surprise-toggle { display:flex; align-items:center; gap:14px; padding:16px; border:1px solid #e6c9c9; border-radius:14px; background:#fff6f3; color:#594747; cursor:pointer; font:600 13px/1.6 'DM Sans',sans-serif; }
+.gift-surprise-toggle input { width:20px; height:20px; flex:none; accent-color:#5f8872; }
+.gift-surprise-toggle small { display:block; font-size:11px; font-weight:400; color:#7c6562; margin-top:3px; }
+.gift-surprise-fields { margin-top:22px; }
+.gift-surprise-live-preview { padding-top:22px; margin-top:22px; border-top:1px solid #eadbd6; }
+.gift-surprise-live-preview .personal-surprise { margin-bottom:0; }
+.gift-surprise-preview-empty { padding:20px; border:1px dashed #e3c9c3; border-radius:14px; background:#fffaf7; text-align:center; }
 @media(prefers-reduced-motion:reduce) { .gift-studio * { transition:none !important; } }

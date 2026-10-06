@@ -2,7 +2,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { PhCamera, PhX } from '@phosphor-icons/vue'
 
-const props = defineProps<{ modelValue: string[]; disabled?: boolean }>()
+const props = defineProps<{ modelValue: string[]; disabled?: boolean; maxPhotos?: number }>()
+const limit = computed(() => Math.max(1, Math.min(3, props.maxPhotos || 3)))
 const emit = defineEmits<{ 'update:modelValue': [photos: string[]] }>()
 const input = ref<HTMLInputElement | null>(null)
 const queue = ref<File[]>([])
@@ -52,7 +53,7 @@ async function openNext() {
 }
 async function addFiles(files: File[]) {
   if (props.disabled || source.value || busy.value) return
-  queue.value = files.filter(file => file.type.startsWith('image/')).slice(0, Math.max(0, 3 - props.modelValue.length))
+  queue.value = files.filter(file => file.type.startsWith('image/')).slice(0, Math.max(0, limit.value - props.modelValue.length))
   if (!queue.value.length) return
   error.value = ''; returnFocus = document.activeElement as HTMLElement
   await openNext()
@@ -99,7 +100,7 @@ async function saveCrop() {
     const x = offset.value.x * (900 / (viewport.value?.clientWidth || 900))
     const y = offset.value.y * (600 / (viewport.value?.clientHeight || 600))
     context.drawImage(image, (900 - width) / 2 + x, (600 - height) / 2 + y, width, height)
-    if (props.modelValue.length < 3) emit('update:modelValue', [...props.modelValue, canvas.toDataURL('image/jpeg', .86)])
+    if (props.modelValue.length < limit.value) emit('update:modelValue', [...props.modelValue, canvas.toDataURL('image/jpeg', .86)])
     await nextTick(); await openNext()
   } catch { error.value = 'This photo could not be cropped. Please try another image.'; cancel() }
   finally { busy.value = false }
@@ -118,9 +119,9 @@ onBeforeUnmount(() => { request++; window.removeEventListener('resize', clampOff
 
 <template>
   <div class="memory-photo-upload">
-    <div class="upload-zone" :class="{ 'is-disabled': disabled }" role="button" :tabindex="disabled ? -1 : 0" :aria-disabled="disabled" aria-label="Add memory photos, up to three" @click="!disabled && input?.click()" @keydown.enter.prevent="!disabled && input?.click()" @keydown.space.prevent="!disabled && input?.click()" @dragover.prevent @drop.prevent="addFiles(Array.from($event.dataTransfer?.files || []))">
-      <input ref="input" type="file" accept="image/*" multiple hidden :disabled="disabled" @change="handleUpload" />
-      <div v-if="!modelValue.length" class="upload-empty"><span><PhCamera :size="30" weight="light" aria-hidden="true" /></span><p>Add up to 3 photos</p></div>
+    <div class="upload-zone" :class="{ 'is-disabled': disabled }" role="button" :tabindex="disabled ? -1 : 0" :aria-disabled="disabled" :aria-label="limit === 1 ? 'Add one surprise photo' : 'Add memory photos, up to three'" @click="!disabled && input?.click()" @keydown.enter.prevent="!disabled && input?.click()" @keydown.space.prevent="!disabled && input?.click()" @dragover.prevent @drop.prevent="addFiles(Array.from($event.dataTransfer?.files || []))">
+      <input ref="input" type="file" accept="image/*" :multiple="limit > 1" hidden :disabled="disabled" @change="handleUpload" />
+      <div v-if="!modelValue.length" class="upload-empty"><span><PhCamera :size="30" weight="light" aria-hidden="true" /></span><p>{{ limit === 1 ? 'Choose one special photo' : 'Add up to 3 photos' }}</p></div>
       <div v-else class="memory-grid">
         <div v-for="(photo, index) in modelValue" :key="index" class="memory-item">
           <img :src="photo" :alt="`Memory ${index + 1}`" />
