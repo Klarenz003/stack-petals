@@ -8,9 +8,9 @@ describe('private final surprise', () => {
     expect(getLetterSurprise({ title: '  Our moment ', message: ' Love you ', photo: 'data:image/jpeg;base64,YQ==' }))
       .toEqual({ title: 'Our moment', message: 'Love you', photo: 'data:image/jpeg;base64,YQ==' })
   })
-  it('rejects public photo URLs and disallowed photo capability', () => {
+  it('rejects public photo URLs', () => {
     expect(getLetterSurprise({ message: 'Hello', photo: 'https://public.example/photo.jpg' })?.photo).toBeNull()
-    expect(getLetterSurprise({ message: 'Hello', photo: 'data:image/png;base64,YQ==' }, false)?.photo).toBeNull()
+    expect(getLetterSurprise({ message: 'Hello', photo: 'data:image/png;base64,YQ==' })?.photo).toBe('data:image/png;base64,YQ==')
   })
   it('provides a title, bounds text and rejects oversized photos', () => {
     const result = getLetterSurprise({ title: '', message: 'x'.repeat(650), photo: 'data:image/jpeg;base64,' + 'A'.repeat(3000000) })

@@ -1,6 +1,8 @@
 // Vite 5183 + isolated Chrome CDP 9243. Backend requests are mocked.
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path')
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+// Run with SURPRISE_MEMORY_UPLOADS=0 to verify the default special photo on restricted cards.
+const memoryUploads = process.env.SURPRISE_MEMORY_UPLOADS !== '0'
 ;(async () => {
   const tabs = await (await fetch('http://127.0.0.1:9243/json')).json()
   const ws = new WebSocket(tabs.find(t => t.type === 'page').webSocketDebuggerUrl)
@@ -22,7 +24,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
         const data = JSON.parse(r.postData)
         body = data.p_password === 'two little flowers' ? { status: 'unlocked', letter: {
           id: 'a1111111-1111-4111-8111-111111111111', letter_v2_qr_id: 'fake-qr', order_id: null, published: true,
-          requires_password: true, sender: 'Someone who cares', recipient: 'Favorite person',
+          requires_password: true, has_photo_upload: memoryUploads, sender: 'Someone who cares', recipient: 'Favorite person',
           message: 'A private letter', letter_theme: 'romance', memories: [], angle_photos: [], petal_messages: publish?.p_petal_messages || [],
           backgrounds: { petal_labels: publish?.p_petal_labels, petal_artworks: publish?.p_petal_artworks, final_surprise: { title: 'Our special moment', message: 'You are loved.', photo: surprisePhoto } }
         } } : { status: 'locked' }
@@ -61,7 +63,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await send('Page.navigate', { url: 'http://127.0.0.1:5183/letter-v2/create/not-activated' }); await delay(1600)
     assert.equal(await run("document.querySelector('fieldset').disabled"), true)
     assert.equal(publish, undefined)
-    await run("sessionStorage.setItem('stack-petals:letter-v2-claim',JSON.stringify({token:'surprise-test',qrId:'fake-qr',activationCode:'TEST-1234',has_photo_upload:true}));sessionStorage.setItem('stack-petals:startup-ready:v1','ready')")
+    await run(`sessionStorage.setItem('stack-petals:letter-v2-claim',JSON.stringify({token:'surprise-test',qrId:'fake-qr',activationCode:'TEST-1234',has_photo_upload:${memoryUploads}}));sessionStorage.setItem('stack-petals:startup-ready:v1','ready')`)
     await send('Page.navigate', { url: 'http://127.0.0.1:5183/letter-v2/create/surprise-test' }); await delay(1100)
     await submit()
     assert.equal(await run("document.querySelectorAll('#gift-letter-to').length"), 1)
@@ -74,7 +76,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     assert.equal(await run("document.querySelector('.little-note-default').textContent.includes('Suggested words will be used.')"), true)
     await click('[aria-label="Use suggested words for note 1"]')
     await fill('[aria-label="Title for note 1"]','My sunshine'); await fill('[aria-label="Body for note 1"]','You light up my day.')
-    await click('[aria-label="Use Heart artwork for note 1"]'); await crop()
+    await click('[aria-label="Use Heart artwork for note 1"]')
+    if (memoryUploads) await crop()
+    else assert.equal(await run("document.querySelectorAll('input[type=file]').length"), 0)
     await shot('stack-petals-little-things-mobile.png')
     await submit()
     await fill('#gift-password','two little flowers'); await fill('#gift-password-confirm','two little flowers')
@@ -87,7 +91,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     assert.equal(await run("document.querySelector('.gift-surprise-live-preview h3').textContent"),'Our special moment')
     assert.equal(await run("document.querySelector('.gift-surprise-live-preview img').src"),surprisePhoto)
     await click('.composer-back')
-    assert.equal(await run("document.querySelectorAll('.memory-item').length"),1)
+    assert.equal(await run("document.querySelectorAll('.memory-item').length"),memoryUploads ? 1 : 0)
     assert.equal(await run("document.querySelector('[aria-label=\\\"Use Heart artwork for note 1\\\"]').getAttribute('aria-pressed')"),'true')
     await click('.composer-back')
     assert.equal(await run("document.querySelector('#gift-letter-message').value"),'A private test letter.')
@@ -99,6 +103,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
     await submit(); await delay(500)
     assert.equal(publish.p_surprise.message, 'You are loved.')
     assert.equal(publish.p_surprise.photo, surprisePhoto)
+    if (!memoryUploads) assert.deepEqual(publish.p_memories, [])
     assert.equal(publish.p_petal_labels[0], 'My sunshine')
     assert.equal(publish.p_petal_messages[0], 'You light up my day.')
     assert.equal(publish.p_petal_artworks[0], 3)

@@ -13,10 +13,10 @@ describe('cinematic letter configuration', () => {
     expect(GIFT.reasons[0]).toBe('You light up my day.')
     expect(GIFT.petalArtworks).toEqual([3, 4, 5, 2, 1, 0])
   })
-  it('resets personal surprise content between letters and respects photo restrictions', () => {
+  it('keeps the special photo when memory uploads are disabled and resets between letters', () => {
     configureCinematicLetter({ letter_v2_qr_id: 'qr-test', backgrounds: { final_surprise: { title: 'For you', message: 'Always loved', photo: 'data:image/jpeg;base64,YQ==' } }, has_photo_upload: false })
     expect(GIFT.isGiftQrLetter).toBe(true)
-    expect(GIFT.personalSurprise).toEqual({ title: 'For you', message: 'Always loved', photo: null })
+    expect(GIFT.personalSurprise).toEqual({ title: 'For you', message: 'Always loved', photo: 'data:image/jpeg;base64,YQ==' })
     configureCinematicLetter({})
     expect(GIFT.personalSurprise).toBeNull()
     expect(GIFT.isGiftQrLetter).toBe(false)

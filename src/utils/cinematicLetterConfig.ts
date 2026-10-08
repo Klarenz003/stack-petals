@@ -53,7 +53,7 @@ export function configureCinematicLetter(
     photoMemories: memories,
     petalArtworks: letter.petal_artworks || letter.backgrounds?.petal_artworks || [],
     lastNote: closings[theme] || closings.romance,
-    personalSurprise: getLetterSurprise(letter.backgrounds?.final_surprise, letter.has_photo_upload !== false),
+    personalSurprise: getLetterSurprise(letter.backgrounds?.final_surprise),
     isGiftQrLetter: Boolean(letter.letter_v2_qr_id),
     product360: bouquet.has360View ? { mode: 'urls', frames: bouquet.frames, frameCount: bouquet.frames.length } : { mode: 'none', frameCount: 0 },
   })

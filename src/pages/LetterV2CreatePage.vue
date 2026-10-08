@@ -34,7 +34,7 @@ const surpriseEnabled = ref(false)
 const surpriseTitle = ref('One more thing: you are loved.')
 const surpriseMessage = ref('')
 const surprisePhotos = ref<string[]>([])
-const surprise = computed(() => surpriseEnabled.value ? getLetterSurprise({ title: surpriseTitle.value, message: surpriseMessage.value, photo: surprisePhotos.value[0] }, canUpload.value) : null)
+const surprise = computed(() => surpriseEnabled.value ? getLetterSurprise({ title: surpriseTitle.value, message: surpriseMessage.value, photo: surprisePhotos.value[0] }) : null)
 const publishedId = ref(''); const managementToken = ref(''); const changed = ref(false)
 async function goStep(target: number) {
   if (saving.value || !claimValid.value) return
@@ -194,7 +194,7 @@ async function publish() {
                 <label class="gift-studio-field" for="gift-surprise-heading">A little title<input id="gift-surprise-heading" v-model="surpriseTitle" maxlength="80" placeholder="My favorite moment with you" /></label>
                 <label class="gift-studio-field" for="gift-surprise-message">Your final note<textarea id="gift-surprise-message" v-model="surpriseMessage" rows="4" maxlength="600" required placeholder="Whenever you miss me, come back here. You are so loved."></textarea></label>
                 <p class="gift-studio-character-count">{{ surpriseMessage.length }} / 600 characters</p>
-                <template v-if="canUpload"><p class="gift-studio-hint">One special photo · Optional. Crop it just how you want it.</p><MemoryPhotoUpload v-model="surprisePhotos" :max-photos="1" :disabled="saving || !claimValid" /></template>
+                <p class="gift-studio-hint">One special photo · Optional. Included with every Gift QR. Crop it just how you want it.</p><MemoryPhotoUpload v-model="surprisePhotos" :max-photos="1" :disabled="saving || !claimValid" />
                 <p class="gift-studio-hint"><PhLockKey :size="14" aria-hidden="true" /> Protected by the same letter password. No extra step for your recipient.</p>
                 <div class="gift-surprise-live-preview"><p class="gift-studio-eyebrow">Your surprise card · Live preview</p><LetterPersonalSurprise v-if="surprise" :surprise="surprise" preview /><p v-else class="gift-studio-hint gift-surprise-preview-empty">Write your final note above to see your card here. Your photo and title will appear with it.</p></div>
               </div>

@@ -65,7 +65,7 @@ onMounted(async () => {
             <h2 id="gift-activation-next-title">From your words to their keepsake.</h2>
             <ol>
               <li><strong>Write your letter.</strong><p>After activation, you’ll go straight to the editor. Choose a theme, add your names, and write your message.</p></li>
-              <li><strong>Make the little things yours.</strong><p>Keep the six suggested notes or change their titles, words, and icons. {{ code.has_photo_upload ? 'You can also add memory photos and an optional final surprise with a special photo.' : 'You can also add an optional final surprise with a personal note.' }}</p></li>
+              <li><strong>Make the little things yours.</strong><p>Keep the six suggested notes or change their titles, words, and icons. Add an optional final surprise with a personal note and one special photo, included with every Gift QR. <template v-if="code.has_photo_upload">You can also add up to three memory photos.</template></p></li>
               <li><strong>Seal it, then publish.</strong><p>Create a letter password of at least 10 characters and confirm it. Publish when you’re ready, then copy, share privately, or save the password to your phone.</p></li>
               <li><strong>Give them the card—and the password.</strong><p>Once published, the same QR opens your finished letter. Your recipient enters the password you chose, not the activation code. No account needed; they can choose to remember their browser for 30 days.</p></li>
             </ol>

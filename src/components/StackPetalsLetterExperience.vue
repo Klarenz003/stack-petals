@@ -16,7 +16,7 @@ const props = defineProps<{ letter: Partial<LetterRecord>; preview?: boolean; sh
 const root = useCinematicExperience()
 const { theme } = configureCinematicLetter(props.letter, props)
 const bouquetImage = computed(() => getLetterBouquetAssets(props.letter).image)
-const surprise = computed(() => getLetterSurprise(props.letter.backgrounds?.final_surprise, props.letter.has_photo_upload !== false))
+const surprise = computed(() => getLetterSurprise(props.letter.backgrounds?.final_surprise))
 
 // The cinematic stylesheet contains intentionally generic selectors (for example
 // `.hero`) because it was originally a standalone page. Keep it mounted only

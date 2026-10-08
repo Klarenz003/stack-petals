@@ -1,7 +1,9 @@
 # One last surprise
 
 Gift QR composers can optionally add an 80-character title, a 600-character final
-note and one cropped photo (only when the QR permits photo uploads).
+note and one optional cropped photo, included with every Gift QR independently
+of the memory-photo setting. The admin Memory photos option still controls the
+separate gallery of up to three photos.
 Recipients unfold the card at the end of
 the letter without a second password prompt. Skipped surprises do not render a
 placeholder gift card for Gift QR letters.
@@ -9,8 +11,13 @@ placeholder gift card for Gift QR letters.
 Photo bytes stay inline in letters.backgrounds.final_surprise, not in public
 storage. Existing letter password/RLS and remembered-browser authorization protect
 the whole object. The secure publishing overload validates photo format and size,
-capability and text limits, then delegates to the existing password-protected RPC.
+and text limits, then delegates to the existing password-protected RPC.
 Old publishing clients remain compatible.
+
+For the default special-photo update, apply
+`supabase/migrations/202610080001_default_surprise_photo.sql` before deploying
+the matching storefront. It does not change existing QR settings or enable
+memory uploads. No live migration has been applied by this local update.
 
 Apply supabase/migrations/202610060001_letter_final_surprise.sql after the private
 gift letters migration, then 202610060002_letter_note_customization.sql before
