@@ -10,7 +10,7 @@ import LetterLittleThingsEditor from '@/components/LetterLittleThingsEditor.vue'
 import LetterPersonalSurprise from '@/components/LetterPersonalSurprise.vue'
 import LetterPasswordShare from '@/components/LetterPasswordShare.vue'
 import { getLetterSurprise } from '@/utils/letterSurprise'
-import { passwordError } from '@/utils/letterAccess'
+import { LETTER_PASSWORD_MIN_LENGTH, passwordError } from '@/utils/letterAccess'
 import { DEFAULT_PETAL_MESSAGES, DEFAULT_GIFT_NOTE_BODIES, getGiftNoteMessages } from '@/utils/letterDefaults'
 import { PhCheck, PhPaperPlaneTilt, PhLockKey, PhArrowRight } from '@phosphor-icons/vue'
 const step = ref(1)
@@ -133,7 +133,7 @@ async function publish() {
           <summary>Change the letter password</summary>
           <p class="gift-studio-hint">Changing it signs out every remembered browser. Keep this composer tab open if you want to change it later.</p>
           <form @submit.prevent="changePassword">
-            <label class="gift-studio-field">New password<input v-model="password" type="password" autocomplete="new-password" minlength="10" required :disabled="saving" /></label>
+            <label class="gift-studio-field">New password<input v-model="password" type="password" autocomplete="new-password" :minlength="LETTER_PASSWORD_MIN_LENGTH" required :disabled="saving" /></label>
             <label class="gift-studio-field">Confirm password<input v-model="confirmation" type="password" autocomplete="new-password" required :disabled="saving" /></label>
             <p v-if="changed" role="status" class="gift-studio-hint">Password updated. Share the new password privately with your recipient.</p>
             <p v-if="error" role="alert" class="gift-studio-error">{{ error }}</p>
@@ -202,10 +202,10 @@ async function publish() {
             <section class="gift-studio-form-card" aria-labelledby="gift-privacy-title">
               <p class="gift-studio-eyebrow"><PhLockKey :size="16" weight="duotone" aria-hidden="true" /> Just for your recipient</p>
               <h2 id="gift-privacy-title">Seal it with a password.</h2>
-              <p id="gift-password-help" class="gift-studio-hint">Choose at least 10 characters—a few memorable words work well. Share it privately with your recipient, never on the QR card.</p>
+              <p id="gift-password-help" class="gift-studio-hint">Choose at least {{ LETTER_PASSWORD_MIN_LENGTH }} characters. A longer password is safer. Share it privately with your recipient, never on the QR card.</p>
               <div class="gift-studio-name-grid">
-                <label class="gift-studio-field" for="gift-password">Letter password<input id="gift-password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" minlength="10" aria-describedby="gift-password-help" required /></label>
-                <label class="gift-studio-field" for="gift-password-confirm">Confirm password<input id="gift-password-confirm" v-model="confirmation" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" minlength="10" required /></label>
+                <label class="gift-studio-field" for="gift-password">Letter password<input id="gift-password" v-model="password" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" :minlength="LETTER_PASSWORD_MIN_LENGTH" aria-describedby="gift-password-help" required /></label>
+                <label class="gift-studio-field" for="gift-password-confirm">Confirm password<input id="gift-password-confirm" v-model="confirmation" :type="showPassword ? 'text' : 'password'" autocomplete="new-password" :minlength="LETTER_PASSWORD_MIN_LENGTH" required /></label>
               </div>
               <label class="gift-password-show"><input v-model="showPassword" type="checkbox" />Show passwords</label>
               <p class="gift-studio-hint">No account needed. Your recipient can remember their browser for 30 days after unlocking.</p>

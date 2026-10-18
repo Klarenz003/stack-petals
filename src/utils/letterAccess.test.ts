@@ -10,7 +10,11 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('private letter browser credentials', () => {
   it('validates length, Unicode byte limit and confirmation without trimming passwords', () => {
-    expect(passwordError('tiny')).not.toBe('')
+    for (const short of ['', 'a', 'ab', 'abc', '    ']) expect(passwordError(short)).not.toBe('')
+    expect(passwordError('tiny')).toBe('')
+    expect(passwordError('\u{1f338}'.repeat(3))).not.toBe('')
+    expect(passwordError('\u{1f338}'.repeat(4))).toBe('')
+    expect(passwordError('tiny', 'Tiny')).not.toBe('')
     expect(passwordError('a'.repeat(73))).not.toBe('')
     expect(passwordError('é'.repeat(37))).not.toBe('')
     expect(passwordError('a'.repeat(72))).toBe('')

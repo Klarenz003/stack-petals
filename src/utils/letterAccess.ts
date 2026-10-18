@@ -1,8 +1,10 @@
 export const LETTER_ACCESS_PREFIX = 'stack-petals:letter-access:'
 export type LetterAccessSession = { token: string; expiresAt: string }
 
+export const LETTER_PASSWORD_MIN_LENGTH = 4
+
 export function passwordError(password: string, confirmation = password): string {
-  if (password.trim().length === 0 || Array.from(password).length < 10) return 'Use at least 10 characters. A few memorable words work well.'
+  if (password.trim().length === 0 || Array.from(password).length < LETTER_PASSWORD_MIN_LENGTH) return 'Use at least 4 characters. A longer password is safer.'
   if (new TextEncoder().encode(password).length > 72 || password.includes('\0')) return 'Please use a shorter password (up to 72 bytes).'
   if (password !== confirmation) return 'The passwords do not match yet.'
   return ''
