@@ -69,7 +69,7 @@ onMounted(async () => {
               <li><strong>Seal it, then publish.</strong><p>Create a letter password of at least 4 characters and confirm it. A longer password is safer. Publish when you’re ready, then copy, share privately, or save the password to your phone.</p></li>
               <li><strong>Give them the card—and the password.</strong><p>Once published, the same QR opens your finished letter. Your recipient enters the password you chose, not the activation code. No account needed; they can choose to remember their browser for 30 days.</p></li>
             </ol>
-            <p class="gift-activation-next-note"><PhLockKey :size="16" aria-hidden="true" /><span>Send the letter password separately and privately. Don’t write it on the QR card. Keep the editor tab open until you publish—refreshing or leaving can lose your unfinished draft.</span></p>
+            <p class="gift-activation-next-note"><PhLockKey :size="16" aria-hidden="true" /><span>Send the letter password separately and privately. Don’t write it on the QR card. Your unfinished letter and cropped photos autosave in this browser for 7 days when storage is available. Return with this QR in the same browser and activate again if asked. You’ll need to re-enter your letter password; it is never saved. Avoid shared devices, and wait for “Draft saved” before leaving.</span></p>
           </section>
         </form>
         <p v-else class="gift-studio-error" role="alert">{{ error }}</p>

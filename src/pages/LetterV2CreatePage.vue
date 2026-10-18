@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 import { reportStorefrontError } from '@/services/errorTracker'
 import { getGiftCapabilities } from '@/utils/giftCapabilities'
@@ -12,6 +12,7 @@ import LetterPasswordShare from '@/components/LetterPasswordShare.vue'
 import { getLetterSurprise } from '@/utils/letterSurprise'
 import { LETTER_PASSWORD_MIN_LENGTH, passwordError } from '@/utils/letterAccess'
 import { DEFAULT_PETAL_MESSAGES, DEFAULT_GIFT_NOTE_BODIES, getGiftNoteMessages } from '@/utils/letterDefaults'
+import { useLetterDraft } from '@/composables/useLetterDraft'
 import { PhCheck, PhPaperPlaneTilt, PhLockKey, PhArrowRight } from '@phosphor-icons/vue'
 const step = ref(1)
 const furthestStep = ref(1)
@@ -36,8 +37,49 @@ const surpriseMessage = ref('')
 const surprisePhotos = ref<string[]>([])
 const surprise = computed(() => surpriseEnabled.value ? getLetterSurprise({ title: surpriseTitle.value, message: surpriseMessage.value, photo: surprisePhotos.value[0] }) : null)
 const publishedId = ref(''); const managementToken = ref(''); const changed = ref(false)
+// A different card must activate independently, never inherit this component's draft.
+onBeforeRouteUpdate(next => {
+  if (next.params.token !== route.params.token) return `/letter-v2/claim/${encodeURIComponent(String(next.params.token || ''))}`
+})
+const discardRequested = ref(false)
+const { loading: draftLoading, busy: draftBusy, status: draftStatus, savedAt: draftSavedAt,
+  storageError: draftError, initialize: initializeDraft, skip: skipDraft,
+  remove: removeDraft, discard: discardDraft, retry: retryDraft } = useLetterDraft(String(route.params.token || ''), {
+  enabled: () => claimValid.value && !publishedId.value,
+  snapshot: () => ({
+    from: from.value, to: to.value, theme: theme.value, message: message.value, memories: memories.value,
+    petalMessages: petalMessages.value, petalTitles: petalTitles.value, petalArtworks: petalArtworks.value,
+    surpriseEnabled: surpriseEnabled.value, surpriseTitle: surpriseTitle.value, surpriseMessage: surpriseMessage.value,
+    surprisePhotos: surprisePhotos.value, step: step.value, furthestStep: furthestStep.value,
+  }),
+  restore: draft => {
+    from.value = draft.from; to.value = draft.to; theme.value = draft.theme; message.value = draft.message
+    memories.value = canUpload.value ? draft.memories : []
+    petalMessages.value = draft.petalMessages; petalTitles.value = draft.petalTitles; petalArtworks.value = draft.petalArtworks
+    surpriseEnabled.value = draft.surpriseEnabled; surpriseTitle.value = draft.surpriseTitle
+    surpriseMessage.value = draft.surpriseMessage; surprisePhotos.value = draft.surprisePhotos
+    step.value = draft.to.trim() && draft.message.trim() ? draft.step : 1
+    furthestStep.value = draft.to.trim() && draft.message.trim() ? draft.furthestStep : 1
+  },
+})
+const draftStatusText = computed(() => draftLoading.value ? 'Checking for your saved draft…'
+  : draftStatus.value === 'saving' ? 'Saving your draft…'
+  : draftStatus.value === 'restored' ? 'Your saved draft is restored. Pick up where you left off.'
+  : draftStatus.value === 'saved' ? 'Draft saved on this device.'
+  : draftStatus.value === 'cleared' ? 'Saved draft deleted. You can start fresh.'
+  : draftStatus.value === 'error' ? 'Draft needs your attention.' : 'Your draft autosaves on this device as you write.')
+async function startOver() {
+  await discardDraft(() => {
+    from.value = ''; to.value = ''; theme.value = 'romance'; message.value = ''; memories.value = []
+    petalMessages.value = [...DEFAULT_GIFT_NOTE_BODIES]; petalTitles.value = [...DEFAULT_PETAL_MESSAGES]
+    petalArtworks.value = [0, 1, 2, 3, 4, 5]; surpriseEnabled.value = false
+    surpriseTitle.value = 'One more thing: you are loved.'; surpriseMessage.value = ''; surprisePhotos.value = []
+    step.value = 1; furthestStep.value = 1; password.value = ''; confirmation.value = ''; error.value = ''
+  })
+  discardRequested.value = false
+}
 async function goStep(target: number) {
-  if (saving.value || !claimValid.value) return
+  if (saving.value || draftLoading.value || draftBusy.value || !claimValid.value) return
   if (target > step.value && (!to.value.trim() || !message.value.trim())) {
     error.value = 'Add the recipient’s name and your message before continuing.'
     return
@@ -49,16 +91,23 @@ async function submitStep() {
   if (step.value < 3) await goStep(step.value + 1)
   else await publish()
 }
-onMounted(() => {
+onMounted(async () => {
+  let qrId = ''
   try {
     const claim = JSON.parse(sessionStorage.getItem('stack-petals:letter-v2-claim') || 'null')
     claimValid.value = Boolean(claim?.token === String(route.params.token || '') && claim?.qrId && claim?.activationCode)
     activationCode.value = claim?.activationCode || ''
     canUpload.value = getGiftCapabilities(claim).hasPhotoUpload
+    qrId = typeof claim?.qrId === 'string' ? claim.qrId : ''
     const receipt = JSON.parse(sessionStorage.getItem(`stack-petals:letter-receipt:${route.params.token}`) || 'null')
     if (receipt?.id && receipt?.managementToken) { publishedId.value = receipt.id; managementToken.value = receipt.managementToken }
   } catch { claimValid.value = false }
-  if (!claimValid.value && !publishedId.value) error.value = 'Please activate your Gift QR card again to begin.'
+  if (publishedId.value) { await removeDraft(); return }
+  if (claimValid.value && qrId) await initializeDraft(qrId)
+  else {
+    skipDraft()
+    error.value = 'Please activate your Gift QR card again to begin. Any saved draft will be restored after activation.'
+  }
 })
 
 async function changePassword() {
@@ -77,7 +126,7 @@ async function changePassword() {
 }
 
 async function publish() {
-  if (!claimValid.value || saving.value) return
+  if (!claimValid.value || saving.value || draftLoading.value || draftBusy.value) return
   if (!to.value.trim() || !message.value.trim()) { await goStep(1); error.value = 'Add the recipient’s name and your message.'; return }
   if (surpriseEnabled.value && !surprise.value) { error.value = 'Add a final message, or turn off the optional surprise.'; return }
   error.value = passwordError(password.value, confirmation.value)
@@ -105,8 +154,8 @@ async function publish() {
     publishedId.value = id; managementToken.value = data[0]?.management_token || data?.management_token || ''
     shareablePassword.value = password.value
     password.value = ''; confirmation.value = ''; activationCode.value = ''
-    sessionStorage.removeItem('stack-petals:letter-v2-claim')
-    localStorage.removeItem('stack-petals:letter-v2-claim')
+    await removeDraft()
+    try { sessionStorage.removeItem('stack-petals:letter-v2-claim'); localStorage.removeItem('stack-petals:letter-v2-claim') } catch { /* Storage may be denied; the server still closes this claimed QR. */ }
     try { sessionStorage.setItem(`stack-petals:letter-receipt:${route.params.token}`, JSON.stringify({ id, managementToken: managementToken.value })) } catch { /* Receipt still works in this tab. */ }
   } catch (publishError) {
     reportStorefrontError('letter.publish', publishError)
@@ -126,6 +175,7 @@ async function publish() {
         <p class="gift-studio-eyebrow">Sealed with care</p>
         <h1 id="gift-composer-title">Your words. Just for them.</h1>
         <p class="gift-studio-intro">Your letter is ready. Share its password privately with your recipient—not on the QR card. They can remember their browser for 30 days.</p>
+        <div v-if="draftError" class="composer-draft composer-draft--warning"><p role="alert">{{ draftError }}</p><button type="button" :disabled="draftBusy" @click="removeDraft()">Retry removing saved draft</button></div>
         <button class="gift-studio-primary" @click="router.push(`/letter-v2/${publishedId}`)">See your letter<PhArrowRight :size="18" aria-hidden="true" /></button>
         <LetterPasswordShare v-if="shareablePassword" :password="shareablePassword" @clear="shareablePassword = ''" />
         <p v-else class="gift-studio-hint">For privacy, the password is not kept after you leave or refresh this page. If you didn’t save it, use Change the letter password below.</p>
@@ -146,10 +196,22 @@ async function publish() {
         <h1 id="gift-composer-title">A little letter. A lot of heart.</h1>
         <p class="gift-studio-intro">A personal message, little memories, and all the things worth saying.</p>
         <div class="gift-studio-activated"><PhCheck :size="15" weight="bold" aria-hidden="true" />{{ claimValid ? 'Your gift is activated. Let’s make it yours.' : 'Activate your Gift QR card to begin.' }}</div>
-        <nav class="composer-steps" aria-label="Letter creation steps"><ol><li v-for="(item, index) in steps" :key="item.title"><button type="button" :aria-current="step === index + 1 ? 'step' : undefined" :disabled="saving || !claimValid || index + 1 > furthestStep" @click="goStep(index + 1)"><span class="composer-step-number"><PhCheck v-if="step > index + 1" :size="15" aria-hidden="true" /><template v-else>{{ index + 1 }}</template></span><span>{{ item.title }}</span></button></li></ol></nav>
+        <section v-if="claimValid" class="composer-draft" :class="{ 'composer-draft--warning': draftError }" aria-label="Saved letter draft">
+          <p class="composer-draft-status" role="status">{{ draftStatusText }}</p>
+          <p v-if="draftError" role="alert">{{ draftError }}</p>
+          <p v-else class="composer-draft-privacy">Your words and cropped photos stay in this browser. Drafts expire after 7 days. Passwords are never saved. Clearing site data or using private browsing may erase drafts. Anyone using this browser may access the draft; avoid shared devices.</p>
+          <p v-if="draftSavedAt" class="composer-draft-time">Last saved {{ new Date(draftSavedAt).toLocaleString() }}. Return using the same QR and browser; re-enter the activation code if asked.</p>
+          <div v-if="!draftLoading" class="composer-draft-actions">
+            <button v-if="draftError" type="button" :disabled="saving || draftBusy" @click="retryDraft()">Retry saving</button>
+            <button v-if="!discardRequested" type="button" :disabled="saving || draftBusy" @click="discardRequested = true">Delete draft &amp; start over</button>
+            <template v-else><p>This deletes the saved draft and clears this form. It cannot be undone.</p><button type="button" :disabled="saving || draftBusy" @click="startOver()">{{ draftBusy ? 'Deleting…' : 'Yes, delete & start over' }}</button><button type="button" :disabled="draftBusy" @click="discardRequested = false">Keep writing</button></template>
+          </div>
+        </section>
+        <p v-else class="gift-studio-hint">Returning to a draft? <RouterLink :to="`/letter-v2/claim/${route.params.token}`">Activate this card again</RouterLink> in the same browser to resume. Your letter password is not saved.</p>
+        <nav class="composer-steps" aria-label="Letter creation steps"><ol><li v-for="(item, index) in steps" :key="item.title"><button type="button" :aria-current="step === index + 1 ? 'step' : undefined" :disabled="saving || draftLoading || draftBusy || !claimValid || index + 1 > furthestStep" @click="goStep(index + 1)"><span class="composer-step-number"><PhCheck v-if="step > index + 1" :size="15" aria-hidden="true" /><template v-else>{{ index + 1 }}</template></span><span>{{ item.title }}</span></button></li></ol></nav>
         <div class="composer-step-intro"><p class="gift-studio-eyebrow">STEP {{ step }} OF 3</p><h2 ref="stepHeading" tabindex="-1">{{ steps[step - 1].heading }}</h2><p class="gift-studio-hint">{{ steps[step - 1].description }}</p></div>
         <form @submit.prevent="submitStep" :aria-busy="saving">
-          <fieldset class="gift-studio-fields" :disabled="saving || !claimValid">
+          <fieldset class="gift-studio-fields" :disabled="saving || draftLoading || draftBusy || !claimValid">
             <legend class="gift-studio-sr-only">Personalize your gift letter</legend>
             <div v-if="step === 1">
             <section class="gift-studio-form-card" aria-labelledby="gift-theme-title">
@@ -215,7 +277,7 @@ async function publish() {
           <p v-if="error" class="gift-studio-error" role="alert">{{ error }}</p>
           <div class="gift-studio-publish">
             <p class="gift-studio-hint">{{ step < 3 ? 'Your words stay here as you move between steps.' : 'Your Gift QR opens a private letter. Only someone with your password can unlock it.' }}</p>
-            <div class="composer-step-actions"><button v-if="step > 1" type="button" class="composer-back" :disabled="saving" @click="goStep(step - 1)">← Back</button><button class="gift-studio-primary" :disabled="saving || !claimValid">{{ step === 1 ? 'Continue to little things' : step === 2 ? 'Continue to finishing touch' : saving ? 'Publishing your letter…' : 'Publish your letter' }}<PhArrowRight v-if="step < 3" :size="17" aria-hidden="true" /><PhPaperPlaneTilt v-else :size="17" aria-hidden="true" /></button></div>
+            <div class="composer-step-actions"><button v-if="step > 1" type="button" class="composer-back" :disabled="saving || draftLoading || draftBusy" @click="goStep(step - 1)">← Back</button><button class="gift-studio-primary" :disabled="saving || draftLoading || draftBusy || !claimValid">{{ step === 1 ? 'Continue to little things' : step === 2 ? 'Continue to finishing touch' : saving ? 'Publishing your letter…' : 'Publish your letter' }}<PhArrowRight v-if="step < 3" :size="17" aria-hidden="true" /><PhPaperPlaneTilt v-else :size="17" aria-hidden="true" /></button></div>
           </div>
         </form>
       </div>
@@ -224,6 +286,16 @@ async function publish() {
 </template>
 <style src="@/assets/gift-qr-studio.css"></style>
 <style scoped>
+.composer-draft { margin-top:20px; padding:16px; border:1px solid #d6e2d3; border-radius:14px; background:#f0f5ed; color:#526452; font:12px/1.7 'DM Sans',sans-serif; overflow-wrap:anywhere; }
+.composer-draft p { margin:0 0 8px; }
+.composer-draft .composer-draft-status { font-weight:600; color:#3e5946; }
+.composer-draft-privacy,.composer-draft-time { font-size:11px; }
+.composer-draft--warning { border-color:#ddbd9a; background:#fff5e8; color:#754e2d; }
+.composer-draft-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.composer-draft-actions p { flex-basis:100%; }
+.composer-draft button { min-height:40px; padding:8px 12px; border:1px solid #b9cbb5; border-radius:9px; background:#fffdf9; color:#3e5946; font:600 11px/1.5 'DM Sans',sans-serif; cursor:pointer; }
+.composer-draft button:disabled { opacity:.6; cursor:default; }
+.composer-draft button:focus-visible { outline:2px solid #587d65; outline-offset:3px; }
 .composer-steps { margin:28px 0; padding:8px; border:1px solid #e6d8cd; border-radius:16px; background:#fffaf6; }
 .composer-steps ol { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; list-style:none; padding:0; margin:0; }
 .composer-steps button { display:flex; width:100%; align-items:center; gap:9px; min-height:54px; padding:10px; border:0; border-radius:10px; background:none; color:#6e645d; font:600 11px/1.5 'DM Sans',sans-serif; cursor:pointer; text-align:left; }
